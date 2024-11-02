@@ -22,7 +22,8 @@ int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int SIDE_SELECTED = 0;
 
-struct EncryptedValue {
+struct EncryptedValue
+{
   uintptr_t value;
   uintptr_t key;
 };
@@ -51,7 +52,8 @@ int main()
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
     // Validating the function address
-    if (!funcAddrIsValid(DECRYPT_FUNC_ADDR)) {
+    if (!funcAddrIsValid(DECRYPT_FUNC_ADDR))
+    {
       printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
       _getch();
       return 0;
@@ -399,7 +401,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 31) + Offsets::Cancel::RequirementsList), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);                       // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);  // cancel list
     // 1st cancel
     disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::Cancel::RequirementsList));
     // 3rd cancel
@@ -438,8 +440,8 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/b+4
     addr = getMoveAddress(moveset, 0x9364E2F5, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
-    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);  // req list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel list
+    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList); // req list
     // 1st cancel
     disableStoryRelatedReqs(addr);
     // Disabling standing req
@@ -579,7 +581,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     }
 
     // ws+2
-    addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx); // d/b+1
+    addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx);                         // d/b+1
     addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel; // 2nd cancel
     {
       uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 20;
@@ -610,21 +612,22 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   {
     addr = getMoveAddressByIdx(moveset, idleStanceIdx);
     addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
-    addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty; // 5th prop
+    addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
     Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
     Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
   }
-  
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
   int req = 0, param = 0;
   int targetParam = bossCode - 350;
-  for (uintptr_t i = 0; i < reqCount; i++) {
+  for (uintptr_t i = 0; i < reqCount; i++)
+  {
     addr = reqHeader + i * Sizes::Moveset::Requirement;
     req = Game.readInt32(addr);
     param = Game.readInt32(addr + 4);
-    if ((req == 806 && param == targetParam) || req == 801 || (req == 802 && param >= 2049)) {
+    if ((req == 806 && param == targetParam) || req == 801 || (req == 802 && param >= 2049))
+    {
       Game.write<int64_t>(addr, 0);
     }
   }
@@ -641,7 +644,7 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
   for (int i = start; i < movesCount; i++)
   {
     uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    EncryptedValue* paramAddr = reinterpret_cast<EncryptedValue*>(addr);
+    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
     uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
     if ((int)decryptedValue == moveNameKey)
       return addr;
@@ -664,7 +667,7 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   start = start >= movesCount ? 0 : start;
   for (int i = start; i < movesCount; i++)
   {
-    EncryptedValue* paramAddr = reinterpret_cast<EncryptedValue*>(movesHead + i * Sizes::Moveset::Move);
+    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(movesHead + i * Sizes::Moveset::Move);
     uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
     if ((int)decryptedValue == moveNameKey)
       return i;
