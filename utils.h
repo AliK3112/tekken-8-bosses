@@ -5,6 +5,18 @@
 #include <map>
 #include <stdexcept>
 
+enum BossCodes {
+  RegularJin, // 0
+  NerfedJin, // 1
+  MishimaJin, // 2
+  KazamaJin, // 3
+  FinalJin, // 4
+  ChainedJin = 11,
+  DevilKazuya = 97,
+  FinalKazuya = 244,
+  FinalHeihachi = 353,
+};
+
 // Function to convert a hexadecimal string to uintptr_t
 uintptr_t hexStringToUintptr(const std::string &hexStr)
 {

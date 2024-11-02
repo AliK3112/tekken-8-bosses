@@ -42,7 +42,7 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 
 int main()
 {
-  int bossCode = 353;
+  int bossCode = BossCodes::FinalKazuya;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game");
@@ -108,23 +108,23 @@ int takeInput()
   switch (input)
   {
   case '1':
-    return 0;
+    return BossCodes::RegularJin;
   case '2':
-    return 1;
+    return BossCodes::NerfedJin;
   case '3':
-    return 11;
+    return BossCodes::ChainedJin;
   case '4':
-    return 2;
+    return BossCodes::MishimaJin;
   case '5':
-    return 3;
+    return BossCodes::KazamaJin;
   case '6':
-    return 4;
+    return BossCodes::FinalJin;
   case '7':
-    return 97;
+    return BossCodes::DevilKazuya;
   case '8':
-    return 244;
+    return BossCodes::FinalKazuya;
   case '9':
-    return 353;
+    return BossCodes::FinalHeihachi;
   default:
     return -1;
   }
