@@ -1,0 +1,4 @@
+player_struct_base=0x09ACF1A0
+moveset_offset=0x2F38
+move_struct_size=0x3A0
+permanent_devil_offset=0x1234

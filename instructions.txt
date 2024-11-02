@@ -1,0 +1,2 @@
+1. Place the .exe anywhere but make sure the file "addresses.txt" is present in the same place
+2. Run the script and simply follow on-screen instructions

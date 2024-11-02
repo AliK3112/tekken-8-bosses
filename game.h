@@ -1,0 +1,250 @@
+#include <iostream>
+#include <Windows.h>
+#include <string>
+#include <Psapi.h>
+#include <tlhelp32.h>
+#include <vector>
+
+#pragma comment(lib, "Psapi.lib")
+
+class GameClass
+{
+private:
+  DWORD processId;
+  HANDLE processHandle;
+  HMODULE baseModule;
+  uintptr_t baseAddress;
+
+public:
+  GameClass() : processId(0), processHandle(nullptr), baseModule(nullptr), baseAddress(0) {}
+
+  ~GameClass()
+  {
+    if (processHandle != nullptr)
+      CloseHandle(processHandle);
+  }
+
+  uintptr_t getBaseAddress()
+  {
+    return baseAddress;
+  }
+
+  bool Attach(const wchar_t *processName)
+  {
+    processId = findProcessByName(processName);
+    if (processId == 0)
+    {
+      std::cerr << "Error: Cannot find the game process." << std::endl;
+      return false;
+    }
+
+    processHandle = OpenProcess(PROCESS_ALL_ACCESS, FALSE, processId);
+    if (processHandle == NULL)
+    {
+      std::cerr << "Error: Failed to open the game process." << std::endl;
+      return false;
+    }
+
+    // Get the module (executable) handle
+    HMODULE hMods[1024];
+    DWORD cbNeeded;
+    if (EnumProcessModules(processHandle, hMods, sizeof(hMods), &cbNeeded))
+    {
+      baseModule = hMods[0]; // First module is the executable
+      MODULEINFO moduleInfo;
+      GetModuleInformation(processHandle, baseModule, &moduleInfo, sizeof(MODULEINFO));
+      baseAddress = reinterpret_cast<uintptr_t>(moduleInfo.lpBaseOfDll); // Base address of the module
+      printf("Base Address: 0x%llx\n", baseAddress);
+    }
+    else
+    {
+      std::cerr << "Error: Failed to obtain base module handle." << std::endl;
+      return false;
+    }
+
+    std::cout << "Successfully attached to the game process." << std::endl;
+    return true;
+  }
+
+  uintptr_t getAddress(uintptr_t *offsets, int size)
+  {
+    uintptr_t address = baseAddress;
+    for (int i = 0; i < size; i++)
+    {
+      address = read<uintptr_t>(address + offsets[i]);
+    }
+    return address;
+  }
+
+  uintptr_t getAddress(const std::vector<DWORD> &offsets)
+  {
+    uintptr_t address = baseAddress;
+    for (DWORD offset : offsets)
+    {
+      if (!ReadProcessMemory(processHandle, reinterpret_cast<LPVOID>(address + offset), &address, sizeof(address), NULL)) {
+        return 0;
+      }
+    }
+    return address;
+  }
+
+  template <typename T>
+  void write(uintptr_t address, T value)
+  {
+    if (!WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), &value, sizeof(T), nullptr))
+    {
+      std::cerr << "Error: Failed to write memory at address " << std::hex << address << std::endl;
+    }
+  }
+
+  void writeString(uintptr_t address, const std::string& str)
+  {
+    if (!WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), str.c_str(), str.size() + 1, nullptr))
+    {
+      std::cerr << "Error: Failed to write string to memory at address " << std::hex << address << std::endl;
+    }
+  }
+
+  template <typename T>
+  std::vector<T> readArray(uintptr_t address, size_t count)
+  {
+    std::vector<T> buffer(count);
+    SIZE_T bytesRead;
+    if (ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer.data(), count * sizeof(T), &bytesRead))
+    {
+      if (bytesRead == count * sizeof(T))
+      {
+        return buffer;
+      }
+    }
+    std::cerr << "Error: Failed to read the memory array." << std::endl;
+    return std::vector<T>();
+  }
+
+  template <typename T>
+  T read(uintptr_t address)
+  {
+    T value;
+    SIZE_T bytesRead;
+    if (!ReadProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), &value, sizeof(T), &bytesRead))
+    {
+      std::cerr << "Error: Failed to read memory at address " << std::hex << address << std::endl;
+    }
+    if (bytesRead != sizeof(T))
+    {
+      std::cerr << "Error: Incomplete read at address " << std::hex << address << std::endl;
+    }
+    return value;
+  }
+
+  BYTE ReadByte(uintptr_t address)
+  {
+    return read<BYTE>(address);
+  }
+
+  char ReadChar(uintptr_t address)
+  {
+    return read<char>(address);
+  }
+
+  short ReadSignedShort(uintptr_t address)
+  {
+    return read<short>(address);
+  }
+
+  unsigned short ReadUnsignedShort(uintptr_t address)
+  {
+    return read<unsigned short>(address);
+  }
+
+  int ReadSignedInt(uintptr_t address)
+  {
+    return read<int>(address);
+  }
+
+  unsigned int ReadUnsignedInt(uintptr_t address)
+  {
+    return read<unsigned int>(address);
+  }
+
+  long ReadLong(uintptr_t address)
+  {
+    return read<long>(address);
+  }
+
+  uintptr_t ReadUnsignedLong(uintptr_t address)
+  {
+    return read<uintptr_t>(address);
+  }
+
+  std::string ReadString(uintptr_t address, SIZE_T size)
+  {
+    std::string value(size, '\0');
+    ReadProcessMemory(processHandle, (LPVOID)address, &value[0], size, nullptr);
+    return value;
+  }
+
+  // Easier Named Methods
+  char readByte(uintptr_t address)
+  {
+    return read<char>(address);
+  }
+
+  uint16_t readUInt16(uintptr_t address)
+  {
+    return read<uint16_t>(address);
+  }
+
+  int16_t readInt16(uintptr_t address)
+  {
+    return read<int16_t>(address);
+  }
+
+  uint32_t readUInt32(uintptr_t address)
+  {
+    return read<uint32_t>(address);
+  }
+
+  int readInt32(uintptr_t address)
+  {
+    return read<int>(address);
+  }
+
+  uint64_t readUInt64(uintptr_t address)
+  {
+    return read<uint64_t>(address);
+  }
+
+  int64_t readInt64(uintptr_t address)
+  {
+    return read<int64_t>(address);
+  }
+
+private:
+  uintptr_t findProcessByName(const std::wstring &processName)
+  {
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot != INVALID_HANDLE_VALUE)
+    {
+      PROCESSENTRY32W entry;
+      entry.dwSize = sizeof(PROCESSENTRY32W);
+
+      if (Process32FirstW(snapshot, &entry))
+      {
+        do
+        {
+          std::wstring currentProcessName = entry.szExeFile;
+          if (currentProcessName == processName)
+          {
+            CloseHandle(snapshot);
+            return static_cast<uintptr_t>(entry.th32ProcessID);
+          }
+        } while (Process32NextW(snapshot, &entry));
+      }
+
+      CloseHandle(snapshot);
+    }
+
+    return 0;
+  }
+};
