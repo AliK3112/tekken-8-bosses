@@ -39,16 +39,23 @@ bool loadHeihachi(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
+bool funcAddrIsValid(uintptr_t funcAddr);
 
 int main()
 {
   int bossCode = -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
-    printf("Attached to the Game");
+    printf("Attached to the Game\n");
     SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
+    // Validating the function address
+    if (!funcAddrIsValid(DECRYPT_FUNC_ADDR)) {
+      printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
+      _getch();
+      return 0;
+    }
     bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
@@ -67,6 +74,27 @@ void storeAddresses()
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
   DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
+}
+
+bool funcAddrIsValid(uintptr_t funcAddr)
+{
+  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
+  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
+
+  if (gameBytes.size() != sizeof(originalBytes))
+  {
+    return false;
+  }
+
+  for (size_t i = 0; i < sizeof(originalBytes); ++i)
+  {
+    if (gameBytes[i] != originalBytes[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 int getSideSelection()
