@@ -1,4 +1,4 @@
 player_struct_base=0x09ADA3B0
 moveset_offset=0x2F48
-permanent_devil_offset=0x1234
+permanent_devil_offset=0x1244
 decryption_function_offset=0x18A98D0

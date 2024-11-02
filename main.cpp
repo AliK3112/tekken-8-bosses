@@ -42,14 +42,14 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 
 int main()
 {
-  int bossCode = BossCodes::FinalKazuya;
+  int bossCode = -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game");
-    // SIDE_SELECTED = getSideSelection();
+    SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
-    // bossCode = takeInput();
+    bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
   }
