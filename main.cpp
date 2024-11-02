@@ -224,8 +224,8 @@ void mainFunc(int bossCode)
 
 bool disableRequirements(uintptr_t moveset, int targetReq, int targetParam)
 {
-  uintptr_t requirements = Game.ReadUnsignedLong(moveset + TekkenOffsets::Moveset::RequirementsHeader);
-  int requirementsCount = Game.ReadSignedInt(moveset + TekkenOffsets::Moveset::RequirementsCount);
+  uintptr_t requirements = Game.ReadUnsignedLong(moveset + Offsets::Moveset::RequirementsHeader);
+  int requirementsCount = Game.ReadSignedInt(moveset + Offsets::Moveset::RequirementsCount);
   for (int i = 0; i < requirementsCount; i++)
   {
     uintptr_t addr = requirements + i * 20;
@@ -285,11 +285,11 @@ bool loadJin(uintptr_t moveset, int bossCode)
   uintptr_t rageArt = getMoveAddress(moveset, 0x9BAE061E, 2100);
   if (rageArt)
   {
-    uintptr_t cancel = Game.readUInt64(rageArt + TekkenOffsets::Move::CancelList);
+    uintptr_t cancel = Game.readUInt64(rageArt + Offsets::Move::CancelList);
     int regularRA = getMoveId(moveset, 0x1ADAB0CB, 2000);
     if (regularRA != -1)
     {
-      Game.write<short>(cancel + TekkenOffsets::Cancel::Move, regularRA);
+      Game.write<short>(cancel + Offsets::Cancel::Move, regularRA);
     }
   }
 
@@ -333,8 +333,8 @@ bool loadJin(uintptr_t moveset, int bossCode)
       uintptr_t moveAddr = getMoveAddress(moveset, move.first, move.second);
       if (moveAddr)
       {
-        uintptr_t cancel = Game.readUInt64(moveAddr + TekkenOffsets::Move::CancelList);
-        Game.write<uintptr_t>(cancel + TekkenOffsets::Cancel::RequirementsList, reqHeader);
+        uintptr_t cancel = Game.readUInt64(moveAddr + Offsets::Move::CancelList);
+        Game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, reqHeader);
       }
     }
   }
@@ -356,61 +356,61 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   if (bossCode == 97)
   {
     // Enabling permanent Devil form
-    uintptr_t movesHeader = Game.readUInt64(moveset + TekkenOffsets::Moveset::MovesHeader);
+    uintptr_t movesHeader = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     uintptr_t addr = movesHeader + (idleStanceIdx * MOVE_SIZE);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::ExtraPropList);
-    Game.write<int>(addr + TekkenOffsets::ExtraProp::Prop, 0x8151);
-    Game.write<int>(addr + TekkenOffsets::ExtraProp::Value, 1);
+    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x8151);
+    Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
 
     // Disabling some requirements for basic attacks
     // 0x8000 alias
     addr = movesHeader + (defaultAliasIdx * MOVE_SIZE);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 32th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 31) + TekkenOffsets::Cancel::RequirementsList), 777);
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 31) + Offsets::Cancel::RequirementsList), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);                       // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);                       // cancel list
     // 1st cancel
-    disableStoryRelatedReqs(Game.readUInt64(addr + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::Cancel::RequirementsList));
     // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 2) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 2) + Offsets::Cancel::RequirementsList));
 
     // 1,1,2
     addr = getMoveAddress(moveset, 0x2226A9EE, idleStanceIdx);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 2) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 2) + Offsets::Cancel::RequirementsList));
 
     // Juggle Escape
     addr = getMoveAddress(moveset, 0xDEBED999, 5);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 6th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 6) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 6) + Offsets::Cancel::RequirementsList));
     // 7th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 7) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 7) + Offsets::Cancel::RequirementsList));
 
     // f,f+2
     addr = getMoveAddress(moveset, 0x1A571FA1, 2000);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 20th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 21) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 21) + Offsets::Cancel::RequirementsList));
     // 21st cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 22) + TekkenOffsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(Game.readUInt64((addr + 40 * 22) + Offsets::Cancel::RequirementsList));
 
     // d/b+1+2
     addr = getMoveAddress(moveset, 0x73EBDBA2, idleStanceIdx);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 3rd cancel
     {
-      uintptr_t req0 = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsHeader);
-      Game.write<uintptr_t>((addr + 40 * 2) + TekkenOffsets::Cancel::RequirementsList, req0);
+      uintptr_t req0 = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+      Game.write<uintptr_t>((addr + 40 * 2) + Offsets::Cancel::RequirementsList, req0);
     }
 
     // d/b+4
     addr = getMoveAddress(moveset, 0x9364E2F5, idleStanceIdx);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList); // cancel list
-    addr = Game.readUInt64(addr + TekkenOffsets::Cancel::RequirementsList);  // req list
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
+    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);  // req list
     // 1st cancel
     disableStoryRelatedReqs(addr);
     // Disabling standing req
@@ -424,8 +424,8 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   {
     // Go through reqs and props to disable his devil form
     // requirements
-    uintptr_t start = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsHeader);
-    uintptr_t count = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsCount);
+    uintptr_t start = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+    uintptr_t count = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
     uintptr_t itemSize = 20;
     for (uintptr_t i = 0; i < count; i++)
     {
@@ -440,14 +440,14 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     }
 
     // extraprops
-    start = Game.readUInt64(moveset + TekkenOffsets::Moveset::ExtraMovePropertiesHeader);
-    count = Game.readUInt64(moveset + TekkenOffsets::Moveset::ExtraMovePropertiesCount);
+    start = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
+    count = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
     itemSize = 40;
     for (uintptr_t i = 0; i < count; i++)
     {
       uintptr_t addr = start + (i * itemSize);
-      int prop = Game.readUInt32(addr + TekkenOffsets::ExtraProp::Prop);
-      int param = Game.readUInt32(addr + TekkenOffsets::ExtraProp::Value);
+      int prop = Game.readUInt32(addr + Offsets::ExtraProp::Prop);
+      int param = Game.readUInt32(addr + Offsets::ExtraProp::Value);
       if (prop == 0x80dc || prop == 0x8683 || (prop == 0x8039 && (param == 0xC || param == 0xD)))
       {
         Game.write<int>(addr, 0);
@@ -458,24 +458,24 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Single-spin uppercut
     uintptr_t addr = getMoveAddress(moveset, 0xD172C176, idleStanceIdx); // B+1+4
     // 2nd cancel
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList) + 40;
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + 40;
     Game.write<int>(addr, 0x10);
-    Game.write<short>(addr + TekkenOffsets::Cancel::Option, 0x50);
+    Game.write<short>(addr + Offsets::Cancel::Option, 0x50);
 
-    uintptr_t reqHeader = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsHeader);
+    uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
     // Ultra-wavedash
     addr = getMoveAddress(moveset, 0x77314B09, idleStanceIdx); // 2
     // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList) + 40;
-    Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + 40;
+    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
 
     // CD+1+2
     addr = getMoveAddress(moveset, 0x0C9CE140, idleStanceIdx);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     // Storing the story cancel req
-    uintptr_t storyReq = Game.readUInt64(addr + TekkenOffsets::Cancel::RequirementsList);
+    uintptr_t storyReq = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
     // Replacing 1st cancel requirement list index
-    Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
+    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
 
     // ff2
     // addr = getMoveAddress(moveset, 0xC00BB85A, idleStanceIdx); // 2
@@ -486,84 +486,84 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // b+2,2
     addr = getMoveAddress(moveset, 0x8B5BFA6C, idleStanceIdx); // 2nd hit of b+2,2
     // Replacing 1st cancel requirement list index
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
-    Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
 
     // NEW b+2,2. Disabling laser cancel
     addr = getMoveAddress(moveset, 0x8FE28C6A, defaultAliasIdx); // 2nd hit of b+2,2
     // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList) + 40;
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + 40;
     if (Game.readInt32(storyReq) == STORY_BATTLE_REQ)
     {
-      Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, storyReq);
+      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, storyReq);
     }
 
     // Disabling u/b+1+2 laser
     // key ub1: 0x1376C644
     // key ub1+2: 0x07F32E0C
     addr = getMoveAddress(moveset, 0x07F32E0C, 2000); // u/b+1+2
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + TekkenOffsets::Moveset::CancelExtraDatasHeader) + 4 * 16;
+      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + 4 * 16;
       int moveId = getMoveId(moveset, 0x1376C644, idleStanceIdx);
       // Making a cancel to u/b+1 on frame 1
-      Game.write<int>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
-      Game.write<int>(addr + TekkenOffsets::Cancel::CancelExtradata, cancelExtradata);
-      Game.write<int>(addr + TekkenOffsets::Cancel::TransitionFrame, 1);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Option, 65);
+      Game.write<int>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+      Game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
+      Game.write<int>(addr + Offsets::Cancel::TransitionFrame, 1);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
+      Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
 
     // d/f+3+4, 1 key: 0x6562FA84
     addr = getMoveAddress(moveset, 0x6562FA84, idleStanceIdx); // (d/f+3+4),1
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     {
-      int moveId = Game.readInt16((addr + 40) + TekkenOffsets::Cancel::Move);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId);
+      int moveId = Game.readInt16((addr + 40) + Offsets::Cancel::Move);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
     }
 
     // d/b+1, 2
     addr = getMoveAddress(moveset, 0xFE501006, idleStanceIdx); // d/b+1
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     {
       // Grabbing move ID from 3rd cancel
-      int moveId_db2 = Game.readInt16(addr + (2 * 40) + TekkenOffsets::Cancel::Move);
+      int moveId_db2 = Game.readInt16(addr + (2 * 40) + Offsets::Cancel::Move);
       // 10th cancel
       addr = addr + (9 * 40);
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowStart, 19);
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowEnd, 19);
-      Game.write<int>(addr + TekkenOffsets::Cancel::TransitionFrame, 19);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId_db2);
+      Game.write<int>(addr + Offsets::Cancel::WindowStart, 19);
+      Game.write<int>(addr + Offsets::Cancel::WindowEnd, 19);
+      Game.write<int>(addr + Offsets::Cancel::TransitionFrame, 19);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId_db2);
       // 11th cancel
       addr += 40;
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowStart, 19);
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowEnd, 19);
-      Game.write<int>(addr + TekkenOffsets::Cancel::TransitionFrame, 19);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId_db2);
+      Game.write<int>(addr + Offsets::Cancel::WindowStart, 19);
+      Game.write<int>(addr + Offsets::Cancel::WindowEnd, 19);
+      Game.write<int>(addr + Offsets::Cancel::TransitionFrame, 19);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId_db2);
 
       // Adjusting d/b+1+2 to cancel into this on frame-1
       int moveId_db1 = getMoveId(moveset, 0xFE501006, moveId_db2);
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + TekkenOffsets::Moveset::CancelExtraDatasHeader) + 4 * 20;
+      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + 4 * 20;
       addr = getMoveAddress(moveset, 0x73EBDBA2, moveId_db1);
-      addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList);
+      addr = Game.readUInt64(addr + Offsets::Move::CancelList);
       // Adjusting the 1st cancel
-      Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId_db1);
+      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId_db1);
     }
 
     // ws+2
     addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx); // d/b+1
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::CancelList) + 40;                  // 2nd cancel
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + 40;                  // 2nd cancel
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + TekkenOffsets::Moveset::CancelExtraDatasHeader) + 4 * 20;
+      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + 4 * 20;
       int moveId = getMoveId(moveset, 0x0AB42E52, defaultAliasIdx);
-      Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::RequirementsList, reqHeader);
-      Game.write<uintptr_t>(addr + TekkenOffsets::Cancel::CancelExtradata, cancelExtradata);
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowStart, 5);
-      Game.write<int>(addr + TekkenOffsets::Cancel::WindowEnd, 5);
-      Game.write<int>(addr + TekkenOffsets::Cancel::TransitionFrame, 5);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Move, (short)moveId);
-      Game.write<short>(addr + TekkenOffsets::Cancel::Option, 65);
+      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+      Game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
+      Game.write<int>(addr + Offsets::Cancel::WindowStart, 5);
+      Game.write<int>(addr + Offsets::Cancel::WindowEnd, 5);
+      Game.write<int>(addr + Offsets::Cancel::TransitionFrame, 5);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
+      Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
 
     Game.writeString(moveset + 8, "ALI");
@@ -582,15 +582,15 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   if (bossCode == 353)
   {
     addr = getMoveAddressByIdx(moveset, idleStanceIdx);
-    addr = Game.readUInt64(addr + TekkenOffsets::Move::ExtraPropList); // props
+    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
     addr = addr + 4 * 40; // 5th prop
-    Game.write<int>(addr + TekkenOffsets::ExtraProp::Prop, 0x83F9);
-    Game.write<int>(addr + TekkenOffsets::ExtraProp::Value, 1);
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
+    Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
   }
   
 
-  uintptr_t reqHeader = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsHeader);
-  uintptr_t reqCount = Game.readUInt64(moveset + TekkenOffsets::Moveset::RequirementsCount);
+  uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+  uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
   int req = 0, param = 0;
   int targetParam = bossCode - 350;
   for (uintptr_t i = 0; i < reqCount; i++) {
@@ -608,8 +608,8 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
 {
-  uintptr_t movesHead = Game.readUInt64(moveset + TekkenOffsets::Moveset::MovesHeader);
-  int movesCount = Game.readInt32(moveset + TekkenOffsets::Moveset::MovesCount);
+  uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+  int movesCount = Game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
   for (int i = start; i < movesCount; i++)
   {
@@ -624,16 +624,16 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
 
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx)
 {
-  uintptr_t movesHead = Game.readUInt64(moveset + TekkenOffsets::Moveset::MovesHeader);
-  int movesCount = Game.readInt32(moveset + TekkenOffsets::Moveset::MovesCount);
+  uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+  int movesCount = Game.readInt32(moveset + Offsets::Moveset::MovesCount);
   idx = idx >= movesCount ? idx % movesCount : idx;
   return movesHead + idx * MOVE_SIZE;
 }
 
 int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
 {
-  uintptr_t movesHead = Game.readUInt64(moveset + TekkenOffsets::Moveset::MovesHeader);
-  int movesCount = Game.readUInt64(moveset + TekkenOffsets::Moveset::MovesCount);
+  uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+  int movesCount = Game.readUInt64(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
   for (int i = start; i < movesCount; i++)
   {

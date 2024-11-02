@@ -1,4 +1,4 @@
-namespace TekkenOffsets
+namespace Offsets
 {
   enum Move
   {
@@ -80,4 +80,28 @@ namespace TekkenOffsets
     Value4 = 0x20,
     Value5 = 0x24
   };
-}
+};
+
+namespace Sizes
+{
+  enum Moveset {
+    Pushback = 0x10,
+    PushbackExtradata = 0x2,
+    Requirement = 0x14,
+    CancelExtradata = 0x4,
+    Cancel = 0x28,
+    ReactionList = 0x70,
+    HitCondition = 0x18,
+    ExtraMoveProperty = 0x28,
+    OtherMoveProperty = 0x20,
+    Move = 0x448,
+    Voiceclip = 0xC,
+    InputExtradata = 0x8,
+    InputSequence = 0x10,
+    Projectile = 0xD8,
+    ThrowExtra = 0xC,
+    Throw = 0x10,
+    ParryList = 0x4,
+    DialogueManager = 0x18
+  }
+};
