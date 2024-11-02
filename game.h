@@ -81,11 +81,122 @@ public:
     uintptr_t address = baseAddress;
     for (DWORD offset : offsets)
     {
-      if (!ReadProcessMemory(processHandle, reinterpret_cast<LPVOID>(address + offset), &address, sizeof(address), NULL)) {
-        return 0;
-      }
+      address = read<uintptr_t>(address + (uintptr_t)offset);
     }
     return address;
+  }
+
+  // Allocate memory in the target process
+  template <typename T>
+  T *allocateInTarget(size_t count)
+  {
+    return reinterpret_cast<T *>(VirtualAllocEx(processHandle, nullptr, sizeof(T) * count, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
+  }
+
+  // Batch call to decrypt multiple values
+  template <typename ReturnType, typename ParamType>
+  std::vector<ReturnType> callFunctionBatch(uintptr_t functionAddress, const std::vector<ParamType> &encryptedArray)
+  {
+    // Allocate remote buffer for encrypted array
+    ParamType *remoteArray = allocateInTarget<ParamType>(encryptedArray.size());
+    if (!remoteArray)
+    {
+      std::cerr << "Error: Failed to allocate memory in target process." << std::endl;
+      return {};
+    }
+
+    // Write encrypted data to remote memory
+    SIZE_T bytesWritten;
+    WriteProcessMemory(processHandle, remoteArray, encryptedArray.data(), sizeof(ParamType) * encryptedArray.size(), &bytesWritten);
+
+    // Create a vector to store decrypted values
+    std::vector<ReturnType> decryptedValues;
+    decryptedValues.reserve(encryptedArray.size());
+
+    // Loop over each element in the remote array, calling the function
+    for (size_t i = 0; i < encryptedArray.size(); i++)
+    {
+      // Call decryption function on each element
+      ReturnType decryptedValue = callFunction<ReturnType, ParamType>(functionAddress, &remoteArray[i]);
+      decryptedValues.push_back(decryptedValue);
+    }
+
+    // Free the remote array after processing
+    freeInTarget(remoteArray);
+
+    return decryptedValues;
+  }
+
+  // Free memory in the target process
+  void freeInTarget(void *address)
+  {
+    VirtualFreeEx(processHandle, address, 0, MEM_RELEASE);
+  }
+
+  // Function to call an internal game function
+  template <typename ReturnType, typename ParamType>
+  ReturnType callFunction(uintptr_t functionAddress, ParamType *paramAddr, bool allocateMemory = false)
+  {
+    ParamType *remoteParamAddr = paramAddr; // Default to using the given address
+
+    if (allocateMemory)
+    {
+      // Allocate memory in the target process for `ParamType`
+      remoteParamAddr = allocateInTarget<ParamType>(1);
+      if (!remoteParamAddr)
+      {
+        std::cerr << "Error: Failed to allocate memory in target process." << std::endl;
+        return ReturnType();
+      }
+
+      // Write the parameter to the allocated memory
+      SIZE_T bytesWritten;
+      if (!WriteProcessMemory(processHandle, remoteParamAddr, paramAddr, sizeof(ParamType), &bytesWritten) || bytesWritten != sizeof(ParamType))
+      {
+        std::cerr << "Error: Failed to write parameter to target process memory." << std::endl;
+        freeInTarget(remoteParamAddr); // Free memory if write fails
+        return ReturnType();
+      }
+    }
+
+    // Prepare the thread context to execute the function at `functionAddress` with `remoteParamAddr` as the argument
+    HANDLE threadHandle = CreateRemoteThread(
+        processHandle,
+        nullptr,
+        0,
+        reinterpret_cast<LPTHREAD_START_ROUTINE>(functionAddress),
+        remoteParamAddr,
+        0,
+        nullptr);
+
+    if (!threadHandle)
+    {
+      std::cerr << "Error: Failed to create remote thread." << std::endl;
+      if (allocateMemory)
+        freeInTarget(remoteParamAddr); // Free if allocated
+      return ReturnType();
+    }
+
+    // Wait for the function call to complete
+    WaitForSingleObject(threadHandle, INFINITE);
+
+    // Retrieve the return value from the thread
+    DWORD exitCode;
+    if (GetExitCodeThread(threadHandle, &exitCode))
+    {
+      CloseHandle(threadHandle);
+      if (allocateMemory)
+        freeInTarget(remoteParamAddr);
+      return static_cast<ReturnType>(exitCode);
+    }
+
+    // Free the allocated memory in the target process, if allocated
+    if (allocateMemory)
+      freeInTarget(remoteParamAddr);
+
+    std::cerr << "Error: Failed to get the return value from the thread." << std::endl;
+    CloseHandle(threadHandle);
+    return ReturnType{};
   }
 
   template <typename T>
