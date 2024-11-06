@@ -188,8 +188,7 @@ void mainFunc(int bossCode)
       continue;
     }
 
-    // If it's not practice mode, continue
-    if (Game.readInt32(matchStructAddr) != 1)
+    if (Game.readInt32(matchStructAddr) != 1 && Game.readInt32(matchStructAddr) != 6)
     {
       continue;
     }
