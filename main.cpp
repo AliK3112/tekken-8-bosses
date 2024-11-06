@@ -14,9 +14,13 @@ uintptr_t MOVESET_OFFSET = 0;
 uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PERMA_DEVIL_OFFSET = 0;
 uintptr_t PLAYER_STRUCT_BASE = 0;
-std::vector<DWORD> INGAME_FLAG_OFFSETS({0x09878578, 0x8});
-std::vector<DWORD> MATCH_STRUCT_OFFSETS({0x099B8B40, 0x50, 0x8, 0x18, 0x8});
+uintptr_t MATCH_STRUCT_OFFSET = 0;
+
+std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
+std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
+std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+
 bool IS_WRITTEN = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
@@ -32,15 +36,21 @@ void storeAddresses();
 int getSideSelection();
 void mainFunc(int bossCode);
 int takeInput();
+void loadCostume(uintptr_t matchStructAddr, int costumeId, std::string costumePath);
+void costumeHandler(uintptr_t matchStructAddr, int bossCode);
 void sleep(int ms) { usleep(ms * 1000); }
 bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
+void loadCharacter(uintptr_t matchStructAddr, int bossCode);
 bool loadJin(uintptr_t moveset, int bossCode);
 bool loadKazuya(uintptr_t moveset, int bossCode);
 bool loadHeihachi(uintptr_t moveset, int bossCode);
+bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 bool funcAddrIsValid(uintptr_t funcAddr);
+bool movesetExists(uintptr_t moveset);
+bool isMovesetEdited(uintptr_t moveset);
 
 int main()
 {
@@ -76,27 +86,7 @@ void storeAddresses()
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
   DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
-}
-
-bool funcAddrIsValid(uintptr_t funcAddr)
-{
-  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
-  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
-
-  if (gameBytes.size() != sizeof(originalBytes))
-  {
-    return false;
-  }
-
-  for (size_t i = 0; i < sizeof(originalBytes); ++i)
-  {
-    if (gameBytes[i] != originalBytes[i])
-    {
-      return false;
-    }
-  }
-
-  return true;
+  MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
 }
 
 int getSideSelection()
@@ -133,6 +123,9 @@ int takeInput()
   printf("7. Devil Kazuya from Chapter 6\n");
   printf("8. Final Battle Kazuya\n");
   printf("9. Heihachi from Story DLC Finale\n");
+  printf("A. Angel Jin\n");
+  printf("B. True Devil Kazuya\n");
+  printf("C. Story Devil Jin\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -155,72 +148,57 @@ int takeInput()
     return BossCodes::FinalKazuya;
   case '9':
     return BossCodes::FinalHeihachi;
+  case 'A':
+  case 'a':
+    return BossCodes::AngelJin;
+  case 'B':
+  case 'b':
+    return BossCodes::TrueDevilKazuya;
+  case 'C':
+  case 'c':
+    return BossCodes::DevilJin;
   default:
     return -1;
   }
   return -1;
 }
 
-bool movesetExists(uintptr_t moveset)
-{
-  std::string str = Game.ReadString(moveset + 8, 3);
-  return str.compare("ALI") == 0 || str.compare("TEK") == 0;
-}
-
-bool isMovesetEdited(uintptr_t moveset)
-{
-  std::string str = Game.ReadString(moveset + 8, 3);
-  return str.compare("ALI") == 0;
-}
-
-void loadCostume(uintptr_t matchStructAddr, int costumeId, std::string costumePath)
-{
-  Game.write<int>(matchStructAddr + 0x6F0, costumeId);
-  Game.writeString(matchStructAddr + 0x13D78, costumePath);
-}
-
-void costumeHandler(uintptr_t matchStructAddr, int bossCode)
-{
-  if (!matchStructAddr)
-    return;
-  int selectedChar = Game.readInt32(matchStructAddr + 0x10);
-  // int targetCharId = bossCode > 11 ? 8 : 6; // future proofing
-  if (selectedChar == 6)
-  {
-    if (bossCode == 11)
-    {
-      loadCostume(matchStructAddr, 51, CHAINED_JIN_COSTUME_PATH);
-    }
-  }
-}
-
 void mainFunc(int bossCode)
 {
   // system("cls");
   printf("Please load into your Game mode now, the Game will automatically detect & load the altered moveset\n");
-  // uintptr_t isInMatch = Game.getBaseAddress() + 0x09878578;
-  // printf("0x%x\n", isInMatch);
-  // return;
   bool isWritten = false;
   bool flag = false;
-  // uintptr_t matchStructAddr = Game.getAddress(MATCH_STRUCT_OFFSETS);
-  // if (!matchStructAddr)
-  // {
-  //   printf("Cannot find the match structure address.\n");
-  //   return;
-  // }
+  uintptr_t matchStructAddr = Game.getAddress({(DWORD)MATCH_STRUCT_OFFSET, 0x50, 0x8, 0x18, 0x8});
+  if (!matchStructAddr)
+  {
+    printf("Cannot find the match structure address.\n");
+    return;
+  }
+  uintptr_t lastAddr = 0;
 
   while (true)
   {
     sleep(100);
+    matchStructAddr = Game.getAddress({(DWORD)MATCH_STRUCT_OFFSET, 0x50, 0x8, 0x18, 0x8});
+    if (matchStructAddr == 0)
+    {
+      continue;
+    }
+
+    // If it's not practice mode, continue
+    if (Game.readInt32(matchStructAddr) != 1)
+    {
+      continue;
+    }
+
+    // Set Character ID
+    loadCharacter(matchStructAddr, bossCode);
 
     uintptr_t playerAddr = Game.getAddress({(DWORD)PLAYER_STRUCT_BASE, (DWORD)(0x30 + SIDE_SELECTED * 8)});
     if (playerAddr == 0)
     {
-      // if (matchStructAddr)
-      // {
-      //   costumeHandler(matchStructAddr, bossCode);
-      // }
+      costumeHandler(matchStructAddr, bossCode);
       continue;
     }
 
@@ -250,6 +228,74 @@ void mainFunc(int bossCode)
       flag = true;
     }
     // break;
+  }
+}
+
+void loadCostume(uintptr_t matchStructAddr, int costumeId, std::string costumePath)
+{
+  Game.write<int>(matchStructAddr + 0x6F0 + SIDE_SELECTED * 0x6760, costumeId);
+  Game.writeString(matchStructAddr + 0x13D78 + SIDE_SELECTED * 0x100, costumePath);
+}
+
+void costumeHandler(uintptr_t matchStructAddr, int bossCode)
+{
+  if (!matchStructAddr)
+    return;
+  switch (bossCode)
+  {
+  case BossCodes::RegularJin:
+  case BossCodes::NerfedJin:
+  case BossCodes::DevilKazuya:
+  case BossCodes::FinalHeihachi:
+    loadCostume(matchStructAddr, 0, "\0");
+    break;
+  case BossCodes::ChainedJin:
+    loadCostume(matchStructAddr, 51, CHAINED_JIN_COSTUME_PATH);
+    break;
+  case BossCodes::MishimaJin:
+  case BossCodes::KazamaJin:
+  case BossCodes::FinalJin:
+    loadCostume(matchStructAddr, 51, FINAL_JIN_COSTUME_PATH);
+    break;
+  case BossCodes::FinalKazuya:
+    loadCostume(matchStructAddr, 51, FINAL_KAZ_COSTUME_PATH);
+    break;
+  case BossCodes::DevilJin:
+    loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH);
+    break;
+  default:
+    break;
+  }
+}
+
+void loadCharacter(uintptr_t matchStructAddr, int bossCode)
+{
+  int charId = -1;
+  int currCharId = Game.readInt32(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84);
+  switch (bossCode)
+  {
+  case BossCodes::AngelJin:
+    charId = BossCodes::AngelJin;
+    // charId = currCharId == 6 ? BossCodes::AngelJin : -1;
+    break;
+  case BossCodes::TrueDevilKazuya:
+    charId = BossCodes::TrueDevilKazuya;
+    // charId = currCharId == 8 ? BossCodes::TrueDevilKazuya : -1;
+    break;
+  case BossCodes::DevilJin:
+    charId = BossCodes::DevilJin;
+    // charId = currCharId == 12 ? BossCodes::DevilJin : -1;
+    break;
+  default:
+    return;
+  }
+  if (charId != -1) {
+    Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
+    if (charId == BossCodes::DevilJin) loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
+    // for (int i = 0; i < 100; i++) {
+    //   sleep(10);
+    //   Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
+    // }
   }
 }
 
@@ -288,6 +334,10 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   else if (charId == 35)
   {
     return loadHeihachi(moveset, bossCode);
+  }
+  else if (charId == 118)
+  {
+    return loadTrueDevilKazuya(moveset, bossCode);
   }
   return true;
 }
@@ -636,6 +686,18 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   return true;
 }
 
+bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
+{
+  // d/f+1, 2
+  uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
+  addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel address
+  addr = addr + Sizes::Moveset::Cancel * 22; // 23rd cancel
+  addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+  disableStoryRelatedReqs(addr, 473);
+  Game.writeString(moveset + 8, "ALI");
+  return true;
+}
+
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
 {
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
@@ -673,4 +735,37 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
       return i;
   }
   return -1;
+}
+
+bool funcAddrIsValid(uintptr_t funcAddr)
+{
+  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
+  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
+
+  if (gameBytes.size() != sizeof(originalBytes))
+  {
+    return false;
+  }
+
+  for (size_t i = 0; i < sizeof(originalBytes); ++i)
+  {
+    if (gameBytes[i] != originalBytes[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool movesetExists(uintptr_t moveset)
+{
+  std::string str = Game.ReadString(moveset + 8, 3);
+  return str.compare("ALI") == 0 || str.compare("TEK") == 0;
+}
+
+bool isMovesetEdited(uintptr_t moveset)
+{
+  std::string str = Game.ReadString(moveset + 8, 3);
+  return str.compare("ALI") == 0;
 }

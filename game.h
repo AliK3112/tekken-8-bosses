@@ -228,7 +228,7 @@ public:
         return buffer;
       }
     }
-    std::cerr << "Error: Failed to read the memory array." << std::endl;
+    // std::cerr << "Error: Failed to read the memory array." << std::endl;
     return std::vector<T>();
   }
 
@@ -239,11 +239,11 @@ public:
     SIZE_T bytesRead;
     if (!ReadProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), &value, sizeof(T), &bytesRead))
     {
-      std::cerr << "Error: Failed to read memory at address " << std::hex << address << std::endl;
+      // std::cerr << "Error: Failed to read memory at address " << std::hex << address << std::endl;
     }
     if (bytesRead != sizeof(T))
     {
-      std::cerr << "Error: Incomplete read at address " << std::hex << address << std::endl;
+      // std::cerr << "Error: Incomplete read at address " << std::hex << address << std::endl;
     }
     return value;
   }

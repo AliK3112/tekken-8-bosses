@@ -13,6 +13,9 @@ enum BossCodes {
   FinalJin, // 4
   ChainedJin = 11,
   DevilKazuya = 97,
+  AngelJin = 117,
+  TrueDevilKazuya = 118,
+  DevilJin = 121,
   FinalKazuya = 244,
   FinalHeihachi = 353,
 };
