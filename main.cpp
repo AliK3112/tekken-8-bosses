@@ -44,7 +44,9 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode);
 bool loadJin(uintptr_t moveset, int bossCode);
 bool loadKazuya(uintptr_t moveset, int bossCode);
 bool loadHeihachi(uintptr_t moveset, int bossCode);
+bool loadAngelJin(uintptr_t moveset, int bossCode);
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode);
+bool loadStoryDevilJin(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
@@ -686,6 +688,12 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   return true;
 }
 
+bool loadAngelJin(uintptr_t moveset, int bossCode)
+{
+  // TODO: Try fixing intros/outros
+  return true;
+}
+
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
   // d/f+1, 2
@@ -695,6 +703,12 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
   addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
   disableStoryRelatedReqs(addr, 473);
   Game.writeString(moveset + 8, "ALI");
+  return true;
+}
+
+bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
+{
+  // TODO: Try fixing intros/outros
   return true;
 }
 

@@ -1,2 +1,5 @@
 1. Place the .exe anywhere but make sure the file "addresses.txt" is present in the same place
 2. Run the script and simply follow on-screen instructions
+3. Costumes load automatically now
+4. For NPCs like Angel Jin, True Devil Kazuya and Story Devil Jin, you cannot pick any other character, they will always be loaded, no matter what
+5. Optionally, you can use the Cheat Table to load the correct HUD icons and character names. Just attach it and activate both scripts in it.
