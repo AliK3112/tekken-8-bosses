@@ -37,7 +37,7 @@ bool InjectDLL(DWORD processId, const char *dllPath)
   WriteProcessMemory(process, allocMem, dllPath, strlen(dllPath) + 1, nullptr);
 
   // Get address of LoadLibraryA and create a remote thread to load the DLL
-  HMODULE kernel32 = GetModuleHandle("kernel32.dll");
+  HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
   FARPROC loadLibAddr = GetProcAddress(kernel32, "LoadLibraryA");
   HANDLE thread = CreateRemoteThread(process, nullptr, 0, (LPTHREAD_START_ROUTINE)loadLibAddr, allocMem, 0, nullptr);
 
@@ -52,12 +52,25 @@ bool InjectDLL(DWORD processId, const char *dllPath)
 int main()
 {
   const wchar_t *processName = L"Polaris-Win64-Shipping.exe";
-  const char *dllPath = "C:\\path\\to\\your\\DLL.dll";
 
+  char exePath[MAX_PATH];
+  if (GetModuleFileNameA(NULL, exePath, MAX_PATH) == 0)
+  {
+    std::cerr << "Failed to get executable path." << std::endl;
+    return 1;
+  }
+  // Remove the executable name to get the directory
+  std::string exeDir = exePath;
+  exeDir = exeDir.substr(0, exeDir.find_last_of("\\/") + 1);
+
+  // Append the DLL file name to create the absolute DLL path
+  std::string dllPath = exeDir + "libbosses.dll";
+
+  // std::cout << "DLL PATH: " << dllPath << std::endl;
   DWORD processId = GetProcessIdByName(processName);
   if (processId)
   {
-    if (InjectDLL(processId, dllPath))
+    if (InjectDLL(processId, dllPath.c_str()))
     {
       std::cout << "DLL Injected Successfully!" << std::endl;
     }
