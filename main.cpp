@@ -24,6 +24,7 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 bool IS_WRITTEN = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
+int END_REQ = 1100;
 int SIDE_SELECTED = 0;
 
 struct EncryptedValue
@@ -53,10 +54,11 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
+bool isEligible(uintptr_t matchStruct);
 
 int main()
 {
-  int bossCode = -1;
+  int bossCode = BossCodes::DevilJin;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
@@ -188,7 +190,7 @@ void mainFunc(int bossCode)
       continue;
     }
 
-    if (Game.readInt32(matchStructAddr) != 1 && Game.readInt32(matchStructAddr) != 6)
+    if (!isEligible(matchStructAddr))
     {
       continue;
     }
@@ -290,7 +292,7 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode)
   default:
     return;
   }
-  if (charId != -1) {
+  if (charId != -1 && isEligible(matchStructAddr)) {
     Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
     if (charId == BossCodes::DevilJin) loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
     // for (int i = 0; i < 100; i++) {
@@ -340,6 +342,10 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   {
     return loadTrueDevilKazuya(moveset, bossCode);
   }
+  else if (charId == 121)
+  {
+    return loadStoryDevilJin(moveset, bossCode);
+  }
   return true;
 }
 
@@ -348,7 +354,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
   for (uintptr_t addr = requirements; true; addr += Sizes::Requirement)
   {
     int req = Game.readUInt32(addr);
-    if (req == 1100)
+    if (req == END_REQ)
       break;
     if (req == STORY_BATTLE_REQ || req == STORY_BATTLE_REQ - 1 || req == givenReq)
     {
@@ -708,6 +714,32 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
   // TODO: Try fixing intros/outros
+  uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+  uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+  for (int i = 2000; i < reqCount; i++) // I know targetReq is first seen after index 2000
+  {
+    uintptr_t requirement = reqHeader + i * Sizes::Moveset::Requirement;
+    int req = Game.readInt32(requirement);
+    if (req == 755)
+    {
+      Game.write(requirement + 4, bossCode);
+    }
+  }
+  // Rage Art init (0xa02e070b)
+  int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
+  uintptr_t addr = getMoveAddress(moveset, 0xa02e070b, defaultAliasIdx - 20);
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+  // Rage Art throw (0x0xfe2cd621)
+  addr = getMoveAddress(moveset, 0xfe2cd621, defaultAliasIdx - 15);
+  // 1st extraprop
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+  // 5th extraprop
+  addr += 4 * Sizes::Moveset::ExtraMoveProperty;
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+
+  Game.writeString(moveset + 8, "ALI");
   return true;
 }
 
@@ -781,4 +813,11 @@ bool isMovesetEdited(uintptr_t moveset)
 {
   std::string str = Game.ReadString(moveset + 8, 3);
   return str.compare("ALI") == 0;
+}
+
+// Checks if it's eligible to load the boss character
+bool isEligible(uintptr_t matchStructAddr)
+{
+  int value = Game.readInt32(matchStructAddr);
+  return value == 1 || value == 6;
 }
