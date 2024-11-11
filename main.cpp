@@ -4,6 +4,7 @@
 #include <conio.h>
 #include <unistd.h>
 #include <limits>
+#include <algorithm>
 
 using namespace Tekken;
 
@@ -347,6 +348,10 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   else if (charId == 35)
   {
     return loadHeihachi(moveset, bossCode);
+  }
+  else if (charId == 117)
+  {
+    return loadAngelJin(moveset, bossCode);
   }
   else if (charId == 118)
   {
@@ -706,6 +711,9 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
   // TODO: Try fixing intros/outros
+  adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
+
+  Game.writeString(moveset + 8, "ALI");
   return true;
 }
 
@@ -718,6 +726,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
   addr = addr + Sizes::Moveset::Cancel * 22; // 23rd cancel
   addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
   disableStoryRelatedReqs(addr, 473);
+
   Game.writeString(moveset + 8, "ALI");
   return true;
 }
