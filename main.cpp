@@ -749,13 +749,24 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
+  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
+    rawIdx = (i % 8) - 4;
     uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-    uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-    if ((int)decryptedValue == moveNameKey)
-      return addr;
+    if (rawIdx > -1)
+    {
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return addr;
+    }
+    else
+    {
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
+        return addr;
+    }
   }
   return 0;
 }
