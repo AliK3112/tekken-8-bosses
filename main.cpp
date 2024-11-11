@@ -27,6 +27,15 @@ int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
 int SIDE_SELECTED = 0;
 
+std::vector<int> STORY_REQS = {
+  667, // Story Fight
+  668, // Story Battle Number
+  777, // Story Flags
+  801, // (DLC) Story Fight
+  802, // (DLC) Story Battle Number
+  806, // (DLC) Story Flags
+};
+
 struct EncryptedValue
 {
   uintptr_t value;
@@ -55,6 +64,7 @@ bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
+void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 
 int main()
 {
@@ -356,7 +366,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
     int req = Game.readUInt32(addr);
     if (req == END_REQ)
       break;
-    if (req == STORY_BATTLE_REQ || req == STORY_BATTLE_REQ - 1 || req == givenReq)
+    if (std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end())
     {
       Game.write<uintptr_t>(addr, 0);
     }
@@ -701,6 +711,7 @@ bool loadAngelJin(uintptr_t moveset, int bossCode)
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
+  adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
   addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel address
@@ -714,17 +725,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
   // TODO: Try fixing intros/outros
-  uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
-  uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
-  for (int i = 2000; i < reqCount; i++) // I know targetReq is first seen after index 2000
-  {
-    uintptr_t requirement = reqHeader + i * Sizes::Moveset::Requirement;
-    int req = Game.readInt32(requirement);
-    if (req == 755)
-    {
-      Game.write(requirement + 4, bossCode);
-    }
-  }
+  adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
   // Rage Art init (0xa02e070b)
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = getMoveAddress(moveset, 0xa02e070b, defaultAliasIdx - 20);
@@ -820,4 +821,19 @@ bool isEligible(uintptr_t matchStructAddr)
 {
   int value = Game.readInt32(matchStructAddr);
   return value == 1 || value == 6;
+}
+
+void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
+{
+  uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+  uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+  for (int i = start; i < reqCount; i++)
+  {
+    uintptr_t requirement = reqHeader + i * Sizes::Moveset::Requirement;
+    int req = Game.readInt32(requirement);
+    if (req == 755)
+    {
+      Game.write(requirement + 4, bossCode);
+    }
+  }
 }
