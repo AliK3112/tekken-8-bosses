@@ -733,14 +733,33 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
-  // TODO: Try fixing intros/outros
-  adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
-  // Rage Art init (0xa02e070b)
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
-  uintptr_t addr = getMoveAddress(moveset, 0xa02e070b, defaultAliasIdx - 20);
+  uintptr_t addr = 0;
+  adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
+
+  // Adjusting winposes
+  {
+    int enderId = getMoveId(moveset, 0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
+    // Grabbing ID of the first intro from alias 0x8000
+    addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr += Sizes::Moveset::Cancel; // 2nd Cancel
+    int start = Game.readUInt16(addr + Offsets::Cancel::Move);
+
+    uintptr_t cancel = 0;
+    addr = getMoveAddress(moveset, 0xD9CDC1C0, start);
+    for (int i = 0; i < 3; i++)
+    {
+      cancel = Game.readUInt64(addr + Offsets::Move::CancelList);
+      Game.write<int16_t>(cancel + Offsets::Cancel::Move, enderId);
+      addr += Sizes::Moveset::Move;
+    }
+  }
+  // Rage Art init (0xa02e070b)
+  addr = getMoveAddress(moveset, 0xa02e070b, defaultAliasIdx - 20);
   addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
   disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
-  // Rage Art throw (0x0xfe2cd621)
+  // Rage Art throw (0xfe2cd621)
   addr = getMoveAddress(moveset, 0xfe2cd621, defaultAliasIdx - 15);
   // 1st extraprop
   addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
@@ -793,12 +812,25 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readUInt64(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
+  uintptr_t addr = 0;
+  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(movesHead + i * Sizes::Moveset::Move);
-    uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-    if ((int)decryptedValue == moveNameKey)
-      return i;
+    rawIdx = (i % 8) - 4;
+    addr = movesHead + i * Sizes::Moveset::Move;
+    if (rawIdx > -1)
+    {
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return i;
+    }
+    else
+    {
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
+        return i;
+    }
   }
   return -1;
 }
@@ -847,10 +879,12 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
 {
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+  uintptr_t requirement = 0;
+  int req = -1;
   for (int i = start; i < reqCount; i++)
   {
-    uintptr_t requirement = reqHeader + i * Sizes::Moveset::Requirement;
-    int req = Game.readInt32(requirement);
+    requirement = reqHeader + i * Sizes::Moveset::Requirement;
+    req = Game.readInt32(requirement);
     if (req == 755)
     {
       Game.write(requirement + 4, bossCode);
