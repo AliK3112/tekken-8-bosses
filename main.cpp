@@ -4,6 +4,7 @@
 #include <conio.h>
 #include <unistd.h>
 #include <limits>
+#include <algorithm>
 
 using namespace Tekken;
 
@@ -24,7 +25,17 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 bool IS_WRITTEN = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
+int END_REQ = 1100;
 int SIDE_SELECTED = 0;
+
+std::vector<int> STORY_REQS = {
+  667, // Story Fight
+  668, // Story Battle Number
+  777, // Story Flags
+  801, // (DLC) Story Fight
+  802, // (DLC) Story Battle Number
+  806, // (DLC) Story Flags
+};
 
 struct EncryptedValue
 {
@@ -53,6 +64,8 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
+bool isEligible(uintptr_t matchStruct);
+void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 
 int main()
 {
@@ -188,7 +201,7 @@ void mainFunc(int bossCode)
       continue;
     }
 
-    if (Game.readInt32(matchStructAddr) != 1 && Game.readInt32(matchStructAddr) != 6)
+    if (!isEligible(matchStructAddr))
     {
       continue;
     }
@@ -290,7 +303,7 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode)
   default:
     return;
   }
-  if (charId != -1) {
+  if (charId != -1 && isEligible(matchStructAddr)) {
     Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
     if (charId == BossCodes::DevilJin) loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
     // for (int i = 0; i < 100; i++) {
@@ -336,9 +349,17 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   {
     return loadHeihachi(moveset, bossCode);
   }
+  else if (charId == 117)
+  {
+    return loadAngelJin(moveset, bossCode);
+  }
   else if (charId == 118)
   {
     return loadTrueDevilKazuya(moveset, bossCode);
+  }
+  else if (charId == 121)
+  {
+    return loadStoryDevilJin(moveset, bossCode);
   }
   return true;
 }
@@ -348,9 +369,9 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
   for (uintptr_t addr = requirements; true; addr += Sizes::Requirement)
   {
     int req = Game.readUInt32(addr);
-    if (req == 1100)
+    if (req == END_REQ)
       break;
-    if (req == STORY_BATTLE_REQ || req == STORY_BATTLE_REQ - 1 || req == givenReq)
+    if (std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end())
     {
       Game.write<uintptr_t>(addr, 0);
     }
@@ -365,7 +386,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
 
   // Adjusting Rage Art
   uintptr_t rageArt = getMoveAddress(moveset, 0x9BAE061E, 2100);
-  if (rageArt)
+  if (rageArt && bossCode != 0)
   {
     uintptr_t cancel = Game.readUInt64(rageArt + Offsets::Move::CancelList);
     int regularRA = getMoveId(moveset, 0x1ADAB0CB, 2000);
@@ -379,7 +400,11 @@ bool loadJin(uintptr_t moveset, int bossCode)
   {
   case 0:
   {
-    disableRequirements(moveset, STORY_BATTLE_REQ, 17);
+    // d/b+1+2 (0x9b789d36)
+    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    disableStoryRelatedReqs(addr);
   }
   break;
   case 1:
@@ -690,24 +715,64 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
   // TODO: Try fixing intros/outros
+  adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
+
+  Game.writeString(moveset + 8, "ALI");
   return true;
 }
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
+  adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
   addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel address
   addr = addr + Sizes::Moveset::Cancel * 22; // 23rd cancel
   addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
   disableStoryRelatedReqs(addr, 473);
+
   Game.writeString(moveset + 8, "ALI");
   return true;
 }
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
-  // TODO: Try fixing intros/outros
+  int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
+  uintptr_t addr = 0;
+  adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
+
+  // Adjusting winposes
+  {
+    int enderId = getMoveId(moveset, 0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
+    // Grabbing ID of the first intro from alias 0x8000
+    addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr += Sizes::Moveset::Cancel; // 2nd Cancel
+    int start = Game.readUInt16(addr + Offsets::Cancel::Move);
+
+    uintptr_t cancel = 0;
+    addr = getMoveAddress(moveset, 0xD9CDC1C0, start);
+    for (int i = 0; i < 3; i++)
+    {
+      cancel = Game.readUInt64(addr + Offsets::Move::CancelList);
+      Game.write<int16_t>(cancel + Offsets::Cancel::Move, enderId);
+      addr += Sizes::Moveset::Move;
+    }
+  }
+  // Rage Art init (0xa02e070b)
+  addr = getMoveAddress(moveset, 0xa02e070b, defaultAliasIdx - 20);
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+  // Rage Art throw (0xfe2cd621)
+  addr = getMoveAddress(moveset, 0xfe2cd621, defaultAliasIdx - 15);
+  // 1st extraprop
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+  // 5th extraprop
+  addr += 4 * Sizes::Moveset::ExtraMoveProperty;
+  disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
+
+  Game.writeString(moveset + 8, "ALI");
   return true;
 }
 
@@ -716,13 +781,24 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
+  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
+    rawIdx = (i % 8) - 4;
     uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-    uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-    if ((int)decryptedValue == moveNameKey)
-      return addr;
+    if (rawIdx > -1)
+    {
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return addr;
+    }
+    else
+    {
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
+        return addr;
+    }
   }
   return 0;
 }
@@ -740,12 +816,25 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readUInt64(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
+  uintptr_t addr = 0;
+  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(movesHead + i * Sizes::Moveset::Move);
-    uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-    if ((int)decryptedValue == moveNameKey)
-      return i;
+    rawIdx = (i % 8) - 4;
+    addr = movesHead + i * Sizes::Moveset::Move;
+    if (rawIdx > -1)
+    {
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return i;
+    }
+    else
+    {
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
+        return i;
+    }
   }
   return -1;
 }
@@ -781,4 +870,28 @@ bool isMovesetEdited(uintptr_t moveset)
 {
   std::string str = Game.ReadString(moveset + 8, 3);
   return str.compare("ALI") == 0;
+}
+
+// Checks if it's eligible to load the boss character
+bool isEligible(uintptr_t matchStructAddr)
+{
+  int value = Game.readInt32(matchStructAddr);
+  return value == 1 || value == 6;
+}
+
+void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
+{
+  uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+  uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+  uintptr_t requirement = 0;
+  int req = -1;
+  for (int i = start; i < reqCount; i++)
+  {
+    requirement = reqHeader + i * Sizes::Moveset::Requirement;
+    req = Game.readInt32(requirement);
+    if (req == 755)
+    {
+      Game.write(requirement + 4, bossCode);
+    }
+  }
 }
