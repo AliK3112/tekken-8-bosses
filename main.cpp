@@ -70,11 +70,11 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 
 int main()
 {
-  int bossCode = BossCodes::Azazel;
+  int bossCode = -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
-    // SIDE_SELECTED = getSideSelection();
+    SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
     // Validating the function address
@@ -84,7 +84,7 @@ int main()
       _getch();
       return 0;
     }
-    // bossCode = takeInput();
+    bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
   }
@@ -266,7 +266,8 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
   case BossCodes::NerfedJin:
   case BossCodes::DevilKazuya:
   case BossCodes::FinalHeihachi:
-    loadCostume(matchStructAddr, 0, "\0");
+  case BossCodes::Azazel:
+    loadCostume(matchStructAddr, 0, "");
     break;
   case BossCodes::ChainedJin:
     loadCostume(matchStructAddr, 51, CHAINED_JIN_COSTUME_PATH);
@@ -293,30 +294,23 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode)
   int currCharId = Game.readInt32(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84);
   switch (bossCode)
   {
-  case BossCodes::AngelJin:
-    charId = BossCodes::AngelJin;
-    // charId = currCharId == 6 ? BossCodes::AngelJin : -1;
-    break;
-  case BossCodes::TrueDevilKazuya:
-    charId = BossCodes::TrueDevilKazuya;
-    // charId = currCharId == 8 ? BossCodes::TrueDevilKazuya : -1;
-    break;
-  case BossCodes::DevilJin:
-    charId = BossCodes::DevilJin;
-    // charId = currCharId == 12 ? BossCodes::DevilJin : -1;
-    break;
+  // In these cases, the bossCode is the chara ID itself
   case BossCodes::Azazel:
-    charId = BossCodes::Azazel;
+  case BossCodes::AngelJin:
+  case BossCodes::TrueDevilKazuya:
+  case BossCodes::DevilJin:
+    charId = bossCode;
+    break;
   default:
     return;
   }
-  if (charId != -1 && isEligible(matchStructAddr)) {
+  if (charId != -1 && isEligible(matchStructAddr))
+  {
     Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
-    if (charId == BossCodes::DevilJin) loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
-    // for (int i = 0; i < 100; i++) {
-    //   sleep(10);
-    //   Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
-    // }
+    if (charId == BossCodes::DevilJin)
+    {
+      loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
+    }
   }
 }
 
@@ -340,11 +334,11 @@ bool disableRequirements(uintptr_t moveset, int targetReq, int targetParam)
 bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
 {
   int charId = Game.readInt32(playerAddr + 0x168);
-  if (charId == 6)
+
+  switch (charId)
   {
-    return loadJin(moveset, bossCode);
-  }
-  else if (charId == 8)
+  case 6: return loadJin(moveset, bossCode);
+  case 8:
   {
     if (bossCode == 97)
     {
@@ -352,27 +346,13 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
     }
     return loadKazuya(moveset, bossCode);
   }
-  else if (charId == 32)
-  {
-    return loadAzezel(moveset, bossCode);
+  case 32: return loadAzezel(moveset, bossCode);
+  case 35: return loadHeihachi(moveset, bossCode);
+  case 117: return loadAngelJin(moveset, bossCode);
+  case 118: return loadTrueDevilKazuya(moveset, bossCode);
+  case 121: return loadStoryDevilJin(moveset, bossCode);
+  default: return true;
   }
-  else if (charId == 35)
-  {
-    return loadHeihachi(moveset, bossCode);
-  }
-  else if (charId == 117)
-  {
-    return loadAngelJin(moveset, bossCode);
-  }
-  else if (charId == 118)
-  {
-    return loadTrueDevilKazuya(moveset, bossCode);
-  }
-  else if (charId == 121)
-  {
-    return loadStoryDevilJin(moveset, bossCode);
-  }
-  return true;
 }
 
 void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
