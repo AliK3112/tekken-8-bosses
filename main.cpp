@@ -107,20 +107,27 @@ void storeAddresses()
 
 int getSideSelection()
 {
-  int selectedSide;
+  int selectedSide = 0;
   while (true)
   {
-    std::cout << "\nWhich side do you want to activate this script for? Enter 0 for Left side and 1 for Right side: ";
-    std::cin >> selectedSide;
-    if (std::cin.fail() || (selectedSide != 0 && selectedSide != 1))
+    std::cout << "\nWhich side do you want to activate this script for?\n";
+    std::cout << "For Left side press 'L' or '0'\n";
+    std::cout << "For Right side press 'R' or '1'\n";
+    char input = _getch();
+
+    if (input == '0' || input == '1')
     {
-      std::cin.clear();                                                   // clear the error flag
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // discard invalid input
-      std::cout << "Invalid input! Please enter 0 or 1." << std::endl;
+      selectedSide = input - '0';
+      break;
+    }
+    else if (input == 'L' || input == 'l' || input == 'R' || input == 'r')
+    {
+      selectedSide = (input | 0x20) == 'r';
+      break;
     }
     else
     {
-      break;
+      std::cout << "\nInvalid input! Please press 'L', 'R', '0' or '1'\n";
     }
   }
   return selectedSide;
@@ -128,8 +135,8 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("Select the Jin that you want to play as\n");
-  printf("Please note, this script only works for offline mods and for player 1\n");
+  printf("Select the Boss that you want to play as\n");
+  printf("Please note, this script only works for Practice and Versus Modes\n");
   printf("1. Devil-powered Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
   printf("3. Chained Jin from Chapter 12 Battle 3\n");
