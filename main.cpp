@@ -69,7 +69,7 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 
 int main()
 {
-  int bossCode = BossCodes::DevilJin;
+  int bossCode = -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
@@ -386,7 +386,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
 
   // Adjusting Rage Art
   uintptr_t rageArt = getMoveAddress(moveset, 0x9BAE061E, 2100);
-  if (rageArt)
+  if (rageArt && bossCode != 0)
   {
     uintptr_t cancel = Game.readUInt64(rageArt + Offsets::Move::CancelList);
     int regularRA = getMoveId(moveset, 0x1ADAB0CB, 2000);
@@ -400,7 +400,11 @@ bool loadJin(uintptr_t moveset, int bossCode)
   {
   case 0:
   {
-    disableRequirements(moveset, STORY_BATTLE_REQ, 17);
+    // d/b+1+2 (0x9b789d36)
+    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865);
+    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    disableStoryRelatedReqs(addr);
   }
   break;
   case 1:
