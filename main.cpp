@@ -701,6 +701,9 @@ bool loadAzezel(uintptr_t moveset, int bossCode)
   addr += Sizes::Moveset::Requirement; // 3rd req
   Game.write<int>(addr, 679);
   Game.write<int>(addr + 4, 0);
+
+  Game.writeString(moveset + 8, "ALI");
+  return true;
 }
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
