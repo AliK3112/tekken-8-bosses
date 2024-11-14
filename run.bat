@@ -1,1 +1,1 @@
-g++ -O2 -s -static -o main.exe main.cpp && main
+g++ -O2 -s -static -o tekken8_bosses.exe main.cpp && tekken8_bosses
