@@ -12,6 +12,7 @@ enum BossCodes {
   KazamaJin, // 3
   FinalJin, // 4
   ChainedJin = 11,
+  Azazel = 32,
   DevilKazuya = 97,
   AngelJin = 117,
   TrueDevilKazuya = 118,

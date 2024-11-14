@@ -54,6 +54,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
 void loadCharacter(uintptr_t matchStructAddr, int bossCode);
 bool loadJin(uintptr_t moveset, int bossCode);
 bool loadKazuya(uintptr_t moveset, int bossCode);
+bool loadAzezel(uintptr_t moveset, int bossCode);
 bool loadHeihachi(uintptr_t moveset, int bossCode);
 bool loadAngelJin(uintptr_t moveset, int bossCode);
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode);
@@ -69,11 +70,11 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 
 int main()
 {
-  int bossCode = -1;
+  int bossCode = BossCodes::Azazel;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
-    SIDE_SELECTED = getSideSelection();
+    // SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
     // Validating the function address
@@ -83,7 +84,7 @@ int main()
       _getch();
       return 0;
     }
-    bossCode = takeInput();
+    // bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
   }
@@ -141,6 +142,7 @@ int takeInput()
   printf("A. Angel Jin\n");
   printf("B. True Devil Kazuya\n");
   printf("C. Story Devil Jin\n");
+  printf("D. Azazel\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -172,6 +174,9 @@ int takeInput()
   case 'C':
   case 'c':
     return BossCodes::DevilJin;
+  case 'D':
+  case 'd':
+    return BossCodes::Azazel;
   default:
     return -1;
   }
@@ -300,6 +305,8 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode)
     charId = BossCodes::DevilJin;
     // charId = currCharId == 12 ? BossCodes::DevilJin : -1;
     break;
+  case BossCodes::Azazel:
+    charId = BossCodes::Azazel;
   default:
     return;
   }
@@ -344,6 +351,10 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
       Game.write<int>(playerAddr + PERMA_DEVIL_OFFSET, 1);
     }
     return loadKazuya(moveset, bossCode);
+  }
+  else if (charId == 32)
+  {
+    return loadAzezel(moveset, bossCode);
   }
   else if (charId == 35)
   {
@@ -675,6 +686,21 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     return true;
   }
   return true;
+}
+
+bool loadAzezel(uintptr_t moveset, int bossCode)
+{
+  int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
+  uintptr_t addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+  addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel
+  addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList); // 1st req
+  Game.write<int>(addr + 4, 8);
+  addr += Sizes::Moveset::Requirement; // 2nd req
+  Game.write<int>(addr, 675);
+  Game.write<int>(addr + 4, 0);
+  addr += Sizes::Moveset::Requirement; // 3rd req
+  Game.write<int>(addr, 679);
+  Game.write<int>(addr + 4, 0);
 }
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
