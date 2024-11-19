@@ -67,6 +67,9 @@ bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
+uintptr_t getMoveNthCancel(uintptr_t move, int n);
+uintptr_t getMoveNthCancelReqAddr(uintptr_t move, int n);
+uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 
 int main()
 {
@@ -369,7 +372,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
     int req = Game.readUInt32(addr);
     if (req == END_REQ)
       break;
-    if (std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end())
+    if ((std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end()) || req == givenReq)
     {
       Game.write<uintptr_t>(addr, 0);
     }
@@ -458,7 +461,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
 
   // Chapter 6 Devil Kazuya
-  if (bossCode == 97)
+  if (bossCode == BossCodes::DevilKazuya)
   {
     // Enabling permanent Devil form
     uintptr_t movesHeader = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
@@ -470,42 +473,37 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Disabling some requirements for basic attacks
     // 0x8000 alias
     addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 32th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 31) + Offsets::Cancel::RequirementsList), 777);
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 31), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);  // cancel list
-    // 1st cancel
-    disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::Cancel::RequirementsList));
-    // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 2) + Offsets::Cancel::RequirementsList));
+    // 2nd cancel
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 1));
+    // 4th cancel
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 3));
 
     // 1,1,2
     addr = getMoveAddress(moveset, 0x2226A9EE, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 2) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 2));
 
     // Juggle Escape
     addr = getMoveAddress(moveset, 0xDEBED999, 5);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 6th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 6) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 6));
     // 7th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 7) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 7));
 
     // f,f+2
     addr = getMoveAddress(moveset, 0x1A571FA1, 2000);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 20th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 21) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 21));
     // 21st cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 22) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 22));
 
     // d/b+1+2
     addr = getMoveAddress(moveset, 0x73EBDBA2, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
+    addr = getMoveNthCancel(addr, 0); // 1st cancel
     // 3rd cancel
     {
       uintptr_t req0 = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
@@ -514,11 +512,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/b+4
     addr = getMoveAddress(moveset, 0x9364E2F5, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel list
-    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList); // req list
     // 1st cancel
-    disableStoryRelatedReqs(addr);
-    // Disabling standing req
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 0));
+    // Disabling standing req  
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
     Game.writeString(moveset + 8, "ALI");
@@ -531,8 +527,8 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // requirements
     uintptr_t start = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
     uintptr_t count = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
-    for (uintptr_t i = 0; i < count; i++)
-    {
+    for (uintptr_t i = 4530; i < count - 2000; i++) // I know around req 4530 these requirements first appear
+    { //4534, 4660 // 4794, 4803 (indexes for these props that I found)
       uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
       int req = Game.readUInt32(addr);
       int param = Game.readUInt32(addr + 4);
@@ -546,7 +542,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // extraprops
     start = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
     count = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
-    for (uintptr_t i = 0; i < count; i++)
+    for (uintptr_t i = 2200; i < count; i++) // First time they appear is at around idx 2275
     {
       uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
       int prop = Game.readUInt32(addr + Offsets::ExtraProp::Prop);
@@ -561,7 +557,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Single-spin uppercut
     uintptr_t addr = getMoveAddress(moveset, 0xD172C176, idleStanceIdx); // B+1+4
     // 2nd cancel
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
+    addr = getMoveNthCancel(addr, 1);
     Game.write<int>(addr, 0x10);
     Game.write<short>(addr + Offsets::Cancel::Option, 0x50);
 
@@ -569,16 +565,15 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Ultra-wavedash
     addr = getMoveAddress(moveset, 0x77314B09, idleStanceIdx); // 2
     // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
+    addr = getMoveNthCancel(addr, 1);
     Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
 
     // CD+1+2
     addr = getMoveAddress(moveset, 0x0C9CE140, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     // Storing the story cancel req
-    uintptr_t storyReq = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    uintptr_t storyReq = getMoveNthCancelReqAddr(addr, 0);
     // Replacing 1st cancel requirement list index
-    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+    Game.write<uintptr_t>(getMoveNthCancel(addr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
 
     // ff2
     // addr = getMoveAddress(moveset, 0xC00BB85A, idleStanceIdx); // 2
@@ -589,25 +584,23 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // b+2,2
     addr = getMoveAddress(moveset, 0x8B5BFA6C, idleStanceIdx); // 2nd hit of b+2,2
     // Replacing 1st cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+    Game.write<uintptr_t>(getMoveNthCancel(addr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
 
     // NEW b+2,2. Disabling laser cancel
     addr = getMoveAddress(moveset, 0x8FE28C6A, defaultAliasIdx); // 2nd hit of b+2,2
-    // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
-    if (Game.readInt32(storyReq) == STORY_BATTLE_REQ)
     {
-      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, storyReq);
+      addr = getMoveNthCancel(addr, 1); // 2nd cancel
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 60);
+      Game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
     }
 
     // Disabling u/b+1+2 laser
     // key ub1: 0x1376C644
     // key ub1+2: 0x07F32E0C
     addr = getMoveAddress(moveset, 0x07F32E0C, 2000); // u/b+1+2
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 16;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 16);
       int moveId = getMoveId(moveset, 0x1376C644, idleStanceIdx);
       // Making a cancel to u/b+1 on frame 1
       Game.write<int>(addr + Offsets::Cancel::RequirementsList, reqHeader);
@@ -619,7 +612,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/f+3+4, 1 key: 0x6562FA84
     addr = getMoveAddress(moveset, 0x6562FA84, idleStanceIdx); // (d/f+3+4),1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
       int moveId = Game.readInt16((addr + Sizes::Moveset::Cancel) + Offsets::Cancel::Move);
       Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
@@ -627,7 +620,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/b+1, 2
     addr = getMoveAddress(moveset, 0xFE501006, idleStanceIdx); // d/b+1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
       // Grabbing move ID from 3rd cancel
       int moveId_db2 = Game.readInt16(addr + (2 * Sizes::Moveset::Cancel) + Offsets::Cancel::Move);
@@ -646,9 +639,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
       // Adjusting d/b+1+2 to cancel into this on frame-1
       int moveId_db1 = getMoveId(moveset, 0xFE501006, moveId_db2);
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 20;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 20);
       addr = getMoveAddress(moveset, 0x73EBDBA2, moveId_db1);
-      addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+      addr = getMoveNthCancel(addr, 0);
       // Adjusting the 1st cancel
       Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
       Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId_db1);
@@ -656,9 +649,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // ws+2
     addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx);                         // d/b+1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel; // 2nd cancel
+    addr = getMoveNthCancel(addr, 1); // 2nd cancel
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 20;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 20);
       int moveId = getMoveId(moveset, 0x0AB42E52, defaultAliasIdx);
       Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
       Game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
@@ -693,6 +686,22 @@ bool loadAzezel(uintptr_t moveset, int bossCode)
   return true;
 }
 
+bool isCorrectParam(int storyFlag, int param)
+{
+  switch (storyFlag)
+  {
+  case 1:
+    return (param >= 0x501 && param < 0x601);
+  case 2:
+    return (param >= 0x601 && param < 0x701);
+  case 3:
+    return (param >= 0x801);
+  default:
+    break;
+  }
+  return false;
+}
+
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
   // if (bossCode != 353) return true;
@@ -712,13 +721,13 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
   int req = 0, param = 0;
-  int targetParam = bossCode - 350;
+  int storyFlag = bossCode - 350;
   for (uintptr_t i = 0; i < reqCount; i++)
   {
     addr = reqHeader + i * Sizes::Moveset::Requirement;
     req = Game.readInt32(addr);
     param = Game.readInt32(addr + 4);
-    if ((req == 806 && param == targetParam) || req == 801 || (req == 802 && param >= 2049))
+    if ((req == 806 && param == storyFlag) || req == 801 || (req == 802 && isCorrectParam(storyFlag, param)))
     {
       Game.write<int64_t>(addr, 0);
     }
@@ -910,4 +919,20 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
       Game.write(requirement + 4, bossCode);
     }
   }
+}
+
+uintptr_t getMoveNthCancel(uintptr_t move, int n)
+{
+  return Game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n;
+}
+
+uintptr_t getMoveNthCancelReqAddr(uintptr_t move, int n)
+{
+  uintptr_t cancel = getMoveNthCancel(move, n);
+  return Game.readUInt64(cancel + Offsets::Cancel::RequirementsList);
+}
+
+uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n)
+{
+  return Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
 }
