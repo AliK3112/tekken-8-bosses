@@ -22,7 +22,7 @@ std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
 
-bool IS_WRITTEN = false;
+bool DEV_MODE = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
@@ -73,11 +73,11 @@ uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 
 int main()
 {
-  int bossCode = -1;
+  int bossCode = DEV_MODE ? BossCodes::RegularJin : -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
-    SIDE_SELECTED = getSideSelection();
+    if (!DEV_MODE) SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
     // Validating the function address
@@ -87,7 +87,7 @@ int main()
       _getch();
       return 0;
     }
-    bossCode = takeInput();
+    if (!DEV_MODE) bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
   }
@@ -403,9 +403,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
   {
     // d/b+1+2 (0x9b789d36)
     uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-    disableStoryRelatedReqs(addr);
+    disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 0));
   }
   break;
   case 1:
@@ -441,8 +439,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
       uintptr_t moveAddr = getMoveAddress(moveset, move.first, move.second);
       if (moveAddr)
       {
-        uintptr_t cancel = Game.readUInt64(moveAddr + Offsets::Move::CancelList);
-        Game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, reqHeader);
+        Game.write<uintptr_t>(getMoveNthCancel(moveAddr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
       }
     }
   }
