@@ -73,7 +73,7 @@ uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::RegularJin : -1;
+  int bossCode = DEV_MODE ? BossCodes::MishimaJin : -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
@@ -765,7 +765,7 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
     int enderId = getMoveId(moveset, 0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
     // Grabbing ID of the first intro from alias 0x8000
     addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
-    addr = getMoveNthCancel(addr, 1) // 2nd Cancel
+    addr = getMoveNthCancel(addr, 1); // 2nd Cancel
     int start = Game.readUInt16(addr + Offsets::Cancel::Move);
 
     uintptr_t cancel = 0;
