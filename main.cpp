@@ -54,7 +54,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
 void loadCharacter(uintptr_t matchStructAddr, int bossCode);
 bool loadJin(uintptr_t moveset, int bossCode);
 bool loadKazuya(uintptr_t moveset, int bossCode);
-bool loadAzezel(uintptr_t moveset, int bossCode);
+bool loadAzazel(uintptr_t moveset, int bossCode);
 bool loadHeihachi(uintptr_t moveset, int bossCode);
 bool loadAngelJin(uintptr_t moveset, int bossCode);
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode);
@@ -356,7 +356,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
     }
     return loadKazuya(moveset, bossCode);
   }
-  case 32: return loadAzezel(moveset, bossCode);
+  case 32: return loadAzazel(moveset, bossCode);
   case 35: return loadHeihachi(moveset, bossCode);
   case 117: return loadAngelJin(moveset, bossCode);
   case 118: return loadTrueDevilKazuya(moveset, bossCode);
@@ -665,7 +665,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   return true;
 }
 
-bool loadAzezel(uintptr_t moveset, int bossCode)
+bool loadAzazel(uintptr_t moveset, int bossCode)
 {
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
@@ -748,10 +748,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
   adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
-  addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel address
-  addr = addr + Sizes::Moveset::Cancel * 22; // 23rd cancel
-  addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-  disableStoryRelatedReqs(addr, 473);
+  disableStoryRelatedReqs(getMoveNthCancelReqAddr(addr, 22), 473); // 23rd cancel
 
   Game.writeString(moveset + 8, "ALI");
   return true;
@@ -768,15 +765,14 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
     int enderId = getMoveId(moveset, 0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
     // Grabbing ID of the first intro from alias 0x8000
     addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    addr += Sizes::Moveset::Cancel; // 2nd Cancel
+    addr = getMoveNthCancel(addr, 1) // 2nd Cancel
     int start = Game.readUInt16(addr + Offsets::Cancel::Move);
 
     uintptr_t cancel = 0;
     addr = getMoveAddress(moveset, 0xD9CDC1C0, start);
     for (int i = 0; i < 3; i++)
     {
-      cancel = Game.readUInt64(addr + Offsets::Move::CancelList);
+      cancel = getMoveNthCancel(addr, 0);
       Game.write<int16_t>(cancel + Offsets::Cancel::Move, enderId);
       addr += Sizes::Moveset::Move;
     }
