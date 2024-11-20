@@ -125,6 +125,23 @@
   - d/b+1, 2 and d/f+3+4, 1, 2 strings use d/b+2 as the last hit
   - Pressing 2 does the Super wavedash
 
+### Monk Heihachi ([Movelist Showcase](https://youtu.be/z4sO4FYiYmU?si=hZ0uQ5lw3xYnf0Gy))
+  - New String: 1, 1, 1 (only when attack hits or blocked)
+  - New String: 1, 1, 4 (only when attack hits or blocked)
+  - 1, 2, 4 last hit changes
+  - New String: 2, 2, 2
+  - New String: 3, 3
+  - Standing 4 now does Spinning Demon
+  - New String: db+2, 3
+  - WGK 2 replaces both WGF & EWGF
+  - 1, b+2, 2 disabled
+  - 1, 2, 2 ~ 1+2 disabled
+  - f+2 ~ 1+2 disabled
+  - df+2, 1 disabled
+  - d+4 stomp disabled
+  - On hit, 2nd Heat Smash comes out as default one
+  - Rage Art changed (Unfortunately, could not be included in the mod)
+
 ### Final Heihachi ([Movelist Showcase](https://youtu.be/OnGgvl0mjRc?si=qylQPTVhdPC7ix3j))
   - u/f+4, 1 can be done without Heat
   - d+3, 2 can be done without Heat
