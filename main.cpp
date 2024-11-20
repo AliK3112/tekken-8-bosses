@@ -361,7 +361,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   case 6: return loadJin(moveset, bossCode);
   case 8:
   {
-    if (bossCode == 97)
+    if (bossCode == BossCodes::DevilKazuya)
     {
       Game.write<int>(playerAddr + PERMA_DEVIL_OFFSET, 1);
     }
@@ -392,7 +392,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
 
 bool loadJin(uintptr_t moveset, int bossCode)
 {
-  int _777param = bossCode == 11 ? 1 : bossCode;
+  int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
   // Disabling requirements
   disableRequirements(moveset, STORY_FLAGS_REQ, _777param);
 
@@ -410,22 +410,21 @@ bool loadJin(uintptr_t moveset, int bossCode)
 
   switch (bossCode)
   {
-  case 0:
+  case BossCodes::RegularJin:
   {
-    // d/b+1+2 (0x9b789d36)
-    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865);
+    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865); // d/b+1+2
     disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
   }
   break;
-  case 1:
+  case BossCodes::NerfedJin:
   {
     // disableRequirements(moveset, 228, 1);
     // disableRequirements(moveset, STORY_BATTLE_REQ - 1, 0);
     // disableRequirements(moveset, STORY_BATTLE_REQ, 33);
   }
   break;
-  case 2:
-  case 3:
+  case BossCodes::MishimaJin:
+  case BossCodes::KazamaJin:
   {
     uintptr_t moveId = getMoveId(moveset, bossCode == 2 ? 0xA33CD19D : 0x7614EF15, 2000);
     if (moveId != 0)
@@ -434,7 +433,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
     }
   }
   break;
-  case 11:
+  case BossCodes::ChainedJin:
   {
     uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
 
@@ -456,7 +455,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
   }
   break;
   default:
-    break;
+    return true;
   }
 
   Game.writeString(moveset + 8, "ALI");
@@ -468,7 +467,6 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
 
-  // Chapter 6 Devil Kazuya
   if (bossCode == BossCodes::DevilKazuya)
   {
     // Enabling permanent Devil form
@@ -526,17 +524,15 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
     Game.writeString(moveset + 8, "ALI");
-    return true;
   }
-  // Devil-less Kazuya
-  if (bossCode == 244)
+  else if (bossCode == BossCodes::FinalKazuya)
   {
     // Go through reqs and props to disable his devil form
     // requirements
     uintptr_t start = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
     uintptr_t count = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
     for (uintptr_t i = 4530; i < count - 2000; i++) // I know around req 4530 these requirements first appear
-    { //4534, 4660 // 4794, 4803 (indexes for these props that I found)
+    { //4534, 4660 // 4794, 4803 (indexes for these props that I found in v1.09)
       uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
       int req = Game.readUInt32(addr);
       int param = Game.readUInt32(addr + 4);
@@ -671,13 +667,13 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     }
 
     Game.writeString(moveset + 8, "ALI");
-    return true;
   }
   return true;
 }
 
 bool loadAzazel(uintptr_t moveset, int bossCode)
 {
+  if (bossCode != BossCodes::Azazel) return true;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
   addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel
@@ -694,7 +690,7 @@ bool loadAzazel(uintptr_t moveset, int bossCode)
   return true;
 }
 
-bool isCorrectParam(int storyFlag, int param)
+bool isCorrectHeihachiFlag(int storyFlag, int param)
 {
   switch (storyFlag)
   {
@@ -712,7 +708,7 @@ bool isCorrectParam(int storyFlag, int param)
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
-  // if (bossCode != 353) return true;
+  if (bossCode / 10 != 35) return true;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = 0;
@@ -735,7 +731,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
     addr = reqHeader + i * Sizes::Moveset::Requirement;
     req = Game.readInt32(addr);
     param = Game.readInt32(addr + 4);
-    if ((req == 806 && param == storyFlag) || req == 801 || (req == 802 && isCorrectParam(storyFlag, param)))
+    if ((req == 806 && param == storyFlag) || req == 801 || (req == 802 && isCorrectHeihachiFlag(storyFlag, param)))
     {
       Game.write<int64_t>(addr, 0);
     }
@@ -747,7 +743,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
-  // TODO: Try fixing intros/outros
+  if (bossCode != BossCodes::Azazel) return true;
   adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
   Game.writeString(moveset + 8, "ALI");
