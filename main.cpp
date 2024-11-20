@@ -71,6 +71,7 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
+bool markMovesetEdited(uintptr_t moveset);
 
 int main()
 {
@@ -458,8 +459,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
     return true;
   }
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadKazuya(uintptr_t moveset, int bossCode)
@@ -523,7 +523,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Disabling standing req  
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
-    Game.writeString(moveset + 8, "ALI");
+    markMovesetEdited(moveset);
   }
   else if (bossCode == BossCodes::FinalKazuya)
   {
@@ -666,7 +666,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
 
-    Game.writeString(moveset + 8, "ALI");
+    markMovesetEdited(moveset);
   }
   return true;
 }
@@ -686,8 +686,7 @@ bool loadAzazel(uintptr_t moveset, int bossCode)
   Game.write<int>(addr, 679);
   Game.write<int>(addr + 4, 0);
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool isCorrectHeihachiFlag(int storyFlag, int param)
@@ -737,8 +736,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
     }
   }
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadAngelJin(uintptr_t moveset, int bossCode)
@@ -746,8 +744,7 @@ bool loadAngelJin(uintptr_t moveset, int bossCode)
   if (bossCode != BossCodes::AngelJin) return true;
   adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
@@ -758,8 +755,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
   disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 22), 473); // 23rd cancel
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
@@ -799,8 +795,7 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
   addr += 4 * Sizes::Moveset::ExtraMoveProperty;
   disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
@@ -937,4 +932,17 @@ uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n)
 {
   return Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
+}
+
+bool markMovesetEdited(uintptr_t moveset)
+{
+  try
+  {
+    Game.writeString(moveset + 8, "ALI");
+    return true;
+  }
+  catch (...)
+  {
+    return false;
+  }
 }
