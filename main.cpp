@@ -21,8 +21,9 @@ std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_a
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 
-bool IS_WRITTEN = false;
+bool DEV_MODE = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
@@ -54,6 +55,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
 void loadCharacter(uintptr_t matchStructAddr, int bossCode);
 bool loadJin(uintptr_t moveset, int bossCode);
 bool loadKazuya(uintptr_t moveset, int bossCode);
+bool loadAzazel(uintptr_t moveset, int bossCode);
 bool loadHeihachi(uintptr_t moveset, int bossCode);
 bool loadAngelJin(uintptr_t moveset, int bossCode);
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode);
@@ -66,14 +68,18 @@ bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
+uintptr_t getMoveNthCancel(uintptr_t move, int n);
+uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
+uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
+bool markMovesetEdited(uintptr_t moveset);
 
 int main()
 {
-  int bossCode = -1;
+  int bossCode = DEV_MODE ? BossCodes::FinalHeihachi : -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
-    SIDE_SELECTED = getSideSelection();
+    if (!DEV_MODE) SIDE_SELECTED = getSideSelection();
     addresses = readKeyValuePairs("addresses.txt");
     storeAddresses();
     // Validating the function address
@@ -83,7 +89,7 @@ int main()
       _getch();
       return 0;
     }
-    bossCode = takeInput();
+    if (!DEV_MODE) bossCode = takeInput();
     if (bossCode != -1)
       mainFunc(bossCode);
   }
@@ -106,20 +112,27 @@ void storeAddresses()
 
 int getSideSelection()
 {
-  int selectedSide;
+  int selectedSide = 0;
   while (true)
   {
-    std::cout << "\nWhich side do you want to activate this script for? Enter 0 for Left side and 1 for Right side: ";
-    std::cin >> selectedSide;
-    if (std::cin.fail() || (selectedSide != 0 && selectedSide != 1))
+    std::cout << "\nWhich side do you want to activate this script for?\n";
+    std::cout << "For Left side press 'L' or '0'\n";
+    std::cout << "For Right side press 'R' or '1'\n";
+    char input = _getch();
+
+    if (input == '0' || input == '1')
     {
-      std::cin.clear();                                                   // clear the error flag
-      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // discard invalid input
-      std::cout << "Invalid input! Please enter 0 or 1." << std::endl;
+      selectedSide = input - '0';
+      break;
+    }
+    else if (input == 'L' || input == 'l' || input == 'R' || input == 'r')
+    {
+      selectedSide = (input | 0x20) == 'r';
+      break;
     }
     else
     {
-      break;
+      std::cout << "\nInvalid input! Please press 'L', 'R', '0' or '1'\n";
     }
   }
   return selectedSide;
@@ -127,8 +140,8 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("Select the Jin that you want to play as\n");
-  printf("Please note, this script only works for offline mods and for player 1\n");
+  printf("**NOTE**, this script only works for Practice and Versus Modes\n");
+  printf("\nSelect the Boss that you want to play as\n");
   printf("1. Devil-powered Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
   printf("3. Chained Jin from Chapter 12 Battle 3\n");
@@ -137,10 +150,12 @@ int takeInput()
   printf("6. Awakened Jin from Chapter 15 Final Battle\n");
   printf("7. Devil Kazuya from Chapter 6\n");
   printf("8. Final Battle Kazuya\n");
-  printf("9. Heihachi from Story DLC Finale\n");
-  printf("A. Angel Jin\n");
-  printf("B. True Devil Kazuya\n");
-  printf("C. Story Devil Jin\n");
+  printf("9. Monk/Amnesia Heihachi from Story DLC\n");
+  printf("A. Heihachi from Story DLC Finale\n");
+  printf("B. Angel Jin\n");
+  printf("C. True Devil Kazuya\n");
+  printf("D. Story Devil Jin\n");
+  printf("E. Azazel\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -162,16 +177,22 @@ int takeInput()
   case '8':
     return BossCodes::FinalKazuya;
   case '9':
-    return BossCodes::FinalHeihachi;
+    return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
-    return BossCodes::AngelJin;
+    return BossCodes::FinalHeihachi;
   case 'B':
   case 'b':
-    return BossCodes::TrueDevilKazuya;
+    return BossCodes::AngelJin;
   case 'C':
   case 'c':
+    return BossCodes::TrueDevilKazuya;
+  case 'D':
+  case 'd':
     return BossCodes::DevilJin;
+  case 'E':
+  case 'e':
+    return BossCodes::Azazel;
   default:
     return -1;
   }
@@ -181,7 +202,7 @@ int takeInput()
 void mainFunc(int bossCode)
 {
   // system("cls");
-  printf("Please load into your Game mode now, the Game will automatically detect & load the altered moveset\n");
+  printf("Please load into the game with the appropriate character, the Game will automatically detect & load the altered moveset\n");
   bool isWritten = false;
   bool flag = false;
   uintptr_t matchStructAddr = Game.getAddress({(DWORD)MATCH_STRUCT_OFFSET, 0x50, 0x8, 0x18, 0x8});
@@ -219,6 +240,7 @@ void mainFunc(int bossCode)
     uintptr_t movesetAddr = Game.ReadUnsignedLong(playerAddr + MOVESET_OFFSET);
     if (movesetAddr == 0)
     {
+      flag = false;
       isWritten = false;
       continue;
     }
@@ -255,31 +277,38 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
 {
   if (!matchStructAddr)
     return;
+  std::string costumePath;
   switch (bossCode)
   {
   case BossCodes::RegularJin:
   case BossCodes::NerfedJin:
   case BossCodes::DevilKazuya:
   case BossCodes::FinalHeihachi:
-    loadCostume(matchStructAddr, 0, "\0");
-    break;
+  case BossCodes::Azazel:
+  case BossCodes::AngelJin:
+  case BossCodes::TrueDevilKazuya:
+    return loadCostume(matchStructAddr, 0, "");
   case BossCodes::ChainedJin:
-    loadCostume(matchStructAddr, 51, CHAINED_JIN_COSTUME_PATH);
+    costumePath = CHAINED_JIN_COSTUME_PATH;
     break;
   case BossCodes::MishimaJin:
   case BossCodes::KazamaJin:
   case BossCodes::FinalJin:
-    loadCostume(matchStructAddr, 51, FINAL_JIN_COSTUME_PATH);
+    costumePath = FINAL_JIN_COSTUME_PATH;
     break;
   case BossCodes::FinalKazuya:
-    loadCostume(matchStructAddr, 51, FINAL_KAZ_COSTUME_PATH);
+    costumePath = FINAL_KAZ_COSTUME_PATH;
     break;
   case BossCodes::DevilJin:
-    loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH);
+    costumePath = DEVIL_JIN_COSTUME_PATH;
+    break;
+  case BossCodes::AmnesiaHeihachi:
+    costumePath = HEIHACHI_MONK_COSTUME_PATH;
     break;
   default:
-    break;
+    return;
   }
+  loadCostume(matchStructAddr, 51, costumePath);
 }
 
 void loadCharacter(uintptr_t matchStructAddr, int bossCode)
@@ -288,28 +317,23 @@ void loadCharacter(uintptr_t matchStructAddr, int bossCode)
   int currCharId = Game.readInt32(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84);
   switch (bossCode)
   {
+  // In these cases, the bossCode is the chara ID itself
+  case BossCodes::Azazel:
   case BossCodes::AngelJin:
-    charId = BossCodes::AngelJin;
-    // charId = currCharId == 6 ? BossCodes::AngelJin : -1;
-    break;
   case BossCodes::TrueDevilKazuya:
-    charId = BossCodes::TrueDevilKazuya;
-    // charId = currCharId == 8 ? BossCodes::TrueDevilKazuya : -1;
-    break;
   case BossCodes::DevilJin:
-    charId = BossCodes::DevilJin;
-    // charId = currCharId == 12 ? BossCodes::DevilJin : -1;
+    charId = bossCode;
     break;
   default:
     return;
   }
-  if (charId != -1 && isEligible(matchStructAddr)) {
+  if (charId != -1 && isEligible(matchStructAddr))
+  {
     Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
-    if (charId == BossCodes::DevilJin) loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
-    // for (int i = 0; i < 100; i++) {
-    //   sleep(10);
-    //   Game.write<int>(matchStructAddr + 0x10 + SIDE_SELECTED * 0x84, charId);
-    // }
+    if (charId == BossCodes::DevilJin)
+    {
+      loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
+    }
   }
 }
 
@@ -333,35 +357,25 @@ bool disableRequirements(uintptr_t moveset, int targetReq, int targetParam)
 bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
 {
   int charId = Game.readInt32(playerAddr + 0x168);
-  if (charId == 6)
+
+  switch (charId)
   {
-    return loadJin(moveset, bossCode);
-  }
-  else if (charId == 8)
+  case 6: return loadJin(moveset, bossCode);
+  case 8:
   {
-    if (bossCode == 97)
+    if (bossCode == BossCodes::DevilKazuya)
     {
       Game.write<int>(playerAddr + PERMA_DEVIL_OFFSET, 1);
     }
     return loadKazuya(moveset, bossCode);
   }
-  else if (charId == 35)
-  {
-    return loadHeihachi(moveset, bossCode);
+  case 32: return loadAzazel(moveset, bossCode);
+  case 35: return loadHeihachi(moveset, bossCode);
+  case 117: return loadAngelJin(moveset, bossCode);
+  case 118: return loadTrueDevilKazuya(moveset, bossCode);
+  case 121: return loadStoryDevilJin(moveset, bossCode);
+  default: return false;
   }
-  else if (charId == 117)
-  {
-    return loadAngelJin(moveset, bossCode);
-  }
-  else if (charId == 118)
-  {
-    return loadTrueDevilKazuya(moveset, bossCode);
-  }
-  else if (charId == 121)
-  {
-    return loadStoryDevilJin(moveset, bossCode);
-  }
-  return true;
 }
 
 void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
@@ -371,7 +385,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
     int req = Game.readUInt32(addr);
     if (req == END_REQ)
       break;
-    if (std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end())
+    if ((std::find(STORY_REQS.begin(), STORY_REQS.end(), req) != STORY_REQS.end()) || req == givenReq)
     {
       Game.write<uintptr_t>(addr, 0);
     }
@@ -380,7 +394,7 @@ void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = 228)
 
 bool loadJin(uintptr_t moveset, int bossCode)
 {
-  int _777param = bossCode == 11 ? 1 : bossCode;
+  int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
   // Disabling requirements
   disableRequirements(moveset, STORY_FLAGS_REQ, _777param);
 
@@ -398,24 +412,21 @@ bool loadJin(uintptr_t moveset, int bossCode)
 
   switch (bossCode)
   {
-  case 0:
+  case BossCodes::RegularJin:
   {
-    // d/b+1+2 (0x9b789d36)
-    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-    disableStoryRelatedReqs(addr);
+    uintptr_t addr = getMoveAddress(moveset, 0x9b789d36, 1865); // d/b+1+2
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
   }
   break;
-  case 1:
+  case BossCodes::NerfedJin:
   {
     // disableRequirements(moveset, 228, 1);
     // disableRequirements(moveset, STORY_BATTLE_REQ - 1, 0);
     // disableRequirements(moveset, STORY_BATTLE_REQ, 33);
   }
   break;
-  case 2:
-  case 3:
+  case BossCodes::MishimaJin:
+  case BossCodes::KazamaJin:
   {
     uintptr_t moveId = getMoveId(moveset, bossCode == 2 ? 0xA33CD19D : 0x7614EF15, 2000);
     if (moveId != 0)
@@ -424,7 +435,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
     }
   }
   break;
-  case 11:
+  case BossCodes::ChainedJin:
   {
     uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
 
@@ -440,18 +451,16 @@ bool loadJin(uintptr_t moveset, int bossCode)
       uintptr_t moveAddr = getMoveAddress(moveset, move.first, move.second);
       if (moveAddr)
       {
-        uintptr_t cancel = Game.readUInt64(moveAddr + Offsets::Move::CancelList);
-        Game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, reqHeader);
+        Game.write<uintptr_t>(getMoveNthCancel(moveAddr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
       }
     }
   }
   break;
   default:
-    break;
+    return false;
   }
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadKazuya(uintptr_t moveset, int bossCode)
@@ -459,8 +468,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
 
-  // Chapter 6 Devil Kazuya
-  if (bossCode == 97)
+  if (bossCode == BossCodes::DevilKazuya)
   {
     // Enabling permanent Devil form
     uintptr_t movesHeader = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
@@ -472,42 +480,37 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Disabling some requirements for basic attacks
     // 0x8000 alias
     addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 32th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 31) + Offsets::Cancel::RequirementsList), 777);
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);  // cancel list
-    // 1st cancel
-    disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::Cancel::RequirementsList));
-    // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 2) + Offsets::Cancel::RequirementsList));
+    // 2nd cancel
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 1));
+    // 4th cancel
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 3));
 
     // 1,1,2
     addr = getMoveAddress(moveset, 0x2226A9EE, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 3rd cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 2) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 2));
 
     // Juggle Escape
     addr = getMoveAddress(moveset, 0xDEBED999, 5);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 6th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 6) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 6));
     // 7th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 7) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 7));
 
     // f,f+2
     addr = getMoveAddress(moveset, 0x1A571FA1, 2000);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
     // 20th cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 21) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 21));
     // 21st cancel
-    disableStoryRelatedReqs(Game.readUInt64((addr + Sizes::Moveset::Cancel * 22) + Offsets::Cancel::RequirementsList));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 22));
 
     // d/b+1+2
     addr = getMoveAddress(moveset, 0x73EBDBA2, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel list
+    addr = getMoveNthCancel(addr, 0); // 1st cancel
     // 3rd cancel
     {
       uintptr_t req0 = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
@@ -516,25 +519,21 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/b+4
     addr = getMoveAddress(moveset, 0x9364E2F5, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel list
-    addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList); // req list
     // 1st cancel
-    disableStoryRelatedReqs(addr);
-    // Disabling standing req
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
+    // Disabling standing req  
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
-    Game.writeString(moveset + 8, "ALI");
-    return true;
+    markMovesetEdited(moveset);
   }
-  // Devil-less Kazuya
-  if (bossCode == 244)
+  else if (bossCode == BossCodes::FinalKazuya)
   {
     // Go through reqs and props to disable his devil form
     // requirements
     uintptr_t start = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
     uintptr_t count = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
-    for (uintptr_t i = 0; i < count; i++)
-    {
+    for (uintptr_t i = 4530; i < count - 2000; i++) // I know around req 4530 these requirements first appear
+    { //4534, 4660 // 4794, 4803 (indexes for these props that I found in v1.09)
       uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
       int req = Game.readUInt32(addr);
       int param = Game.readUInt32(addr + 4);
@@ -548,7 +547,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // extraprops
     start = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
     count = Game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
-    for (uintptr_t i = 0; i < count; i++)
+    for (uintptr_t i = 2200; i < count; i++) // First time they appear is at around idx 2275
     {
       uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
       int prop = Game.readUInt32(addr + Offsets::ExtraProp::Prop);
@@ -563,7 +562,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Single-spin uppercut
     uintptr_t addr = getMoveAddress(moveset, 0xD172C176, idleStanceIdx); // B+1+4
     // 2nd cancel
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
+    addr = getMoveNthCancel(addr, 1);
     Game.write<int>(addr, 0x10);
     Game.write<short>(addr + Offsets::Cancel::Option, 0x50);
 
@@ -571,16 +570,15 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Ultra-wavedash
     addr = getMoveAddress(moveset, 0x77314B09, idleStanceIdx); // 2
     // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
+    addr = getMoveNthCancel(addr, 1);
     Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
 
     // CD+1+2
     addr = getMoveAddress(moveset, 0x0C9CE140, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
     // Storing the story cancel req
-    uintptr_t storyReq = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    uintptr_t storyReq = getMoveNthCancel1stReqAddr(addr, 0);
     // Replacing 1st cancel requirement list index
-    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+    Game.write<uintptr_t>(getMoveNthCancel(addr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
 
     // ff2
     // addr = getMoveAddress(moveset, 0xC00BB85A, idleStanceIdx); // 2
@@ -591,25 +589,23 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // b+2,2
     addr = getMoveAddress(moveset, 0x8B5BFA6C, idleStanceIdx); // 2nd hit of b+2,2
     // Replacing 1st cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+    Game.write<uintptr_t>(getMoveNthCancel(addr, 0) + Offsets::Cancel::RequirementsList, reqHeader);
 
     // NEW b+2,2. Disabling laser cancel
     addr = getMoveAddress(moveset, 0x8FE28C6A, defaultAliasIdx); // 2nd hit of b+2,2
-    // Replacing 2nd cancel requirement list index
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel;
-    if (Game.readInt32(storyReq) == STORY_BATTLE_REQ)
     {
-      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, storyReq);
+      addr = getMoveNthCancel(addr, 1); // 2nd cancel
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 60);
+      Game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
     }
 
     // Disabling u/b+1+2 laser
     // key ub1: 0x1376C644
     // key ub1+2: 0x07F32E0C
     addr = getMoveAddress(moveset, 0x07F32E0C, 2000); // u/b+1+2
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 16;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 16);
       int moveId = getMoveId(moveset, 0x1376C644, idleStanceIdx);
       // Making a cancel to u/b+1 on frame 1
       Game.write<int>(addr + Offsets::Cancel::RequirementsList, reqHeader);
@@ -621,7 +617,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/f+3+4, 1 key: 0x6562FA84
     addr = getMoveAddress(moveset, 0x6562FA84, idleStanceIdx); // (d/f+3+4),1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
       int moveId = Game.readInt16((addr + Sizes::Moveset::Cancel) + Offsets::Cancel::Move);
       Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
@@ -629,7 +625,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // d/b+1, 2
     addr = getMoveAddress(moveset, 0xFE501006, idleStanceIdx); // d/b+1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+    addr = getMoveNthCancel(addr, 0);
     {
       // Grabbing move ID from 3rd cancel
       int moveId_db2 = Game.readInt16(addr + (2 * Sizes::Moveset::Cancel) + Offsets::Cancel::Move);
@@ -648,9 +644,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
       // Adjusting d/b+1+2 to cancel into this on frame-1
       int moveId_db1 = getMoveId(moveset, 0xFE501006, moveId_db2);
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 20;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 20);
       addr = getMoveAddress(moveset, 0x73EBDBA2, moveId_db1);
-      addr = Game.readUInt64(addr + Offsets::Move::CancelList);
+      addr = getMoveNthCancel(addr, 0);
       // Adjusting the 1st cancel
       Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
       Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId_db1);
@@ -658,9 +654,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // ws+2
     addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx);                         // d/b+1
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList) + Sizes::Moveset::Cancel; // 2nd cancel
+    addr = getMoveNthCancel(addr, 1); // 2nd cancel
     {
-      uintptr_t cancelExtradata = Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * 20;
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 20);
       int moveId = getMoveId(moveset, 0x0AB42E52, defaultAliasIdx);
       Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
       Game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
@@ -671,72 +667,101 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
 
-    Game.writeString(moveset + 8, "ALI");
-    return true;
+    markMovesetEdited(moveset);
   }
-  return true;
+  return false;
+}
+
+bool loadAzazel(uintptr_t moveset, int bossCode)
+{
+  if (bossCode != BossCodes::Azazel) return false;
+  int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
+  uintptr_t addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+  addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel
+  addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList); // 1st req
+  Game.write<int>(addr + 4, 8);
+  addr += Sizes::Moveset::Requirement; // 2nd req
+  Game.write<int>(addr, 675);
+  Game.write<int>(addr + 4, 0);
+  addr += Sizes::Moveset::Requirement; // 3rd req
+  Game.write<int>(addr, 679);
+  Game.write<int>(addr + 4, 0);
+
+  return markMovesetEdited(moveset);
+}
+
+bool isCorrectHeihachiFlag(int storyFlag, int param)
+{
+  switch (storyFlag)
+  {
+  case 1:
+    return (param >= 0x501 && param < 0x601);
+  case 2:
+    return (param >= 0x601 && param < 0x701);
+  case 3:
+    return (param >= 0x801);
+  default:
+    break;
+  }
+  return false;
 }
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
-  // if (bossCode != 353) return true;
+  if (bossCode / 10 != 35) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = 0;
   // Get into idle stance cancels
-  if (bossCode == 353)
+  if (bossCode == BossCodes::FinalHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
   {
     addr = getMoveAddressByIdx(moveset, idleStanceIdx);
     addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
     addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
     Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
-    Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
+    Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
   }
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
   int req = 0, param = 0;
-  int targetParam = bossCode - 350;
+  int storyFlag = bossCode - 350;
   for (uintptr_t i = 0; i < reqCount; i++)
   {
     addr = reqHeader + i * Sizes::Moveset::Requirement;
     req = Game.readInt32(addr);
     param = Game.readInt32(addr + 4);
-    if ((req == 806 && param == targetParam) || req == 801 || (req == 802 && param >= 2049))
+    if ((req == 806 && param == storyFlag) || req == 801 || (req == 802 && isCorrectHeihachiFlag(storyFlag, param)))
     {
       Game.write<int64_t>(addr, 0);
     }
   }
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
-  // TODO: Try fixing intros/outros
+  if (bossCode != BossCodes::AngelJin) return false;
   adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
+  if (bossCode != BossCodes::TrueDevilKazuya) return false;
   adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
-  addr = Game.readUInt64(addr + Offsets::Move::CancelList); // cancel address
-  addr = addr + Sizes::Moveset::Cancel * 22; // 23rd cancel
-  addr = Game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-  disableStoryRelatedReqs(addr, 473);
+  disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 22), 473); // 23rd cancel
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
+  if (bossCode != BossCodes::DevilJin) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = 0;
   adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
@@ -746,15 +771,14 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
     int enderId = getMoveId(moveset, 0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
     // Grabbing ID of the first intro from alias 0x8000
     addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::CancelList);
-    addr += Sizes::Moveset::Cancel; // 2nd Cancel
+    addr = getMoveNthCancel(addr, 1); // 2nd Cancel
     int start = Game.readUInt16(addr + Offsets::Cancel::Move);
 
     uintptr_t cancel = 0;
     addr = getMoveAddress(moveset, 0xD9CDC1C0, start);
     for (int i = 0; i < 3; i++)
     {
-      cancel = Game.readUInt64(addr + Offsets::Move::CancelList);
+      cancel = getMoveNthCancel(addr, 0);
       Game.write<int16_t>(cancel + Offsets::Cancel::Move, enderId);
       addr += Sizes::Moveset::Move;
     }
@@ -772,8 +796,7 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
   addr += 4 * Sizes::Moveset::ExtraMoveProperty;
   disableStoryRelatedReqs(Game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr));
 
-  Game.writeString(moveset + 8, "ALI");
-  return true;
+  return markMovesetEdited(moveset);
 }
 
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
@@ -893,5 +916,34 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
     {
       Game.write(requirement + 4, bossCode);
     }
+  }
+}
+
+uintptr_t getMoveNthCancel(uintptr_t move, int n)
+{
+  return Game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n;
+}
+
+uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
+{
+  uintptr_t cancel = getMoveNthCancel(move, n);
+  return Game.readUInt64(cancel + Offsets::Cancel::RequirementsList);
+}
+
+uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n)
+{
+  return Game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
+}
+
+bool markMovesetEdited(uintptr_t moveset)
+{
+  try
+  {
+    Game.writeString(moveset + 8, "ALI");
+    return true;
+  }
+  catch (...)
+  {
+    return false;
   }
 }

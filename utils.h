@@ -12,12 +12,15 @@ enum BossCodes {
   KazamaJin, // 3
   FinalJin, // 4
   ChainedJin = 11,
+  Azazel = 32,
   DevilKazuya = 97,
   AngelJin = 117,
   TrueDevilKazuya = 118,
   DevilJin = 121,
   FinalKazuya = 244,
-  FinalHeihachi = 353,
+  AmnesiaHeihachi = 351, // 35, 1
+  ShadowHeihachi = 352, // 35, 2
+  FinalHeihachi = 353, // 35, 3
 };
 
 // Function to convert a hexadecimal string to uintptr_t
