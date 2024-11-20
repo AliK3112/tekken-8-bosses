@@ -743,7 +743,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
-  if (bossCode != BossCodes::Azazel) return true;
+  if (bossCode != BossCodes::AngelJin) return true;
   adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
   Game.writeString(moveset + 8, "ALI");
@@ -752,6 +752,7 @@ bool loadAngelJin(uintptr_t moveset, int bossCode)
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
+  if (bossCode != BossCodes::TrueDevilKazuya) return true;
   adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
@@ -763,6 +764,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
+  if (bossCode != BossCodes::DevilJin) return true;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = 0;
   adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
