@@ -140,8 +140,8 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("Select the Boss that you want to play as\n");
-  printf("Please note, this script only works for Practice and Versus Modes\n");
+  printf("**NOTE**, this script only works for Practice and Versus Modes\n");
+  printf("\nSelect the Boss that you want to play as\n");
   printf("1. Devil-powered Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
   printf("3. Chained Jin from Chapter 12 Battle 3\n");
@@ -202,7 +202,7 @@ int takeInput()
 void mainFunc(int bossCode)
 {
   // system("cls");
-  printf("Please load into your Game mode now, the Game will automatically detect & load the altered moveset\n");
+  printf("Please load into the game with the appropriate character, the Game will automatically detect & load the altered moveset\n");
   bool isWritten = false;
   bool flag = false;
   uintptr_t matchStructAddr = Game.getAddress({(DWORD)MATCH_STRUCT_OFFSET, 0x50, 0x8, 0x18, 0x8});
@@ -240,6 +240,7 @@ void mainFunc(int bossCode)
     uintptr_t movesetAddr = Game.ReadUnsignedLong(playerAddr + MOVESET_OFFSET);
     if (movesetAddr == 0)
     {
+      flag = false;
       isWritten = false;
       continue;
     }
@@ -373,7 +374,7 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
   case 117: return loadAngelJin(moveset, bossCode);
   case 118: return loadTrueDevilKazuya(moveset, bossCode);
   case 121: return loadStoryDevilJin(moveset, bossCode);
-  default: return true;
+  default: return false;
   }
 }
 
@@ -456,7 +457,7 @@ bool loadJin(uintptr_t moveset, int bossCode)
   }
   break;
   default:
-    return true;
+    return false;
   }
 
   return markMovesetEdited(moveset);
@@ -668,12 +669,12 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     markMovesetEdited(moveset);
   }
-  return true;
+  return false;
 }
 
 bool loadAzazel(uintptr_t moveset, int bossCode)
 {
-  if (bossCode != BossCodes::Azazel) return true;
+  if (bossCode != BossCodes::Azazel) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = getMoveAddressByIdx(moveset, defaultAliasIdx);
   addr = Game.readUInt64(addr + Offsets::Move::CancelList);         // cancel
@@ -707,7 +708,7 @@ bool isCorrectHeihachiFlag(int storyFlag, int param)
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
-  if (bossCode / 10 != 35) return true;
+  if (bossCode / 10 != 35) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = 0;
@@ -741,7 +742,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
 
 bool loadAngelJin(uintptr_t moveset, int bossCode)
 {
-  if (bossCode != BossCodes::AngelJin) return true;
+  if (bossCode != BossCodes::AngelJin) return false;
   adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
   return markMovesetEdited(moveset);
@@ -749,7 +750,7 @@ bool loadAngelJin(uintptr_t moveset, int bossCode)
 
 bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 {
-  if (bossCode != BossCodes::TrueDevilKazuya) return true;
+  if (bossCode != BossCodes::TrueDevilKazuya) return false;
   adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
   // d/f+1, 2
   uintptr_t addr = getMoveAddress(moveset, 0x4339a4bd, 1673);
@@ -760,7 +761,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
 
 bool loadStoryDevilJin(uintptr_t moveset, int bossCode)
 {
-  if (bossCode != BossCodes::DevilJin) return true;
+  if (bossCode != BossCodes::DevilJin) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   uintptr_t addr = 0;
   adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
