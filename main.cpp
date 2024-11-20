@@ -21,6 +21,7 @@ std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_a
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 
 bool DEV_MODE = false;
 int STORY_FLAGS_REQ = 777;
@@ -73,7 +74,7 @@ uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::MishimaJin : -1;
+  int bossCode = DEV_MODE ? BossCodes::FinalHeihachi : -1;
   if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     printf("Attached to the Game\n");
@@ -148,11 +149,12 @@ int takeInput()
   printf("6. Awakened Jin from Chapter 15 Final Battle\n");
   printf("7. Devil Kazuya from Chapter 6\n");
   printf("8. Final Battle Kazuya\n");
-  printf("9. Heihachi from Story DLC Finale\n");
-  printf("A. Angel Jin\n");
-  printf("B. True Devil Kazuya\n");
-  printf("C. Story Devil Jin\n");
-  printf("D. Azazel\n");
+  printf("9. Monk/Amnesia Heihachi from Story DLC\n");
+  printf("A. Heihachi from Story DLC Finale\n");
+  printf("B. Angel Jin\n");
+  printf("C. True Devil Kazuya\n");
+  printf("D. Story Devil Jin\n");
+  printf("E. Azazel\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -174,18 +176,21 @@ int takeInput()
   case '8':
     return BossCodes::FinalKazuya;
   case '9':
-    return BossCodes::FinalHeihachi;
+    return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
-    return BossCodes::AngelJin;
+    return BossCodes::FinalHeihachi;
   case 'B':
   case 'b':
-    return BossCodes::TrueDevilKazuya;
+    return BossCodes::AngelJin;
   case 'C':
   case 'c':
-    return BossCodes::DevilJin;
+    return BossCodes::TrueDevilKazuya;
   case 'D':
   case 'd':
+    return BossCodes::DevilJin;
+  case 'E':
+  case 'e':
     return BossCodes::Azazel;
   default:
     return -1;
@@ -270,6 +275,7 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
 {
   if (!matchStructAddr)
     return;
+  std::string costumePath;
   switch (bossCode)
   {
   case BossCodes::RegularJin:
@@ -277,25 +283,30 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
   case BossCodes::DevilKazuya:
   case BossCodes::FinalHeihachi:
   case BossCodes::Azazel:
-    loadCostume(matchStructAddr, 0, "");
-    break;
+  case BossCodes::AngelJin:
+  case BossCodes::TrueDevilKazuya:
+    return loadCostume(matchStructAddr, 0, "");
   case BossCodes::ChainedJin:
-    loadCostume(matchStructAddr, 51, CHAINED_JIN_COSTUME_PATH);
+    costumePath = CHAINED_JIN_COSTUME_PATH;
     break;
   case BossCodes::MishimaJin:
   case BossCodes::KazamaJin:
   case BossCodes::FinalJin:
-    loadCostume(matchStructAddr, 51, FINAL_JIN_COSTUME_PATH);
+    costumePath = FINAL_JIN_COSTUME_PATH;
     break;
   case BossCodes::FinalKazuya:
-    loadCostume(matchStructAddr, 51, FINAL_KAZ_COSTUME_PATH);
+    costumePath = FINAL_KAZ_COSTUME_PATH;
     break;
   case BossCodes::DevilJin:
-    loadCostume(matchStructAddr, 51, DEVIL_JIN_COSTUME_PATH);
+    costumePath = DEVIL_JIN_COSTUME_PATH;
+    break;
+  case BossCodes::AmnesiaHeihachi:
+    costumePath = HEIHACHI_MONK_COSTUME_PATH;
     break;
   default:
-    break;
+    return;
   }
+  loadCostume(matchStructAddr, 51, costumePath);
 }
 
 void loadCharacter(uintptr_t matchStructAddr, int bossCode)
@@ -706,13 +717,13 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = 0;
   // Get into idle stance cancels
-  if (bossCode == 353)
+  if (bossCode == BossCodes::FinalHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
   {
     addr = getMoveAddressByIdx(moveset, idleStanceIdx);
     addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
     addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
     Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
-    Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
+    Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
   }
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
