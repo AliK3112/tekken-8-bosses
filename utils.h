@@ -18,9 +18,9 @@ enum BossCodes {
   TrueDevilKazuya = 118,
   DevilJin = 121,
   FinalKazuya = 244,
-  AmnesiaHeihachi = 351, // 35, 1
-  ShadowHeihachi = 352, // 35, 2
-  FinalHeihachi = 353, // 35, 3
+  AmnesiaHeihachi = 351, // Heihachi (35), Variant # 1
+  ShadowHeihachi = 352, // Heihachi (35), Variant # 2
+  FinalHeihachi = 353, // Heihachi (35), Variant # 3
 };
 
 // Function to convert a hexadecimal string to uintptr_t
