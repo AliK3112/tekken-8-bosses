@@ -16,7 +16,7 @@ void sleep(int ms) { usleep(ms * 1000); }
 void mainFunc();
 bool disableCamera(uintptr_t movesetAddr);
 void storeAddresses();
-uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
+uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0);
 uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
 void disableCameraReqs(uintptr_t requirements);
@@ -117,7 +117,7 @@ bool disableCamera(uintptr_t moveset)
   return true;
 }
 
-uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
+uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start)
 {
   uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
