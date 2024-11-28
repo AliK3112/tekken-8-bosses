@@ -29,6 +29,7 @@ int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
 int SIDE_SELECTED = 0;
+std::string BOSS_NAME;
 
 std::vector<int> STORY_REQS = {
   667, // Story Fight
@@ -162,7 +163,7 @@ int takeInput()
 {
   printf("**NOTE**, this script only works for Practice and Versus Modes\n");
   printf("\nSelect the Boss that you want to play as\n");
-  printf("1. Devil-powered Jin from Chapter 1\n");
+  printf("1. Boosted Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
   printf("3. Chained Jin from Chapter 12 Battle 3\n");
   printf("4. Mishima Jin from Chapter 15 Battle 2\n");
@@ -181,37 +182,51 @@ int takeInput()
   switch (input)
   {
   case '1':
+    BOSS_NAME = "Jin (Boosted)";
     return BossCodes::RegularJin;
   case '2':
+    BOSS_NAME = "Jin (Nerfed)";
     return BossCodes::NerfedJin;
   case '3':
+    BOSS_NAME = "Jin (Chained)";
     return BossCodes::ChainedJin;
   case '4':
+    BOSS_NAME = "Jin (Mishima)";
     return BossCodes::MishimaJin;
   case '5':
+    BOSS_NAME = "Jin (Kazama)";
     return BossCodes::KazamaJin;
   case '6':
+    BOSS_NAME = "Jin (Ultimate)";
     return BossCodes::FinalJin;
   case '7':
+    BOSS_NAME = "Devil Kazuya";
     return BossCodes::DevilKazuya;
   case '8':
+    BOSS_NAME = "Kazuya (Final)";
     return BossCodes::FinalKazuya;
   case '9':
+    BOSS_NAME = "Heihachi (Monk)";
     return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
+    BOSS_NAME = "Heihachi (Final)";
     return BossCodes::FinalHeihachi;
   case 'B':
   case 'b':
+    BOSS_NAME = "Angel Jin";
     return BossCodes::AngelJin;
   case 'C':
   case 'c':
+    BOSS_NAME = "True Devil Kazuya";
     return BossCodes::TrueDevilKazuya;
   case 'D':
   case 'd':
+    BOSS_NAME = "Jin (Devil)";
     return BossCodes::DevilJin;
   case 'E':
   case 'e':
+    BOSS_NAME = "Azazel";
     return BossCodes::Azazel;
   default:
     return -1;
@@ -280,7 +295,7 @@ void mainFunc(int bossCode)
     {
       isWritten = loadBoss(playerAddr, movesetAddr, bossCode);
       if (!flag && isWritten)
-        printf("Moveset Edited\n");
+        printf("Boss loaded: %s\n", BOSS_NAME.c_str());
       flag = true;
     }
     // break;
