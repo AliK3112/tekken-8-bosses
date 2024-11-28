@@ -110,7 +110,7 @@ void storeAddresses()
 bool disableCamera(uintptr_t moveset)
 {
   // anim-key 0x2a1eb12b (air bounds)
-  uintptr_t addr = getMoveAddress(moveset, 0x2a1eb12b, 40);
+  uintptr_t addr = getMoveAddress(moveset, 0x2a1eb12b);
   disableCameraReqs(getMoveNthCancel1stReqAddr(addr, 0));
   disableCameraReqs(getMoveNthCancel1stReqAddr(addr, 1));
   markMovesetEdited(moveset);
