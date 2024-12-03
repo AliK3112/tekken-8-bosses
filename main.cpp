@@ -24,7 +24,6 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 
 bool DEV_MODE = false;
-bool USE_DECRYPT = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
@@ -82,39 +81,39 @@ int main()
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
-    if (Game.Attach(L"Polaris-Win64-Shipping.exe")) {
+    if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
+    {
       break;
     }
     sleep(1000);
   }
   printf("Attached to the Game\n");
-  if (!DEV_MODE) SIDE_SELECTED = getSideSelection();
+  if (!DEV_MODE)
+    SIDE_SELECTED = getSideSelection();
+  if (SIDE_SELECTED == -1)
+  {
+    return 0;
+  }
   addresses = readKeyValuePairs("addresses.txt");
   storeAddresses();
+
   // Validating the function address
-  if (funcAddrIsValid(DECRYPT_FUNC_ADDR))
-  {
-    USE_DECRYPT = DECRYPT_FUNC_ADDR != 0;
-    if (!USE_DECRYPT)
-    {
-      printf("Decryption method address not found! The program is assuming you're on version 1.08 or prior\n");
-    }
-  }
-  else
+  if (!funcAddrIsValid(DECRYPT_FUNC_ADDR))
   {
     printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
     _getch();
     return 0;
   }
 
-  if (!DEV_MODE) bossCode = takeInput();
-  if (bossCode != -1)
-    mainFunc(bossCode);
+  if (!DEV_MODE)
+    bossCode = takeInput();
   if (bossCode != -1)
   {
-    printf("Press any key to close the script\n");
-    _getch();
+    mainFunc(bossCode);
   }
+
+  printf("Press any key to close the script\n");
+  _getch();
   return 0;
 }
 
@@ -123,11 +122,7 @@ void storeAddresses()
   PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
-  try {
-    DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
-  } catch (...) {
-    DECRYPT_FUNC_ADDR = 0;
-  }
+  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
 }
 
@@ -139,6 +134,7 @@ int getSideSelection()
     std::cout << "\nWhich side do you want to activate this script for?\n";
     std::cout << "For Left side press 'L' or '0'\n";
     std::cout << "For Right side press 'R' or '1'\n";
+    std::cout << "For exiting: Esc or Q\n";
     char input = _getch();
 
     if (input == '0' || input == '1')
@@ -150,6 +146,10 @@ int getSideSelection()
     {
       selectedSide = (input | 0x20) == 'r';
       break;
+    }
+    else if (input == 27 || input == 'q' || input == 'Q')
+    {
+      return -1;
     }
     else
     {
@@ -567,7 +567,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // 1st cancel
     addr = getMoveNthCancel1stReqAddr(addr, 0);
     disableStoryRelatedReqs(addr);
-    // Disabling standing req  
+    // Disabling standing req
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
     markMovesetEdited(moveset);
@@ -853,28 +853,19 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
   int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
+    rawIdx = (i % 8) - 4;
     uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    if (USE_DECRYPT)
+    if (rawIdx > -1)
     {
-      rawIdx = (i % 8) - 4;
-      if (rawIdx > -1)
-      {
-        int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
-        if (value == moveNameKey)
-          return addr;
-      }
-      else
-      {
-        EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-        if ((int)decryptedValue == moveNameKey)
-          return addr;
-      }
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return addr;
     }
     else
     {
-      int value = Game.readInt32(addr);
-      if (value == moveNameKey)
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
         return addr;
     }
   }
@@ -902,26 +893,17 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   {
     rawIdx = (i % 8) - 4;
     addr = movesHead + i * Sizes::Moveset::Move;
-    if (USE_DECRYPT)
+    if (rawIdx > -1)
     {
-      if (rawIdx > -1)
-      {
-        int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
-        if (value == moveNameKey)
-          return i;
-      }
-      else
-      {
-        EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-        if ((int)decryptedValue == moveNameKey)
-          return i;
-      }
+      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return i;
     }
     else
     {
-      int value = Game.readInt32(addr);
-      if (value == moveNameKey)
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
         return i;
     }
   }
@@ -933,8 +915,6 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
 
 bool funcAddrIsValid(uintptr_t funcAddr)
 {
-  if (funcAddr == 0) return true;
-
   byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
   std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
 
