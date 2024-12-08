@@ -5,13 +5,13 @@ namespace Tekken
     enum Move
     {
       MoveNameKey = 0x0,
-      AnimNameKey = 0x20,
-      AnimAddr1 = 0x50,
-      AnimAddr2 = 0x54,
-      CancelList = 0x98,
-      ExtraPropList = 0x138,
-      StartPropList = 0x140,
-      EndPropList = 0x148
+      AnimNameKey = 0x4,
+      AnimAddr1 = 0x18,
+      AnimAddr2 = 0x1C,
+      CancelList = 0x28,
+      ExtraPropList = 0x90,
+      StartPropList = 0x98,
+      EndPropList = 0xA0
     };
 
     enum Cancel
@@ -97,7 +97,7 @@ namespace Tekken
       HitCondition = 0x18,
       ExtraMoveProperty = 0x28,
       OtherMoveProperty = 0x20,
-      Move = 0x448,
+      Move = 0x3A0,
       Voiceclip = 0xC,
       InputExtradata = 0x8,
       InputSequence = 0x10,

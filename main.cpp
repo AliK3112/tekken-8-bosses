@@ -12,7 +12,6 @@ using namespace Tekken;
 GameClass Game;
 std::map<std::string, uintptr_t> addresses;
 uintptr_t MOVESET_OFFSET = 0;
-uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PERMA_DEVIL_OFFSET = 0;
 uintptr_t PLAYER_STRUCT_BASE = 0;
 uintptr_t MATCH_STRUCT_OFFSET = 0;
@@ -64,7 +63,6 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
-bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
@@ -97,14 +95,6 @@ int main()
   addresses = readKeyValuePairs("addresses.txt");
   storeAddresses();
 
-  // Validating the function address
-  if (!funcAddrIsValid(DECRYPT_FUNC_ADDR))
-  {
-    printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
-    _getch();
-    return 0;
-  }
-
   if (!DEV_MODE)
     bossCode = takeInput();
   if (bossCode != -1)
@@ -122,7 +112,6 @@ void storeAddresses()
   PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
-  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
 }
 
@@ -200,7 +189,7 @@ int takeInput()
     BOSS_NAME = "Jin (Ultimate)";
     return BossCodes::FinalJin;
   case '7':
-    BOSS_NAME = "Devil Kazuya";
+    BOSS_NAME = "Kazuya (Devil)";
     return BossCodes::DevilKazuya;
   case '8':
     BOSS_NAME = "Kazuya (Final)";
@@ -214,11 +203,11 @@ int takeInput()
     return BossCodes::FinalHeihachi;
   case 'B':
   case 'b':
-    BOSS_NAME = "Angel Jin";
+    BOSS_NAME = "Jin (Angel)";
     return BossCodes::AngelJin;
   case 'C':
   case 'c':
-    BOSS_NAME = "True Devil Kazuya";
+    BOSS_NAME = "Kazuya (True Devil)";
     return BossCodes::TrueDevilKazuya;
   case 'D':
   case 'd':
@@ -850,24 +839,12 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
-  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    rawIdx = (i % 8) - 4;
     uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    if (rawIdx > -1)
-    {
-      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
-      if (value == moveNameKey)
-        return addr;
-    }
-    else
-    {
-      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-      if ((int)decryptedValue == moveNameKey)
-        return addr;
-    }
+    int value = Game.readInt32(addr);
+    if (value == moveNameKey)
+      return addr;
   }
   std::ostringstream oss;
   oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
@@ -887,51 +864,17 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   uintptr_t movesHead = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = Game.readUInt64(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
-  uintptr_t addr = 0;
-  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    rawIdx = (i % 8) - 4;
-    addr = movesHead + i * Sizes::Moveset::Move;
-    if (rawIdx > -1)
-    {
-      int value = Game.readInt32(addr + 0x10 + rawIdx * 4);
-      if (value == moveNameKey)
-        return i;
-    }
-    else
-    {
-      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-      uintptr_t decryptedValue = Game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-      if ((int)decryptedValue == moveNameKey)
-        return i;
-    }
+    uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
+    int value = Game.readInt32(addr);
+    if (value == moveNameKey)
+      return i;
   }
   std::ostringstream oss;
   oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
   throw std::runtime_error(oss.str());
   return -1;
-}
-
-bool funcAddrIsValid(uintptr_t funcAddr)
-{
-  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
-  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
-
-  if (gameBytes.size() != sizeof(originalBytes))
-  {
-    return false;
-  }
-
-  for (size_t i = 0; i < sizeof(originalBytes); ++i)
-  {
-    if (gameBytes[i] != originalBytes[i])
-    {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool movesetExists(uintptr_t moveset)
