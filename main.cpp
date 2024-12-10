@@ -77,7 +77,7 @@ bool markMovesetEdited(uintptr_t moveset);
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::ChainedJin : -1;
+  int bossCode = DEV_MODE ? BossCodes::ShadowHeihachi : -1;
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
@@ -757,11 +757,22 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   if (bossCode / 10 != 35) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
-  uintptr_t addr = 0;
+  uintptr_t addr = getMoveAddressByIdx(moveset, idleStanceIdx);
+  if (bossCode == BossCodes::ShadowHeihachi)
+  {
+    uintptr_t cancel1 = getMoveNthCancel(addr, 0);
+    uintptr_t reqListCancel1 = getCancelReqAddr(cancel1);
+    uintptr_t reqListCancel2 = getMoveNthCancel1stReqAddr(addr, 1);
+    Game.write<uintptr_t>(cancel1 + Offsets::Cancel::RequirementsList, reqListCancel2);
+    disableStoryRelatedReqs(reqListCancel1);
+    // TODO: b,f+2 functional
+    // TODO: Broken Toy functional
+    return markMovesetEdited(moveset);
+  }
+  
   // Get into idle stance cancels
   if (bossCode == BossCodes::FinalHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
   {
-    addr = getMoveAddressByIdx(moveset, idleStanceIdx);
     addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
     addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
     Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
