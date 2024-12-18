@@ -1,5 +1,7 @@
-player_struct_base=0x09ADA3B0
-moveset_offset=0x2F48
-permanent_devil_offset=0x1244
-decryption_function_offset=0x18A98D0
-match_struct=0x09AD6AA8
+player_struct_base=0x09B15B38
+moveset_offset=0x3308
+permanent_devil_offset=0x1294
+decryption_function_offset=0x18B32B0
+match_struct=0x09B12228
+hud_icon_addr=0x5E273B1
+hud_name_addr=0x5E279C7
