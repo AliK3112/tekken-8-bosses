@@ -16,6 +16,8 @@ uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PERMA_DEVIL_OFFSET = 0;
 uintptr_t PLAYER_STRUCT_BASE = 0;
 uintptr_t MATCH_STRUCT_OFFSET = 0;
+uintptr_t HUD_ICON_ADDR = 0;
+uintptr_t HUD_NAME_ADDR = 0;
 
 std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
@@ -24,6 +26,7 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 
 bool DEV_MODE = false;
+bool HANDLE_ICONS = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
@@ -51,6 +54,7 @@ void mainFunc(int bossCode);
 int takeInput();
 void loadCostume(uintptr_t matchStructAddr, int costumeId, std::string costumePath);
 void costumeHandler(uintptr_t matchStructAddr, int bossCode);
+void hudHandler(uintptr_t matchStructAddr, int bossCode);
 void sleep(int ms) { usleep(ms * 1000); }
 bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
 void loadCharacter(uintptr_t matchStructAddr, int bossCode);
@@ -65,6 +69,7 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 bool funcAddrIsValid(uintptr_t funcAddr);
+bool instAddrIsValid();
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
@@ -74,10 +79,12 @@ uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 bool markMovesetEdited(uintptr_t moveset);
+void modifyHudAddr();
+void restoreHudAddr();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::ShadowHeihachi : -1;
+  int bossCode = DEV_MODE ? BossCodes::DevilKazuya : -1;
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
@@ -105,6 +112,8 @@ int main()
     return 0;
   }
 
+  HANDLE_ICONS = instAddrIsValid();
+
   if (!DEV_MODE)
     bossCode = takeInput();
   if (bossCode != -1)
@@ -124,6 +133,8 @@ void storeAddresses()
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
   DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
+  HUD_ICON_ADDR = getValueByKey(addresses, "hud_icon_addr") + Game.getBaseAddress();
+  HUD_NAME_ADDR = getValueByKey(addresses, "hud_name_addr") + Game.getBaseAddress();
 }
 
 int getSideSelection()
@@ -257,6 +268,9 @@ void mainFunc(int bossCode)
       continue;
     }
 
+    // At this point, the matchStruct is present, so modify the instructions
+    // if (HANDLE_ICONS) modifyHudAddr();
+
     if (!isEligible(matchStructAddr))
     {
       continue;
@@ -264,6 +278,9 @@ void mainFunc(int bossCode)
 
     // Set Character ID
     loadCharacter(matchStructAddr, bossCode);
+
+    // Handle HUD icons
+    if (HANDLE_ICONS) hudHandler(matchStructAddr, bossCode);
 
     uintptr_t playerAddr = Game.getAddress({(DWORD)PLAYER_STRUCT_BASE, (DWORD)(0x30 + SIDE_SELECTED * 8)});
     if (playerAddr == 0)
@@ -279,6 +296,9 @@ void mainFunc(int bossCode)
       isWritten = false;
       continue;
     }
+
+    // At this point, the moveset is loaded, so restore the instructions
+    // if (HANDLE_ICONS) restoreHudAddr();
 
     if (!movesetExists(movesetAddr))
     {
@@ -344,6 +364,61 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
     return;
   }
   loadCostume(matchStructAddr, 51, costumePath);
+}
+
+void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
+{
+  std::string icon;
+  std::string name;
+  const char c = side == 0 ? 'L' : 'R';
+  if (bossCode == BossCodes::DevilJin && charId == BossCodes::DevilJin)
+  {
+    icon = buildString(c, getCharCode(6));
+    name = getNamePath(6);
+  }
+  else if (bossCode == BossCodes::FinalJin && charId == 6)
+  {
+    icon = buildString(c, "ant2");
+    name = getNamePath(6);
+  }
+  else if (bossCode == BossCodes::FinalKazuya && charId == 8)
+  {
+    icon = buildString(c, "grl2");
+    name = getNamePath(8);
+  }
+  else if (bossCode == BossCodes::DevilKazuya && charId == 8)
+  {
+    icon = buildString(c, "grl3");
+    name = getNamePath("grl2");
+  }
+  else if (bossCode == BossCodes::AmnesiaHeihachi && charId == 35)
+  {
+    icon = buildString(c, "bee2");
+    name = getNamePath(35);
+  }
+  else if (bossCode == BossCodes::ShadowHeihachi && charId == 35)
+  {
+    icon = buildString(c, "bee3");
+    name = getNamePath("bee3");
+  }
+  Game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
+  Game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
+}
+
+void hudHandler(uintptr_t matchStruct, int bossCode)
+{
+  int char1 = Game.readInt32(matchStruct + 0x10);
+  int char2 = Game.readInt32(matchStruct + 0x94);
+  std::string icon1 = getIconPath(0, char1);
+  std::string icon2 = getIconPath(1, char2);
+  std::string name1 = getNamePath(char1);
+  std::string name2 = getNamePath(char2);
+  Game.writeString(matchStruct + 0x2C0, icon1);
+  Game.writeString(matchStruct + 0x3C0, icon2);
+  Game.writeString(matchStruct + 0x4C0, name1);
+  Game.writeString(matchStruct + 0x5C0, name2);
+
+  loadBossHud(matchStruct, SIDE_SELECTED, SIDE_SELECTED ? char2 : char1, bossCode);
 }
 
 void loadCharacter(uintptr_t matchStructAddr, int bossCode)
@@ -945,6 +1020,14 @@ bool funcAddrIsValid(uintptr_t funcAddr)
   return true;
 }
 
+bool instAddrIsValid()
+{
+  int val1 = Game.readUInt16(HUD_ICON_ADDR);
+  int val2 = Game.readUInt16(HUD_NAME_ADDR);
+  bool flag = val1 == 0x5274 && val2 == 0x3174;
+  return flag;
+}
+
 bool movesetExists(uintptr_t moveset)
 {
   std::string str = Game.ReadString(moveset + 8, 3);
@@ -1012,4 +1095,16 @@ bool markMovesetEdited(uintptr_t moveset)
   {
     return false;
   }
+}
+
+void modifyHudAddr()
+{
+  Game.write<uint16_t>(HUD_ICON_ADDR, 0x9090);
+  Game.write<uint16_t>(HUD_NAME_ADDR, 0x9090);
+}
+
+void restoreHudAddr()
+{
+  Game.write<uint16_t>(HUD_ICON_ADDR, 0x3174);
+  Game.write<uint16_t>(HUD_NAME_ADDR, 0x5274);
 }
