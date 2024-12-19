@@ -79,12 +79,12 @@ uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 bool markMovesetEdited(uintptr_t moveset);
-void modifyHudAddr();
-void restoreHudAddr();
+void modifyHudAddr(uintptr_t matchStructAddr);
+void restoreHudAddr(uintptr_t matchStructAddr);
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::DevilKazuya : -1;
+  int bossCode = DEV_MODE ? BossCodes::AngelJin : -1;
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
@@ -128,13 +128,20 @@ int main()
 
 void storeAddresses()
 {
+  uintptr_t gameBaseAddr = Game.getBaseAddress();
+
   PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
-  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
+  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + gameBaseAddr;
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
-  HUD_ICON_ADDR = getValueByKey(addresses, "hud_icon_addr") + Game.getBaseAddress();
-  HUD_NAME_ADDR = getValueByKey(addresses, "hud_name_addr") + Game.getBaseAddress();
+  try {
+    HUD_ICON_ADDR = getValueByKey(addresses, "hud_icon_addr") + gameBaseAddr;
+    HUD_NAME_ADDR = getValueByKey(addresses, "hud_name_addr") + gameBaseAddr;
+  } catch (...) {
+    HUD_ICON_ADDR = gameBaseAddr;
+    HUD_NAME_ADDR = gameBaseAddr;
+  }
 }
 
 int getSideSelection()
@@ -269,7 +276,7 @@ void mainFunc(int bossCode)
     }
 
     // At this point, the matchStruct is present, so modify the instructions
-    // if (HANDLE_ICONS) modifyHudAddr();
+    if (HANDLE_ICONS) modifyHudAddr(matchStructAddr);
 
     if (!isEligible(matchStructAddr))
     {
@@ -298,7 +305,7 @@ void mainFunc(int bossCode)
     }
 
     // At this point, the moveset is loaded, so restore the instructions
-    // if (HANDLE_ICONS) restoreHudAddr();
+    if (HANDLE_ICONS) restoreHudAddr(matchStructAddr);
 
     if (!movesetExists(movesetAddr))
     {
@@ -401,8 +408,8 @@ void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
     icon = buildString(c, "bee3");
     name = getNamePath("bee3");
   }
-  Game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
-  Game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
+  if (!icon.empty()) Game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
+  if (!name.empty()) Game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
 }
 
 void hudHandler(uintptr_t matchStruct, int bossCode)
@@ -1097,14 +1104,28 @@ bool markMovesetEdited(uintptr_t moveset)
   }
 }
 
-void modifyHudAddr()
+void modifyHudAddr(uintptr_t matchStructAddr)
 {
-  Game.write<uint16_t>(HUD_ICON_ADDR, 0x9090);
-  Game.write<uint16_t>(HUD_NAME_ADDR, 0x9090);
+  int mode = Game.readInt32(matchStructAddr);
+  if (mode == 1 || mode == 6)
+  {
+    int icon = Game.readUInt16(HUD_ICON_ADDR);
+    int name = Game.readUInt16(HUD_NAME_ADDR);
+    if (icon == 0x5274 && name == 0x3174)
+    {
+      Game.write<uint16_t>(HUD_ICON_ADDR, 0x9090);
+      Game.write<uint16_t>(HUD_NAME_ADDR, 0x9090);
+    }
+  }
 }
 
-void restoreHudAddr()
+void restoreHudAddr(uintptr_t matchStructAddr)
 {
-  Game.write<uint16_t>(HUD_ICON_ADDR, 0x3174);
-  Game.write<uint16_t>(HUD_NAME_ADDR, 0x5274);
+  int icon = Game.readUInt16(HUD_ICON_ADDR);
+  int name = Game.readUInt16(HUD_NAME_ADDR);
+  if (icon == 0x9090 && name == 0x9090)
+  {
+    Game.write<uint16_t>(HUD_ICON_ADDR, 0x5274);
+    Game.write<uint16_t>(HUD_NAME_ADDR, 0x3174);
+  }
 }
