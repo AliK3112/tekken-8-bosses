@@ -180,7 +180,7 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("**NOTE**, this script only works for Practice and Versus Modes\n");
+  printf("**NOTE**, Eligible Game Modes: Practice, Arcade, Story and Versus\n");
   printf("\nSelect the Boss that you want to play as\n");
   printf("1. Boosted Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
