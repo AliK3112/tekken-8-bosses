@@ -24,6 +24,7 @@ std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
+std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
 bool DEV_MODE = false;
 bool HANDLE_ICONS = false;
@@ -84,7 +85,7 @@ void restoreHudAddr(uintptr_t matchStructAddr);
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::AngelJin : -1;
+  int bossCode = DEV_MODE ? BossCodes::ShadowHeihachi : -1;
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
@@ -190,11 +191,12 @@ int takeInput()
   printf("7. Devil Kazuya from Chapter 6\n");
   printf("8. Final Battle Kazuya\n");
   printf("9. Monk/Amnesia Heihachi from Story DLC\n");
-  printf("A. Heihachi from Story DLC Finale\n");
-  printf("B. Angel Jin\n");
-  printf("C. True Devil Kazuya\n");
-  printf("D. Story Devil Jin\n");
-  printf("E. Azazel\n");
+  printf("A. Shadow Heihachi from Story DLC\n");
+  printf("B. Heihachi from Story DLC Finale\n");
+  printf("C. Angel Jin\n");
+  printf("D. True Devil Kazuya\n");
+  printf("E. Story Devil Jin\n");
+  printf("F. Azazel\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -219,18 +221,21 @@ int takeInput()
     return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
-    return BossCodes::FinalHeihachi;
+    return BossCodes::ShadowHeihachi;
   case 'B':
   case 'b':
-    return BossCodes::AngelJin;
+    return BossCodes::FinalHeihachi;
   case 'C':
   case 'c':
-    return BossCodes::TrueDevilKazuya;
+    return BossCodes::AngelJin;
   case 'D':
   case 'd':
-    return BossCodes::DevilJin;
+    return BossCodes::TrueDevilKazuya;
   case 'E':
   case 'e':
+    return BossCodes::DevilJin;
+  case 'F':
+  case 'f':
     return BossCodes::Azazel;
   default:
     return -1;
@@ -353,6 +358,9 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
     break;
   case BossCodes::AmnesiaHeihachi:
     costumePath = HEIHACHI_MONK_COSTUME_PATH;
+    break;
+  case BossCodes::ShadowHeihachi:
+    costumePath = HEIHACHI_SHADOW_COSTUME_PATH;
     break;
   default:
     return;
@@ -836,16 +844,17 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
     disableStoryRelatedReqs(reqListCancel1);
     // TODO: b,f+2 functional
     // TODO: Broken Toy functional
-    return markMovesetEdited(moveset);
+    // return markMovesetEdited(moveset);
   }
   
   // Get into idle stance cancels
-  if (bossCode == BossCodes::FinalHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
+  addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
+  Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
+  Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
+  if (bossCode == BossCodes::ShadowHeihachi)
   {
-    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
-    addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
-    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
-    Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
+    return markMovesetEdited(moveset);
   }
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
