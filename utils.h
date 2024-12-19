@@ -165,3 +165,26 @@ std::string getNamePath(const std::string& code)
   ss << "T_UI_HUD_Character_Name_" << code;
   return ss.str();
 }
+
+std::string getBossName(int bossCode)
+{
+  switch (bossCode)
+  {
+  case BossCodes::RegularJin: return "Jin (Boosted)";
+  case BossCodes::NerfedJin: return "Jin (Nerfed)";
+  case BossCodes::ChainedJin: return "Jin (Chained)";
+  case BossCodes::MishimaJin: return "Jin (Mishima)";
+  case BossCodes::KazamaJin: return "Jin (Kazama)";
+  case BossCodes::FinalJin: return "Jin (Ultimate)";
+  case BossCodes::DevilKazuya: return "Kazuya (Devil)";
+  case BossCodes::FinalKazuya: return "Kazuya (Final)";
+  case BossCodes::AmnesiaHeihachi: return "Heihachi (Monk)";
+  case BossCodes::ShadowHeihachi: return "Heihachi (Shadow)";
+  case BossCodes::FinalHeihachi: return "Heihachi (Final)";
+  case BossCodes::AngelJin: return "Jin (Angel)";
+  case BossCodes::TrueDevilKazuya: return "Kazuya (True Devil)";
+  case BossCodes::DevilJin: return "Jin (Devil)";
+  case BossCodes::Azazel: return "Azazel";
+  default: return "__unknown__";
+  }
+}

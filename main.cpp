@@ -200,51 +200,37 @@ int takeInput()
   switch (input)
   {
   case '1':
-    BOSS_NAME = "Jin (Boosted)";
     return BossCodes::RegularJin;
   case '2':
-    BOSS_NAME = "Jin (Nerfed)";
     return BossCodes::NerfedJin;
   case '3':
-    BOSS_NAME = "Jin (Chained)";
     return BossCodes::ChainedJin;
   case '4':
-    BOSS_NAME = "Jin (Mishima)";
     return BossCodes::MishimaJin;
   case '5':
-    BOSS_NAME = "Jin (Kazama)";
     return BossCodes::KazamaJin;
   case '6':
-    BOSS_NAME = "Jin (Ultimate)";
     return BossCodes::FinalJin;
   case '7':
-    BOSS_NAME = "Devil Kazuya";
     return BossCodes::DevilKazuya;
   case '8':
-    BOSS_NAME = "Kazuya (Final)";
     return BossCodes::FinalKazuya;
   case '9':
-    BOSS_NAME = "Heihachi (Monk)";
     return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
-    BOSS_NAME = "Heihachi (Final)";
     return BossCodes::FinalHeihachi;
   case 'B':
   case 'b':
-    BOSS_NAME = "Angel Jin";
     return BossCodes::AngelJin;
   case 'C':
   case 'c':
-    BOSS_NAME = "True Devil Kazuya";
     return BossCodes::TrueDevilKazuya;
   case 'D':
   case 'd':
-    BOSS_NAME = "Jin (Devil)";
     return BossCodes::DevilJin;
   case 'E':
   case 'e':
-    BOSS_NAME = "Azazel";
     return BossCodes::Azazel;
   default:
     return -1;
@@ -255,6 +241,7 @@ int takeInput()
 void mainFunc(int bossCode)
 {
   // system("cls");
+  BOSS_NAME = getBossName(bossCode);
   printf("Please load into the game with the appropriate character, the Game will automatically detect & load the altered moveset\n");
   bool isWritten = false;
   bool flag = false;
