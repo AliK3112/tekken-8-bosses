@@ -1044,7 +1044,7 @@ bool isMovesetEdited(uintptr_t moveset)
 bool isEligible(uintptr_t matchStructAddr)
 {
   int value = Game.readInt32(matchStructAddr);
-  return value == 1 || value == 6;
+  return value == 1 || value == 2 || value == 5 || value == 6;
 }
 
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
