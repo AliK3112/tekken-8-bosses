@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdint>
 #include <Windows.h>
 #include <string>
 #include <Psapi.h>
