@@ -871,6 +871,10 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
     return markMovesetEdited(moveset);
   }
 
+  // Boss Heihachi
+  // 1,1 > 1+3 throw -> 0x10E04C8A
+  // u/f+3, 4 -> 0x426E03A8
+
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
   int req = 0, param = 0;
