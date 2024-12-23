@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <limits>
 #include <algorithm>
+#include <csignal>
 
 using namespace Tekken;
 
@@ -82,10 +83,23 @@ uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 bool markMovesetEdited(uintptr_t moveset);
 void modifyHudAddr(uintptr_t matchStructAddr);
 void restoreHudAddr(uintptr_t matchStructAddr);
+void signalHandler(int signal);
+BOOL WINAPI ConsoleHandler(DWORD signal);
+void atExit();
 
 int main()
 {
   int bossCode = DEV_MODE ? BossCodes::ShadowHeihachi : -1;
+  // Set up end-program handler
+  if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
+	{
+		std::cerr << "Error: Could not set control handler\n";
+		return 1;
+	}
+	std::atexit(atExit);
+	std::signal(SIGINT, signalHandler);
+	std::signal(SIGTERM, signalHandler);
+  //
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
   {
@@ -180,7 +194,7 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("**NOTE**, Eligible Game Modes: Practice, Arcade, Story and Versus\n");
+  printf("**NOTE**, Eligible Game Modes: Practice, Arcade, Story, Versus and Tekken Ball\n");
   printf("\nSelect the Boss that you want to play as\n");
   printf("1. Boosted Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
@@ -1047,7 +1061,7 @@ bool isMovesetEdited(uintptr_t moveset)
 bool isEligible(uintptr_t matchStructAddr)
 {
   int value = Game.readInt32(matchStructAddr);
-  return value == 1 || value == 2 || value == 5 || value == 6;
+  return value == 1 || value == 2 || value == 5 || value == 6 || value == 12;
 }
 
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
@@ -1124,4 +1138,25 @@ void restoreHudAddr(uintptr_t matchStructAddr)
     Game.write<uint16_t>(HUD_ICON_ADDR, 0x5274);
     Game.write<uint16_t>(HUD_NAME_ADDR, 0x3174);
   }
+}
+
+BOOL WINAPI ConsoleHandler(DWORD signal)
+{
+  if (signal == CTRL_CLOSE_EVENT)
+  {
+    restoreHudAddr(0);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void signalHandler(int signal = 1)
+{
+	restoreHudAddr(0);
+	std::exit(signal);
+}
+
+void atExit()
+{
+	restoreHudAddr(0);
 }
