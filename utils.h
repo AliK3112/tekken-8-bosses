@@ -128,6 +128,58 @@ std::string getCharCode(int charId)
   }
 }
 
+std::string getCharacterName(int id) {
+  switch (id) {
+    case 0: return "PAUL";
+    case 1: return "LAW";
+    case 2: return "KING";
+    case 3: return "YOSHIMITSU";
+    case 4: return "HWOARANG";
+    case 5: return "XIAYOU";
+    case 6: return "JIN";
+    case 7: return "BRYAN";
+    case 8: return "KAZUYA";
+    case 9: return "STEVE";
+    case 10: return "JACK8";
+    case 11: return "ASUKA";
+    case 12: return "DEVIL_JIN";
+    case 13: return "FENG";
+    case 14: return "LILI";
+    case 15: return "DRAGUNOV";
+    case 16: return "LEO";
+    case 17: return "LARS";
+    case 18: return "ALISA";
+    case 19: return "CLAUDIO";
+    case 20: return "SHAHEEN";
+    case 21: return "NINA";
+    case 22: return "LEE";
+    case 23: return "KUMA";
+    case 24: return "PANDA";
+    case 25: return "ZAFINA";
+    case 26: return "LEROY";
+    case 27: return "JUN";
+    case 28: return "REINA";
+    case 29: return "AZUCENA";
+    case 30: return "VICTOR";
+    case 31: return "RAVEN";
+    case 32: return "AZAZEL";
+    case 33: return "EDDY";
+    case 34: return "LIDIA";
+    case 35: return "HEIHACHI";
+    case 36: return "CLIVE";
+    case 116: return "DUMMY";
+    case 117: return "ANGEL_JIN";
+    case 118: return "TRUE_DEVIL_KAZUYA";
+    case 119: return "JACK7";
+    case 120: return "SOLDIER";
+    case 121: return "DEVIL_JIN_2";
+    case 122: return "TEKKEN_MONK";
+    case 123: return "SEIRYU";
+    default: throw std::invalid_argument("Invalid character ID");
+  }
+}
+
+
 std::string buildString(const char side, const std::string& code) {
     std::stringstream ss;
     ss << "T_UI_HUD_Character_Icon_" << side << "_" << code;
