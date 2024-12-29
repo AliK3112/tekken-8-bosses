@@ -75,6 +75,7 @@ bool instAddrIsValid();
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
+bool cancelHasCondition(uintptr_t cancel, int req, int param);
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
 uintptr_t getCancelReqAddr(uintptr_t cancel);
 uintptr_t getMoveNthCancel(uintptr_t move, int n);
@@ -89,7 +90,7 @@ void atExit();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::ShadowHeihachi : -1;
+  int bossCode = DEV_MODE ? BossCodes::FinalHeihachi : -1;
   // Set up end-program handler
   if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
 	{
@@ -116,7 +117,14 @@ int main()
   {
     return 0;
   }
-  addresses = readKeyValuePairs("addresses.txt");
+  if (DEV_MODE)
+  {
+    addresses = readKeyValuePairs("C:\\Users\\alikh\\Documents\\Projects\\tekken-8-bosses\\addresses.txt");
+  }
+  else
+  {
+    addresses = readKeyValuePairs("addresses.txt");
+  }
   storeAddresses();
 
   // Validating the function address
@@ -613,11 +621,12 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Iteratively find the first cancel which has the req 667
     {
       uintptr_t cancel = getMoveNthCancel(addr, 0);
-      while (true)
+      for (; true; cancel += Sizes::Moveset::Cancel)
       {
-        int req = Game.readInt32(getCancelReqAddr(cancel));
-        if (req == STORY_BATTLE_REQ - 1) break;
-        cancel += Sizes::Moveset::Cancel;
+        if (cancelHasCondition(cancel, STORY_BATTLE_REQ - 1))
+        {
+          break;
+        }
       }
       disableStoryRelatedReqs(getCancelReqAddr(cancel));
       // Move 2 cancels forward
@@ -849,8 +858,16 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = getMoveAddressByIdx(moveset, idleStanceIdx);
+
+  // Idle stance, set/disable Warrior Instinct
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
+  addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
+  Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
+  Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
+
   if (bossCode == BossCodes::ShadowHeihachi)
   {
+    addr = getMoveAddressByIdx(moveset, idleStanceIdx);
     uintptr_t cancel1 = getMoveNthCancel(addr, 0);
     uintptr_t reqListCancel1 = getCancelReqAddr(cancel1);
     uintptr_t reqListCancel2 = getMoveNthCancel1stReqAddr(addr, 1);
@@ -858,22 +875,46 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
     disableStoryRelatedReqs(reqListCancel1);
     // TODO: b,f+2 functional
     // TODO: Broken Toy functional
-    // return markMovesetEdited(moveset);
-  }
-  
-  // Get into idle stance cancels
-  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
-  addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
-  Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
-  Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
-  if (bossCode == BossCodes::ShadowHeihachi)
-  {
     return markMovesetEdited(moveset);
   }
 
-  // Boss Heihachi
-  // 1,1 > 1+3 throw -> 0x10E04C8A
-  // u/f+3, 4 -> 0x426E03A8
+  // Final Heihachi
+  if (bossCode == BossCodes::FinalHeihachi)
+  {
+    // Enable most of the moves by modifying 2,2
+    addr = getMoveAddress(moveset, 0xF69E2BEF, 1550);
+    addr = getMoveNthCancel(addr, 1);
+    disableStoryRelatedReqs(getCancelReqAddr(addr));
+    int new22 = Game.readInt16(addr + Offsets::Cancel::Move);
+    addr = getMoveAddressByIdx(moveset, new22);
+    // 2,2,2
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 5));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 6));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 7));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 8));
+    // 1,1 > 1+3 throw
+    addr = getMoveAddress(moveset, 0x10E04C8A, 2000);
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
+    // Parry cancels from idle stance
+    addr = getMoveAddressByIdx(moveset, idleStanceIdx);
+    addr = getMoveNthCancel(addr, 0);
+    // Finding the address for the first parry cancel
+    for (uintptr_t cancel = addr; true; cancel += Sizes::Moveset::Cancel)
+    {
+      if (cancelHasCondition(cancel, 806, 3))
+      {
+        addr = cancel;
+        break;
+      }
+    }
+    // 4-cancels for parries
+    for (int i = 0; i < 4; i++)
+    {
+      disableStoryRelatedReqs(getCancelReqAddr(addr));
+      addr += Sizes::Moveset::Cancel;
+    }
+    return markMovesetEdited(moveset);
+  }
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
   uintptr_t reqCount = Game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
@@ -1066,6 +1107,23 @@ bool isEligible(uintptr_t matchStructAddr)
 {
   int value = Game.readInt32(matchStructAddr);
   return value == 1 || value == 2 || value == 5 || value == 6 || value == 12;
+}
+
+bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
+{
+  uintptr_t requirements = getCancelReqAddr(cancel);
+  for (uintptr_t addr = requirements; true; addr += Sizes::Moveset::Requirement)
+  {
+    int req = Game.readInt32(addr);
+    int param = Game.readInt32(addr + 4);
+    if (req == END_REQ)
+      return false;
+    if (req == targetReq && (targetParam == -1 || param == targetParam))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
