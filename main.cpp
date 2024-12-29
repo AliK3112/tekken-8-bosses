@@ -913,6 +913,8 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
       disableStoryRelatedReqs(getCancelReqAddr(addr));
       addr += Sizes::Moveset::Cancel;
     }
+    // TODO: Heat at round start
+    // TODO: Pre-round animation
     return markMovesetEdited(moveset);
   }
 
