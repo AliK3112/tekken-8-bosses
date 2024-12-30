@@ -623,7 +623,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       uintptr_t cancel = getMoveNthCancel(addr, 0);
       for (; true; cancel += Sizes::Moveset::Cancel)
       {
-        if (cancelHasCondition(cancel, STORY_BATTLE_REQ - 1))
+        if (cancelHasCondition(cancel, STORY_BATTLE_REQ - 1, -1))
         {
           break;
         }
@@ -852,6 +852,27 @@ bool isCorrectHeihachiFlag(int storyFlag, int param)
   return false;
 }
 
+void handleHeihachiMoveProp(uintptr_t moveset, int moveIdx)
+{
+  uintptr_t addr = getMoveAddressByIdx(moveset, moveIdx);
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  while (true)
+  {
+    int frame = Game.readInt32(addr + Offsets::ExtraProp::Type);
+    int prop = Game.readInt32(addr + Offsets::ExtraProp::Prop);
+    uintptr_t reqList = Game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
+    if (!prop && !frame)
+      break;
+    // Cancels & Props both have requirements at offset 0x8
+    if (cancelHasCondition(addr, 802, 2050))
+    {
+      disableStoryRelatedReqs(getCancelReqAddr(addr));
+      break;
+    }
+    addr += Sizes::Moveset::ExtraMoveProperty;
+  }
+}
+
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
   if (bossCode / 10 != 35) return false;
@@ -913,8 +934,26 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
       disableStoryRelatedReqs(getCancelReqAddr(addr));
       addr += Sizes::Moveset::Cancel;
     }
-    // TODO: Heat at round start
-    // TODO: Pre-round animation
+
+    int preRound1 = defaultAliasIdx - 3;
+    int preRound2 = defaultAliasIdx - 2;
+    {
+      uintptr_t defaultAliasAddr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+      addr = getMoveNthCancel(defaultAliasAddr, 50);
+      while (true)
+      {
+        if (cancelHasCondition(addr, 696, -1))
+          break;
+        addr += Sizes::Moveset::Cancel;
+      }
+      // 
+      Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound1);
+      addr += Sizes::Moveset::Cancel; // going to next cancel
+      Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound2);
+      // Now enabling story reqs inside their props
+      handleHeihachiMoveProp(moveset, preRound1);
+      handleHeihachiMoveProp(moveset, preRound2);
+    }
     return markMovesetEdited(moveset);
   }
 
