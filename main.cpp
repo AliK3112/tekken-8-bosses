@@ -863,6 +863,10 @@ void handleHeihachiMoveProp(uintptr_t moveset, int moveIdx)
     uintptr_t reqList = Game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
     if (!prop && !frame)
       break;
+    if (prop == 0x82e2)
+    {
+      Game.write<int>(addr + Offsets::ExtraProp::Value, 0); // don't spend rage
+    }
     // Cancels & Props both have requirements at offset 0x8
     if (cancelHasCondition(addr, 802, 2050))
     {
