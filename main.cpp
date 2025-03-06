@@ -400,7 +400,7 @@ void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
     icon = buildString(c, getCharCode(6));
     name = getNamePath(6);
   }
-  else if (bossCode == BossCodes::FinalJin && charId == 6)
+  else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == 6)
   {
     icon = buildString(c, "ant2");
     name = getNamePath(6);
