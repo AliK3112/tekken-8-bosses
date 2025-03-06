@@ -1,3 +1,2 @@
 player_struct_base=0x09A6D360
-permanent_devil_offset=0x130C
 match_struct=0x09A699B8

@@ -154,7 +154,6 @@ void storeAddresses()
 {
   uintptr_t gameBaseAddr = Game.getBaseAddress();
 
-  PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
 }
@@ -181,7 +180,14 @@ void scanAddresses()
   if (addr != 0) {
     MOVESET_OFFSET = Game.readUInt32(addr + 3);
   } else {
-    throw std::runtime_error("Moveset Offset not found!");
+    throw std::runtime_error("\"Moveset\" Offset not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
+  if (addr != 0) {
+    PERMA_DEVIL_OFFSET = Game.readUInt32(addr + 3);
+  } else {
+    throw std::runtime_error("\"Permanent Devil Mode\" offset not found!");
   }
 
   if (DEV_MODE) {
@@ -189,6 +195,7 @@ void scanAddresses()
     printf("HUD_ICON_ADDR: 0x%x\n", HUD_ICON_ADDR);
     printf("HUD_NAME_ADDR: 0x%x\n", HUD_NAME_ADDR);
     printf("MOVESET_OFFSET: 0x%x\n", MOVESET_OFFSET);
+    printf("PERMA_DEVIL_OFFSET: 0x%x\n", PERMA_DEVIL_OFFSET);
   }
 }
 
