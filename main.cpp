@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <limits>
 #include <algorithm>
+#include <stdexcept>
 #include <csignal>
 
 using namespace Tekken;
@@ -51,6 +52,7 @@ struct EncryptedValue
 };
 
 void storeAddresses();
+void scanAddresses();
 int getSideSelection();
 void mainFunc(int bossCode);
 int takeInput();
@@ -71,7 +73,6 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
 bool funcAddrIsValid(uintptr_t funcAddr);
-bool instAddrIsValid();
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
@@ -110,7 +111,9 @@ int main()
     }
     sleep(1000);
   }
-  printf("Attached to the Game\n");
+
+  scanAddresses();
+
   if (!DEV_MODE)
     SIDE_SELECTED = getSideSelection();
   if (SIDE_SELECTED == -1)
@@ -135,8 +138,6 @@ int main()
     return 0;
   }
 
-  HANDLE_ICONS = instAddrIsValid();
-
   if (!DEV_MODE)
     bossCode = takeInput();
   if (bossCode != -1)
@@ -155,15 +156,39 @@ void storeAddresses()
 
   PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
-  MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
-  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + gameBaseAddr;
   MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
-  try {
-    HUD_ICON_ADDR = getValueByKey(addresses, "hud_icon_addr") + gameBaseAddr;
-    HUD_NAME_ADDR = getValueByKey(addresses, "hud_name_addr") + gameBaseAddr;
-  } catch (...) {
-    HUD_ICON_ADDR = gameBaseAddr;
-    HUD_NAME_ADDR = gameBaseAddr;
+}
+
+void scanAddresses()
+{
+  uintptr_t addr = Game.FastAoBScan(Tekken::ENC_SIG_BYTES);
+  if (addr != 0) {
+    DECRYPT_FUNC_ADDR = addr;
+  } else {
+    throw std::runtime_error("Decryption Function Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, Game.getBaseAddress() + 0x5A00000);
+  HUD_ICON_ADDR = addr + 13;
+
+  addr = Game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
+  HUD_NAME_ADDR = addr + 13;
+
+  // Setting the global flag
+  HANDLE_ICONS = HUD_ICON_ADDR && HUD_NAME_ADDR;
+
+  addr = Game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
+  if (addr != 0) {
+    MOVESET_OFFSET = Game.readUInt32(addr + 3);
+  } else {
+    throw std::runtime_error("Moveset Offset not found!");
+  }
+
+  if (DEV_MODE) {
+    printf("DECRYPT_FUNC_ADDR: 0x%x\n", DECRYPT_FUNC_ADDR);
+    printf("HUD_ICON_ADDR: 0x%x\n", HUD_ICON_ADDR);
+    printf("HUD_NAME_ADDR: 0x%x\n", HUD_NAME_ADDR);
+    printf("MOVESET_OFFSET: 0x%x\n", MOVESET_OFFSET);
   }
 }
 
@@ -1125,14 +1150,6 @@ bool funcAddrIsValid(uintptr_t funcAddr)
   }
 
   return true;
-}
-
-bool instAddrIsValid()
-{
-  int val1 = Game.readUInt16(HUD_ICON_ADDR);
-  int val2 = Game.readUInt16(HUD_NAME_ADDR);
-  bool flag = val1 == 0x5274 && val2 == 0x3174;
-  return flag;
 }
 
 bool movesetExists(uintptr_t moveset)

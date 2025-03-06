@@ -1,7 +1,3 @@
 player_struct_base=0x09A6D360
-moveset_offset=0x34C8
 permanent_devil_offset=0x130C
-decryption_function_offset=0x17FA170
 match_struct=0x09A699B8
-hud_icon_addr=0x5DC04D1
-hud_name_addr=0x5DC0AE7
