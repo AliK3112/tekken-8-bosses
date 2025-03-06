@@ -90,7 +90,7 @@ void atExit();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::FinalHeihachi : -1;
+  int bossCode = DEV_MODE ? BossCodes::DevilKazuya : -1;
   // Set up end-program handler
   if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
 	{
@@ -613,9 +613,9 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // Disabling some requirements for basic attacks
     // 0x8000 alias
-    addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
+    // addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
     // 32th cancel
-    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), 777);
+    // disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
     // Iteratively find the first cancel which has the req 667
@@ -670,7 +670,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // Disabling standing req
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
-    markMovesetEdited(moveset);
+    return markMovesetEdited(moveset);
   }
   else if (bossCode == BossCodes::FinalKazuya)
   {
