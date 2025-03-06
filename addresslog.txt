@@ -1,0 +1,7 @@
+// The addresses at which the values were spotted, saving so I can optimize AoB scanner in the future
+v1.12
+decryption_function_offset=0x17FA170
+moveset_offset=0x18D2C6E
+permanent_devil_offset=0x2CE5F0A
+hud_icon_addr=0x5DC04D1
+hud_name_addr=0x5DC0AE7
