@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <Windows.h>
 #include <string>
+#include <sstream>
 #include <Psapi.h>
 #include <tlhelp32.h>
 #include <vector>
@@ -209,7 +210,7 @@ public:
     }
   }
 
-  void writeString(uintptr_t address, const std::string& str)
+  void writeString(uintptr_t address, const std::string &str)
   {
     if (!WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), str.c_str(), str.size() + 1, nullptr))
     {
@@ -330,6 +331,92 @@ public:
   int64_t readInt64(uintptr_t address)
   {
     return read<int64_t>(address);
+  }
+
+  uintptr_t FastAoBScan(const std::string &pattern, uintptr_t startAddress = 0, uintptr_t endAddress = 0)
+  {
+    if (!this->processHandle || this->baseAddress == 0)
+    {
+      std::cerr << "Error: Process not attached or base address not set." << std::endl;
+      return 0;
+    }
+
+    MODULEINFO moduleInfo;
+    if (!GetModuleInformation(this->processHandle, baseModule, &moduleInfo, sizeof(moduleInfo)))
+    {
+      std::cerr << "Error: Failed to get module information." << std::endl;
+      return 0;
+    }
+
+    uintptr_t moduleStart = this->baseAddress;
+    uintptr_t moduleEnd = moduleStart + moduleInfo.SizeOfImage;
+
+    // Validate or assign start and end addresses
+    if (startAddress == 0 || startAddress < moduleStart || startAddress >= moduleEnd)
+      startAddress = moduleStart;
+    if (endAddress == 0 || endAddress > moduleEnd || endAddress <= startAddress)
+      endAddress = moduleEnd;
+
+    // Convert pattern string to byte array and mask
+    std::vector<uint8_t> patternBytes;
+    std::vector<bool> mask; // False for wildcards, true for exact match
+
+    std::istringstream ss(pattern);
+    std::string byteStr;
+    while (ss >> byteStr)
+    {
+      if (byteStr == "??" || byteStr == "?")
+      {
+        patternBytes.push_back(0);
+        mask.push_back(false);
+      }
+      else
+      {
+        patternBytes.push_back(static_cast<uint8_t>(std::stoul(byteStr, nullptr, 16)));
+        mask.push_back(true);
+      }
+    }
+
+    size_t patternSize = patternBytes.size();
+    if (patternSize == 0)
+    {
+      std::cerr << "Error: Invalid pattern format." << std::endl;
+      return 0;
+    }
+
+    const size_t bufferSize = 0x10000; // 64 KB chunks
+    std::vector<uint8_t> buffer(bufferSize);
+
+    for (uintptr_t address = startAddress; address < endAddress - patternSize; address += bufferSize - patternSize)
+    {
+      SIZE_T bytesRead;
+      if (!ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer.data(), bufferSize, &bytesRead))
+      {
+        continue; // Skip unreadable regions
+      }
+
+      for (size_t i = 0; i < bytesRead - patternSize; i++)
+      {
+        bool found = true;
+
+        // Optimized pattern comparison using wildcards
+        for (size_t j = 0; j < patternSize; j++)
+        {
+          if (mask[j] && buffer[i + j] != patternBytes[j]) // Only compare non-wildcard bytes
+          {
+            found = false;
+            break;
+          }
+        }
+
+        if (found)
+        {
+          return address + i; // Return the first found address
+        }
+      }
+    }
+
+    return 0; // Not found
   }
 
 private:
