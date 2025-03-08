@@ -107,7 +107,6 @@ void mainFunc()
 void storeAddresses()
 {
   PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
-  MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
 }
 
 void scanAddresses()
@@ -121,6 +120,16 @@ void scanAddresses()
   {
     throw std::runtime_error("Decryption Function Address not found!");
   }
+
+  addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
+  if (addr != 0)
+  {
+    MOVESET_OFFSET = game.readUInt32(addr + 3);
+  }
+  else
+  {
+    throw std::runtime_error("Moveset Offset not found!");
+  }
 }
 
 bool disableCamera(uintptr_t moveset)
@@ -133,33 +142,19 @@ bool disableCamera(uintptr_t moveset)
   return true;
 }
 
-uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
+uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start)
 {
   uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
-  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    rawIdx = (i % 8) - 4;
-    uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-    if (rawIdx > -1)
-    {
-      int value = game.readInt32(addr + 0x10 + rawIdx * 4);
-      if (value == moveNameKey)
-        return addr;
-    }
-    else
-    {
-      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-      uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
-      if ((int)decryptedValue == moveNameKey)
-        return addr;
-    }
+    uintptr_t addr = (movesHead + i * Sizes::Moveset::Move);
+    int value = game.readInt32(addr + Offsets::Move::AnimAddr1);
+    if (value == moveNameKey)
+      return addr;
   }
-  std::ostringstream oss;
-  oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
-  throw std::runtime_error(oss.str());
+  return 0;
 }
 
 uintptr_t getMoveNthCancel(uintptr_t move, int n)
