@@ -9,6 +9,7 @@ using namespace Tekken;
 GameClass game;
 std::map<std::string, uintptr_t> addresses;
 uintptr_t MOVESET_OFFSET = 0;
+uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PLAYER_STRUCT_BASE = 0;
 int END_REQ = 1100;
 
@@ -16,6 +17,7 @@ void sleep(int ms) { usleep(ms * 1000); }
 void mainFunc();
 bool disableCamera(uintptr_t movesetAddr);
 void storeAddresses();
+void scanAddresses();
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0);
 uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
@@ -40,6 +42,7 @@ int main()
     }
     sleep(1000);
   }
+  scanAddresses();
   addresses = readKeyValuePairs("addresses.txt");
   storeAddresses();
   mainFunc();
@@ -107,6 +110,19 @@ void storeAddresses()
   MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
 }
 
+void scanAddresses()
+{
+  uintptr_t addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES);
+  if (addr != 0)
+  {
+    DECRYPT_FUNC_ADDR = addr;
+  }
+  else
+  {
+    throw std::runtime_error("Decryption Function Address not found!");
+  }
+}
+
 bool disableCamera(uintptr_t moveset)
 {
   // anim-key 0x2a1eb12b (air bounds)
@@ -117,19 +133,33 @@ bool disableCamera(uintptr_t moveset)
   return true;
 }
 
-uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start)
+uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
 {
   uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
   int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
   start = start >= movesCount ? 0 : start;
+  int rawIdx = -1;
   for (int i = start; i < movesCount; i++)
   {
-    uintptr_t addr = (movesHead + i * Sizes::Moveset::Move);
-    int value = game.readInt32(addr + Offsets::Move::AnimAddr1);
-    if (value == moveNameKey)
-      return addr;
+    rawIdx = (i % 8) - 4;
+    uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
+    if (rawIdx > -1)
+    {
+      int value = game.readInt32(addr + 0x10 + rawIdx * 4);
+      if (value == moveNameKey)
+        return addr;
+    }
+    else
+    {
+      EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+      uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(DECRYPT_FUNC_ADDR, paramAddr);
+      if ((int)decryptedValue == moveNameKey)
+        return addr;
+    }
   }
-  return 0;
+  std::ostringstream oss;
+  oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+  throw std::runtime_error(oss.str());
 }
 
 uintptr_t getMoveNthCancel(uintptr_t move, int n)
