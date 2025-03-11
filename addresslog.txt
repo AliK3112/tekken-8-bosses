@@ -5,3 +5,12 @@ moveset_offset=0x18D2C6E
 permanent_devil_offset=0x2CE5F0A
 hud_icon_addr=0x5DC04D1
 hud_name_addr=0x5DC0AE7
+
+v1.13
+decryption_function_offset=0x17FC480
+moveset_offset=0x18D582E
+permanent_devil_offset=0x2CEABFA
+hud_icon_addr=0x5DE3B51
+hud_name_addr=0x5DE4167
+player_struct_base=0x5DE04A1
+match_struct=0x5E688B1
