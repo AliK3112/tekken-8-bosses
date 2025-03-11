@@ -1,2 +1,2 @@
-player_struct_base=0x09A6D360
-match_struct=0x09A699B8
+player_struct_base=0x09A91C58
+match_struct=0x09A8E258
