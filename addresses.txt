@@ -1,2 +1,0 @@
-player_struct_base=0x09A91C58
-match_struct=0x09A8E258

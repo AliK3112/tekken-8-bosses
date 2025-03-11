@@ -12,7 +12,6 @@ using namespace Tekken;
 
 // Globals
 GameClass Game;
-std::map<std::string, uintptr_t> addresses;
 uintptr_t MOVESET_OFFSET = 0;
 uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PERMA_DEVIL_OFFSET = 0;
@@ -51,7 +50,6 @@ struct EncryptedValue
   uintptr_t key;
 };
 
-void storeAddresses();
 void scanAddresses();
 int getSideSelection();
 void mainFunc(int bossCode);
@@ -72,7 +70,6 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
-bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
@@ -120,23 +117,6 @@ int main()
   {
     return 0;
   }
-  if (DEV_MODE)
-  {
-    addresses = readKeyValuePairs("C:\\Users\\alikh\\Documents\\Projects\\tekken-8-bosses\\addresses.txt");
-  }
-  else
-  {
-    addresses = readKeyValuePairs("addresses.txt");
-  }
-  storeAddresses();
-
-  // Validating the function address
-  if (!funcAddrIsValid(DECRYPT_FUNC_ADDR))
-  {
-    printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
-    _getch();
-    return 0;
-  }
 
   if (!DEV_MODE)
     bossCode = takeInput();
@@ -150,24 +130,47 @@ int main()
   return 0;
 }
 
-void storeAddresses()
-{
-  uintptr_t gameBaseAddr = Game.getBaseAddress();
-
-  PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
-  MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
-}
-
 void scanAddresses()
 {
-  uintptr_t addr = Game.FastAoBScan(Tekken::ENC_SIG_BYTES);
+  printf("Scanning for addresses...\n");
+  uintptr_t addr = 0;
+  uintptr_t base = Game.getBaseAddress();
+  uintptr_t start = base;
+
+  addr = Game.FastAoBScan(Tekken::PLAYER_STRUCT_SIG_BYTES, start + 0x5A00000);
+  if (addr != 0) {
+    start = addr; // To use as starting point for other scans
+
+    // $1 + $2 + $3 - $4
+    // $1 = Address at which the signature bytes were found
+    // $2 = Length of the instruction where signature bytes were found
+    // $3 = Relative offset to Player base address within the signature instruction
+    // $4 = Game's base address
+    PLAYER_STRUCT_BASE = addr + 7 + Game.readUInt32(addr + 3) - base;
+  } else {
+    throw std::runtime_error("Player Struct Base Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::MATCH_STRUCT_SIG_BYTES, start);
+  if (addr != 0) {
+    // $1 + $2 + $3 - $4
+    // $1 = Address at which the signature bytes were found
+    // $2 = Length of the instruction where signature bytes were found
+    // $3 = Relative offset to Player base address within the signature instruction
+    // $4 = Game's base address
+    MATCH_STRUCT_OFFSET = addr + 7 + Game.readUInt32(addr + 3) - base;
+  } else {
+    throw std::runtime_error("Match Struct Base Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
   if (addr != 0) {
     DECRYPT_FUNC_ADDR = addr;
   } else {
     throw std::runtime_error("Decryption Function Address not found!");
   }
 
-  addr = Game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, Game.getBaseAddress() + 0x5A00000);
+  addr = Game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
   HUD_ICON_ADDR = addr + 13;
 
   addr = Game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
@@ -183,7 +186,7 @@ void scanAddresses()
     throw std::runtime_error("\"Moveset\" Offset not found!");
   }
 
-  addr = Game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
+  addr = Game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, base + 0x2C00000);
   if (addr != 0) {
     PERMA_DEVIL_OFFSET = Game.readUInt32(addr + 3);
   } else {
@@ -191,12 +194,15 @@ void scanAddresses()
   }
 
   if (DEV_MODE) {
-    printf("DECRYPT_FUNC_ADDR: 0x%x\n", DECRYPT_FUNC_ADDR);
-    printf("HUD_ICON_ADDR: 0x%x\n", HUD_ICON_ADDR);
-    printf("HUD_NAME_ADDR: 0x%x\n", HUD_NAME_ADDR);
-    printf("MOVESET_OFFSET: 0x%x\n", MOVESET_OFFSET);
-    printf("PERMA_DEVIL_OFFSET: 0x%x\n", PERMA_DEVIL_OFFSET);
+    printf("PLAYER_STRUCT_BASE: 0x%llX\n", PLAYER_STRUCT_BASE);
+    printf("MATCH_STRUCT_OFFSET: 0x%llX\n", MATCH_STRUCT_OFFSET);
+    printf("DECRYPT_FUNC_ADDR: 0x%llX\n", DECRYPT_FUNC_ADDR);
+    printf("HUD_ICON_ADDR: 0x%llX\n", HUD_ICON_ADDR);
+    printf("HUD_NAME_ADDR: 0x%llX\n", HUD_NAME_ADDR);
+    printf("MOVESET_OFFSET: 0x%llX\n", MOVESET_OFFSET);
+    printf("PERMA_DEVIL_OFFSET: 0x%llX\n", PERMA_DEVIL_OFFSET);
   }
+  printf("Addresses successfully scanned...\n");
 }
 
 int getSideSelection()
@@ -310,7 +316,6 @@ void mainFunc(int bossCode)
     printf("Cannot find the match structure address.\n");
     return;
   }
-  uintptr_t lastAddr = 0;
 
   while (true)
   {
@@ -1136,27 +1141,6 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
   oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
   throw std::runtime_error(oss.str());
   return -1;
-}
-
-bool funcAddrIsValid(uintptr_t funcAddr)
-{
-  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
-  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
-
-  if (gameBytes.size() != sizeof(originalBytes))
-  {
-    return false;
-  }
-
-  for (size_t i = 0; i < sizeof(originalBytes); ++i)
-  {
-    if (gameBytes[i] != originalBytes[i])
-    {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool movesetExists(uintptr_t moveset)
