@@ -117,4 +117,21 @@ namespace Tekken
   std::string DEVIL_FLAG_SIG_BYTES = "41 83 BF ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
   std::string PLAYER_STRUCT_SIG_BYTES = "4C 89 35 ?? ?? ?? ?? 41 88 5E 28 66 41 89 9E 88 00 00 00 E8 ?? ?? ?? ?? 41 88 86 8A 00 00 00";
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
+
+  enum Requirements
+  {
+    CHARA_CONTROLLER = 228,
+    STORY_BATTLE = 667,
+    STORY_BATTLE_NUM = 668,
+    INTRO_RELATED = 755,
+    STORY_FLAGS = 777,
+    DLC_STORY1_BATTLE = 801,
+    DLC_STORY1_BATTLE_NUM = 802,
+    DLC_STORY1_FLAGS = 806,
+    PRE_ROUND_ANIM = 696,
+    _697 = 697, // Intros related
+    OUTRO1 = 675, // Outro related 1
+    OUTRO2 = 679, // Outro related 2
+    EOL = 1100, // End of the list
+  };
 }
