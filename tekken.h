@@ -108,4 +108,13 @@ namespace Tekken
       DialogueManager = 0x18
     };
   }
+
+  std::string ENC_SIG_BYTES = "48 89 5C 24 08 57 48 83 EC 20 48 8B 59 08 48 8B 39 48 8B D3 48 8B CF E8 ?? ?? ?? ?? 48 3B C7 0F 85 ?? ?? ?? ?? 48 83 F7 1D 40 0F B6 C7 24 1F 76 20 0F B6 C8 0F 1F 40 00 0F 1F 84 00 00 00 00 00 48 8B C3 48 C1 E8 3F 48 8D 1C 58 48 83 E9 01 75 EF F3 0F 10 0D ?? ?? ?? ?? F3 0F 10 05 ?? ?? ?? ?? E8 ?? ?? ?? ?? F3 0F 10 0D ?? ?? ?? ?? 33 C0 0F 2F C1 72 16 F3 0F 5C C1 0F 2F C1 73 0D 48 B9 00 00 00 00 00 00 00 80 48 8B C1 48 83 E3 E0 33 D2 48 33 DF 48 C1 E3 20 F3 48 0F 2C C8 48 03 C8 48 8B C3 48 F7 F1 48 8B 5C 24 30 48 83 C4 20 5F C3 48 8B 5C 24 30 33 C0 48 83 C4 20 5F C3";
+
+  std::string HUD_NAME_SIG_BYTES = "48 8B C8 4C 8B F0 E8 ?? ?? ?? ?? 84 C0 74 31 40 0F B6 CE";
+  std::string HUD_ICON_SIG_BYTES = "48 8B C8 4C 8B F8 E8 ?? ?? ?? ?? 84 C0 74 52 80 BD 8A 00";
+  std::string MOVSET_OFFSET_SIG_BYTES = "48 89 91 ?? ?? ?? 00 4C 8B D9 48 89 91 ?? ?? ?? 00 48 8B DA 48 89 91 ?? ?? ?? 00 48 89 91 ?? ?? ?? 00 0F B7 02 89 81 ?? ?? ?? 00 B8 01 80 00 80";
+  std::string DEVIL_FLAG_SIG_BYTES = "41 83 BF ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
+  std::string PLAYER_STRUCT_SIG_BYTES = "4C 89 35 ?? ?? ?? ?? 41 88 5E 28 66 41 89 9E 88 00 00 00 E8 ?? ?? ?? ?? 41 88 86 8A 00 00 00";
+  std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
 }

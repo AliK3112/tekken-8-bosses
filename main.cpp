@@ -5,29 +5,35 @@
 #include <unistd.h>
 #include <limits>
 #include <algorithm>
+#include <stdexcept>
+#include <csignal>
 
 using namespace Tekken;
 
 // Globals
 GameClass Game;
-std::map<std::string, uintptr_t> addresses;
 uintptr_t MOVESET_OFFSET = 0;
 uintptr_t DECRYPT_FUNC_ADDR = 0;
 uintptr_t PERMA_DEVIL_OFFSET = 0;
 uintptr_t PLAYER_STRUCT_BASE = 0;
 uintptr_t MATCH_STRUCT_OFFSET = 0;
+uintptr_t HUD_ICON_ADDR = 0;
+uintptr_t HUD_NAME_ADDR = 0;
 
 std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
+std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
 bool DEV_MODE = false;
+bool HANDLE_ICONS = false;
 int STORY_FLAGS_REQ = 777;
 int STORY_BATTLE_REQ = 668;
 int END_REQ = 1100;
 int SIDE_SELECTED = 0;
+std::string BOSS_NAME;
 
 std::vector<int> STORY_REQS = {
   667, // Story Fight
@@ -44,12 +50,13 @@ struct EncryptedValue
   uintptr_t key;
 };
 
-void storeAddresses();
+void scanAddresses();
 int getSideSelection();
 void mainFunc(int bossCode);
 int takeInput();
 void loadCostume(uintptr_t matchStructAddr, int costumeId, std::string costumePath);
 void costumeHandler(uintptr_t matchStructAddr, int bossCode);
+void hudHandler(uintptr_t matchStructAddr, int bossCode);
 void sleep(int ms) { usleep(ms * 1000); }
 bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode);
 void loadCharacter(uintptr_t matchStructAddr, int bossCode);
@@ -63,51 +70,139 @@ bool loadStoryDevilJin(uintptr_t moveset, int bossCode);
 uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start);
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx);
 int getMoveId(uintptr_t moveset, int moveNameKey, int start);
-bool funcAddrIsValid(uintptr_t funcAddr);
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
 bool isEligible(uintptr_t matchStruct);
+bool cancelHasCondition(uintptr_t cancel, int req, int param);
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start);
+uintptr_t getCancelReqAddr(uintptr_t cancel);
 uintptr_t getMoveNthCancel(uintptr_t move, int n);
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n);
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n);
 bool markMovesetEdited(uintptr_t moveset);
+void modifyHudAddr(uintptr_t matchStructAddr);
+void restoreHudAddr(uintptr_t matchStructAddr);
+void signalHandler(int signal);
+BOOL WINAPI ConsoleHandler(DWORD signal);
+void atExit();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::FinalHeihachi : -1;
-  if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
+  int bossCode = DEV_MODE ? BossCodes::DevilKazuya : -1;
+  // Set up end-program handler
+  if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
+	{
+		std::cerr << "Error: Could not set control handler\n";
+		return 1;
+	}
+	std::atexit(atExit);
+	std::signal(SIGINT, signalHandler);
+	std::signal(SIGTERM, signalHandler);
+  //
+  printf("Waiting for Tekken 8 to run...\n");
+  while (true)
   {
-    printf("Attached to the Game\n");
-    if (!DEV_MODE) SIDE_SELECTED = getSideSelection();
-    addresses = readKeyValuePairs("addresses.txt");
-    storeAddresses();
-    // Validating the function address
-    if (!funcAddrIsValid(DECRYPT_FUNC_ADDR))
+    if (Game.Attach(L"Polaris-Win64-Shipping.exe"))
     {
-      printf("Function address is invalid. The script will not be able to work if this is not correct.\nPress any key to close the script\n");
-      _getch();
-      return 0;
+      break;
     }
-    if (!DEV_MODE) bossCode = takeInput();
-    if (bossCode != -1)
-      mainFunc(bossCode);
+    sleep(1000);
   }
+
+  scanAddresses();
+
+  if (!DEV_MODE)
+    SIDE_SELECTED = getSideSelection();
+  if (SIDE_SELECTED == -1)
+  {
+    return 0;
+  }
+
+  if (!DEV_MODE)
+    bossCode = takeInput();
   if (bossCode != -1)
   {
-    printf("Press any key to close the script\n");
-    _getch();
+    mainFunc(bossCode);
   }
+
+  printf("Press any key to close the script\n");
+  _getch();
   return 0;
 }
 
-void storeAddresses()
+void scanAddresses()
 {
-  PERMA_DEVIL_OFFSET = getValueByKey(addresses, "permanent_devil_offset");
-  PLAYER_STRUCT_BASE = getValueByKey(addresses, "player_struct_base");
-  MOVESET_OFFSET = getValueByKey(addresses, "moveset_offset");
-  DECRYPT_FUNC_ADDR = getValueByKey(addresses, "decryption_function_offset") + Game.getBaseAddress();
-  MATCH_STRUCT_OFFSET = getValueByKey(addresses, "match_struct");
+  printf("Scanning for addresses...\n");
+  uintptr_t addr = 0;
+  uintptr_t base = Game.getBaseAddress();
+  uintptr_t start = base;
+
+  addr = Game.FastAoBScan(Tekken::PLAYER_STRUCT_SIG_BYTES, start + 0x5A00000);
+  if (addr != 0) {
+    start = addr; // To use as starting point for other scans
+
+    // $1 + $2 + $3 - $4
+    // $1 = Address at which the signature bytes were found
+    // $2 = Length of the instruction where signature bytes were found
+    // $3 = Relative offset to Player base address within the signature instruction
+    // $4 = Game's base address
+    PLAYER_STRUCT_BASE = addr + 7 + Game.readUInt32(addr + 3) - base;
+  } else {
+    throw std::runtime_error("Player Struct Base Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::MATCH_STRUCT_SIG_BYTES, start);
+  if (addr != 0) {
+    // $1 + $2 + $3 - $4
+    // $1 = Address at which the signature bytes were found
+    // $2 = Length of the instruction where signature bytes were found
+    // $3 = Relative offset to Player base address within the signature instruction
+    // $4 = Game's base address
+    MATCH_STRUCT_OFFSET = addr + 7 + Game.readUInt32(addr + 3) - base;
+  } else {
+    throw std::runtime_error("Match Struct Base Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
+  if (addr != 0) {
+    DECRYPT_FUNC_ADDR = addr;
+  } else {
+    throw std::runtime_error("Decryption Function Address not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
+  HUD_ICON_ADDR = addr + 13;
+
+  addr = Game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
+  HUD_NAME_ADDR = addr + 13;
+
+  // Setting the global flag
+  HANDLE_ICONS = HUD_ICON_ADDR && HUD_NAME_ADDR;
+
+  addr = Game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
+  if (addr != 0) {
+    MOVESET_OFFSET = Game.readUInt32(addr + 3);
+  } else {
+    throw std::runtime_error("\"Moveset\" Offset not found!");
+  }
+
+  addr = Game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, base + 0x2C00000);
+  if (addr != 0) {
+    PERMA_DEVIL_OFFSET = Game.readUInt32(addr + 3);
+  } else {
+    throw std::runtime_error("\"Permanent Devil Mode\" offset not found!");
+  }
+
+  if (DEV_MODE) {
+    printf("PLAYER_STRUCT_BASE: 0x%llX\n", PLAYER_STRUCT_BASE);
+    printf("MATCH_STRUCT_OFFSET: 0x%llX\n", MATCH_STRUCT_OFFSET);
+    printf("DECRYPT_FUNC_ADDR: 0x%llX\n", DECRYPT_FUNC_ADDR);
+    printf("HUD_ICON_ADDR: 0x%llX\n", HUD_ICON_ADDR);
+    printf("HUD_NAME_ADDR: 0x%llX\n", HUD_NAME_ADDR);
+    printf("MOVESET_OFFSET: 0x%llX\n", MOVESET_OFFSET);
+    printf("PERMA_DEVIL_OFFSET: 0x%llX\n", PERMA_DEVIL_OFFSET);
+  }
+  printf("Addresses successfully scanned...\n");
 }
 
 int getSideSelection()
@@ -118,6 +213,7 @@ int getSideSelection()
     std::cout << "\nWhich side do you want to activate this script for?\n";
     std::cout << "For Left side press 'L' or '0'\n";
     std::cout << "For Right side press 'R' or '1'\n";
+    std::cout << "For exiting: Esc or Q\n";
     char input = _getch();
 
     if (input == '0' || input == '1')
@@ -130,6 +226,10 @@ int getSideSelection()
       selectedSide = (input | 0x20) == 'r';
       break;
     }
+    else if (input == 27 || input == 'q' || input == 'Q')
+    {
+      return -1;
+    }
     else
     {
       std::cout << "\nInvalid input! Please press 'L', 'R', '0' or '1'\n";
@@ -140,9 +240,9 @@ int getSideSelection()
 
 int takeInput()
 {
-  printf("**NOTE**, this script only works for Practice and Versus Modes\n");
+  printf("**NOTE**, Eligible Game Modes: Practice, Arcade, Story, Versus and Tekken Ball\n");
   printf("\nSelect the Boss that you want to play as\n");
-  printf("1. Devil-powered Jin from Chapter 1\n");
+  printf("1. Boosted Jin from Chapter 1\n");
   printf("2. Nerfed Jin\n");
   printf("3. Chained Jin from Chapter 12 Battle 3\n");
   printf("4. Mishima Jin from Chapter 15 Battle 2\n");
@@ -151,11 +251,12 @@ int takeInput()
   printf("7. Devil Kazuya from Chapter 6\n");
   printf("8. Final Battle Kazuya\n");
   printf("9. Monk/Amnesia Heihachi from Story DLC\n");
-  printf("A. Heihachi from Story DLC Finale\n");
-  printf("B. Angel Jin\n");
-  printf("C. True Devil Kazuya\n");
-  printf("D. Story Devil Jin\n");
-  printf("E. Azazel\n");
+  printf("A. Shadow Heihachi from Story DLC\n");
+  printf("B. Heihachi from Story DLC Finale\n");
+  printf("C. Angel Jin\n");
+  printf("D. True Devil Kazuya\n");
+  printf("E. Story Devil Jin\n");
+  printf("F. Azazel\n");
   printf("Press any other key to exit\n");
   int input = _getch();
   switch (input)
@@ -180,18 +281,21 @@ int takeInput()
     return BossCodes::AmnesiaHeihachi;
   case 'A':
   case 'a':
-    return BossCodes::FinalHeihachi;
+    return BossCodes::ShadowHeihachi;
   case 'B':
   case 'b':
-    return BossCodes::AngelJin;
+    return BossCodes::FinalHeihachi;
   case 'C':
   case 'c':
-    return BossCodes::TrueDevilKazuya;
+    return BossCodes::AngelJin;
   case 'D':
   case 'd':
-    return BossCodes::DevilJin;
+    return BossCodes::TrueDevilKazuya;
   case 'E':
   case 'e':
+    return BossCodes::DevilJin;
+  case 'F':
+  case 'f':
     return BossCodes::Azazel;
   default:
     return -1;
@@ -202,6 +306,7 @@ int takeInput()
 void mainFunc(int bossCode)
 {
   // system("cls");
+  BOSS_NAME = getBossName(bossCode);
   printf("Please load into the game with the appropriate character, the Game will automatically detect & load the altered moveset\n");
   bool isWritten = false;
   bool flag = false;
@@ -211,7 +316,6 @@ void mainFunc(int bossCode)
     printf("Cannot find the match structure address.\n");
     return;
   }
-  uintptr_t lastAddr = 0;
 
   while (true)
   {
@@ -222,6 +326,9 @@ void mainFunc(int bossCode)
       continue;
     }
 
+    // At this point, the matchStruct is present, so modify the instructions
+    if (HANDLE_ICONS) modifyHudAddr(matchStructAddr);
+
     if (!isEligible(matchStructAddr))
     {
       continue;
@@ -229,6 +336,9 @@ void mainFunc(int bossCode)
 
     // Set Character ID
     loadCharacter(matchStructAddr, bossCode);
+
+    // Handle HUD icons
+    if (HANDLE_ICONS) hudHandler(matchStructAddr, bossCode);
 
     uintptr_t playerAddr = Game.getAddress({(DWORD)PLAYER_STRUCT_BASE, (DWORD)(0x30 + SIDE_SELECTED * 8)});
     if (playerAddr == 0)
@@ -245,6 +355,9 @@ void mainFunc(int bossCode)
       continue;
     }
 
+    // At this point, the moveset is loaded, so restore the instructions
+    if (HANDLE_ICONS) restoreHudAddr(matchStructAddr);
+
     if (!movesetExists(movesetAddr))
     {
       isWritten = false;
@@ -260,7 +373,7 @@ void mainFunc(int bossCode)
     {
       isWritten = loadBoss(playerAddr, movesetAddr, bossCode);
       if (!flag && isWritten)
-        printf("Moveset Edited\n");
+        printf("Boss loaded: %s\n", BOSS_NAME.c_str());
       flag = true;
     }
     // break;
@@ -305,10 +418,68 @@ void costumeHandler(uintptr_t matchStructAddr, int bossCode)
   case BossCodes::AmnesiaHeihachi:
     costumePath = HEIHACHI_MONK_COSTUME_PATH;
     break;
+  case BossCodes::ShadowHeihachi:
+    costumePath = HEIHACHI_SHADOW_COSTUME_PATH;
+    break;
   default:
     return;
   }
   loadCostume(matchStructAddr, 51, costumePath);
+}
+
+void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
+{
+  std::string icon;
+  std::string name;
+  const char c = side == 0 ? 'L' : 'R';
+  if (bossCode == BossCodes::DevilJin && charId == BossCodes::DevilJin)
+  {
+    icon = buildString(c, getCharCode(6));
+    name = getNamePath(6);
+  }
+  else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == 6)
+  {
+    icon = buildString(c, "ant2");
+    name = getNamePath(6);
+  }
+  else if (bossCode == BossCodes::FinalKazuya && charId == 8)
+  {
+    icon = buildString(c, "grl2");
+    name = getNamePath(8);
+  }
+  else if (bossCode == BossCodes::DevilKazuya && charId == 8)
+  {
+    icon = buildString(c, "grl3");
+    name = getNamePath("grl2");
+  }
+  else if (bossCode == BossCodes::AmnesiaHeihachi && charId == 35)
+  {
+    icon = buildString(c, "bee2");
+    name = getNamePath(35);
+  }
+  else if (bossCode == BossCodes::ShadowHeihachi && charId == 35)
+  {
+    icon = buildString(c, "bee3");
+    name = getNamePath("bee3");
+  }
+  if (!icon.empty()) Game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
+  if (!name.empty()) Game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
+}
+
+void hudHandler(uintptr_t matchStruct, int bossCode)
+{
+  int char1 = Game.readInt32(matchStruct + 0x10);
+  int char2 = Game.readInt32(matchStruct + 0x94);
+  std::string icon1 = getIconPath(0, char1);
+  std::string icon2 = getIconPath(1, char2);
+  std::string name1 = getNamePath(char1);
+  std::string name2 = getNamePath(char2);
+  Game.writeString(matchStruct + 0x2C0, icon1);
+  Game.writeString(matchStruct + 0x3C0, icon2);
+  Game.writeString(matchStruct + 0x4C0, name1);
+  Game.writeString(matchStruct + 0x5C0, name2);
+
+  loadBossHud(matchStruct, SIDE_SELECTED, SIDE_SELECTED ? char2 : char1, bossCode);
 }
 
 void loadCharacter(uintptr_t matchStructAddr, int bossCode)
@@ -479,15 +650,26 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
 
     // Disabling some requirements for basic attacks
     // 0x8000 alias
-    addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
+    // addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
     // 32th cancel
-    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), 777);
+    // disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), 777);
 
     addr = getMoveAddress(moveset, 0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
-    // 2nd cancel
-    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 1));
-    // 4th cancel
-    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 3));
+    // Iteratively find the first cancel which has the req 667
+    {
+      uintptr_t cancel = getMoveNthCancel(addr, 0);
+      for (; true; cancel += Sizes::Moveset::Cancel)
+      {
+        if (cancelHasCondition(cancel, STORY_BATTLE_REQ - 1, -1))
+        {
+          break;
+        }
+      }
+      disableStoryRelatedReqs(getCancelReqAddr(cancel));
+      // Move 2 cancels forward
+      cancel += Sizes::Moveset::Cancel * 2;
+      disableStoryRelatedReqs(getCancelReqAddr(cancel));
+    }
 
     // 1,1,2
     addr = getMoveAddress(moveset, 0x2226A9EE, idleStanceIdx);
@@ -520,11 +702,12 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     // d/b+4
     addr = getMoveAddress(moveset, 0x9364E2F5, idleStanceIdx);
     // 1st cancel
-    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
-    // Disabling standing req  
+    addr = getMoveNthCancel1stReqAddr(addr, 0);
+    disableStoryRelatedReqs(addr);
+    // Disabling standing req
     Game.write<int>(addr + Sizes::Moveset::Requirement, 0);
 
-    markMovesetEdited(moveset);
+    return markMovesetEdited(moveset);
   }
   else if (bossCode == BossCodes::FinalKazuya)
   {
@@ -706,20 +889,113 @@ bool isCorrectHeihachiFlag(int storyFlag, int param)
   return false;
 }
 
+void handleHeihachiMoveProp(uintptr_t moveset, int moveIdx)
+{
+  uintptr_t addr = getMoveAddressByIdx(moveset, moveIdx);
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
+  while (true)
+  {
+    int frame = Game.readInt32(addr + Offsets::ExtraProp::Type);
+    int prop = Game.readInt32(addr + Offsets::ExtraProp::Prop);
+    uintptr_t reqList = Game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
+    if (!prop && !frame)
+      break;
+    if (prop == 0x82e2)
+    {
+      Game.write<int>(addr + Offsets::ExtraProp::Value, 0); // don't spend rage
+    }
+    // Cancels & Props both have requirements at offset 0x8
+    if (cancelHasCondition(addr, 802, 2050))
+    {
+      disableStoryRelatedReqs(getCancelReqAddr(addr));
+      break;
+    }
+    addr += Sizes::Moveset::ExtraMoveProperty;
+  }
+}
+
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
   if (bossCode / 10 != 35) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
-  uintptr_t addr = 0;
-  // Get into idle stance cancels
-  if (bossCode == BossCodes::FinalHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
+  uintptr_t addr = getMoveAddressByIdx(moveset, idleStanceIdx);
+
+  // Idle stance, set/disable Warrior Instinct
+  addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
+  addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
+  Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
+  Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
+
+  if (bossCode == BossCodes::ShadowHeihachi)
   {
     addr = getMoveAddressByIdx(moveset, idleStanceIdx);
-    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
-    addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
-    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
-    Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
+    uintptr_t cancel1 = getMoveNthCancel(addr, 0);
+    uintptr_t reqListCancel1 = getCancelReqAddr(cancel1);
+    uintptr_t reqListCancel2 = getMoveNthCancel1stReqAddr(addr, 1);
+    Game.write<uintptr_t>(cancel1 + Offsets::Cancel::RequirementsList, reqListCancel2);
+    disableStoryRelatedReqs(reqListCancel1);
+    // TODO: b,f+2 functional
+    // TODO: Broken Toy functional
+    return markMovesetEdited(moveset);
+  }
+
+  // Final Heihachi
+  if (bossCode == BossCodes::FinalHeihachi)
+  {
+    // Enable most of the moves by modifying 2,2
+    addr = getMoveAddress(moveset, 0xF69E2BEF, 1550);
+    addr = getMoveNthCancel(addr, 1);
+    disableStoryRelatedReqs(getCancelReqAddr(addr));
+    int new22 = Game.readInt16(addr + Offsets::Cancel::Move);
+    addr = getMoveAddressByIdx(moveset, new22);
+    // 2,2,2
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 5));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 6));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 7));
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 8));
+    // 1,1 > 1+3 throw
+    addr = getMoveAddress(moveset, 0x10E04C8A, 2000);
+    disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 0));
+    // Parry cancels from idle stance
+    addr = getMoveAddressByIdx(moveset, idleStanceIdx);
+    addr = getMoveNthCancel(addr, 0);
+    // Finding the address for the first parry cancel
+    for (uintptr_t cancel = addr; true; cancel += Sizes::Moveset::Cancel)
+    {
+      if (cancelHasCondition(cancel, 806, 3))
+      {
+        addr = cancel;
+        break;
+      }
+    }
+    // 4-cancels for parries
+    for (int i = 0; i < 4; i++)
+    {
+      disableStoryRelatedReqs(getCancelReqAddr(addr));
+      addr += Sizes::Moveset::Cancel;
+    }
+
+    int preRound1 = defaultAliasIdx - 3;
+    int preRound2 = defaultAliasIdx - 2;
+    {
+      uintptr_t defaultAliasAddr = getMoveAddressByIdx(moveset, defaultAliasIdx);
+      addr = getMoveNthCancel(defaultAliasAddr, 50);
+      while (true)
+      {
+        if (cancelHasCondition(addr, 696, -1))
+          break;
+        addr += Sizes::Moveset::Cancel;
+      }
+      // 
+      Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound1);
+      addr += Sizes::Moveset::Cancel; // going to next cancel
+      Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound2);
+      // Now enabling story reqs inside their props
+      handleHeihachiMoveProp(moveset, preRound1);
+      handleHeihachiMoveProp(moveset, preRound2);
+    }
+    return markMovesetEdited(moveset);
   }
 
   uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
@@ -823,7 +1099,9 @@ uintptr_t getMoveAddress(uintptr_t moveset, int moveNameKey, int start = 0)
         return addr;
     }
   }
-  return 0;
+  std::ostringstream oss;
+  oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+  throw std::runtime_error(oss.str());
 }
 
 uintptr_t getMoveAddressByIdx(uintptr_t moveset, int idx)
@@ -859,28 +1137,10 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
         return i;
     }
   }
+  std::ostringstream oss;
+  oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+  throw std::runtime_error(oss.str());
   return -1;
-}
-
-bool funcAddrIsValid(uintptr_t funcAddr)
-{
-  byte originalBytes[] = {0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x48, 0x8B, 0x59, 0x08, 0x48, 0x8B};
-  std::vector<byte> gameBytes = Game.readArray<byte>(funcAddr, 16);
-
-  if (gameBytes.size() != sizeof(originalBytes))
-  {
-    return false;
-  }
-
-  for (size_t i = 0; i < sizeof(originalBytes); ++i)
-  {
-    if (gameBytes[i] != originalBytes[i])
-    {
-      return false;
-    }
-  }
-
-  return true;
 }
 
 bool movesetExists(uintptr_t moveset)
@@ -899,7 +1159,24 @@ bool isMovesetEdited(uintptr_t moveset)
 bool isEligible(uintptr_t matchStructAddr)
 {
   int value = Game.readInt32(matchStructAddr);
-  return value == 1 || value == 6;
+  return value == 1 || value == 2 || value == 5 || value == 6 || value == 12;
+}
+
+bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
+{
+  uintptr_t requirements = getCancelReqAddr(cancel);
+  for (uintptr_t addr = requirements; true; addr += Sizes::Moveset::Requirement)
+  {
+    int req = Game.readInt32(addr);
+    int param = Game.readInt32(addr + 4);
+    if (req == END_REQ)
+      return false;
+    if (req == targetReq && (targetParam == -1 || param == targetParam))
+    {
+      return true;
+    }
+  }
+  return false;
 }
 
 void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
@@ -919,6 +1196,11 @@ void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
   }
 }
 
+uintptr_t getCancelReqAddr(uintptr_t cancel)
+{
+  return Game.readUInt64(cancel + Offsets::Cancel::RequirementsList);
+}
+
 uintptr_t getMoveNthCancel(uintptr_t move, int n)
 {
   return Game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n;
@@ -926,8 +1208,7 @@ uintptr_t getMoveNthCancel(uintptr_t move, int n)
 
 uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
 {
-  uintptr_t cancel = getMoveNthCancel(move, n);
-  return Game.readUInt64(cancel + Offsets::Cancel::RequirementsList);
+  return getCancelReqAddr(getMoveNthCancel(move, n));
 }
 
 uintptr_t getNthCancelFlagAddr(uintptr_t moveset, int n)
@@ -946,4 +1227,51 @@ bool markMovesetEdited(uintptr_t moveset)
   {
     return false;
   }
+}
+
+void modifyHudAddr(uintptr_t matchStructAddr)
+{
+  int mode = Game.readInt32(matchStructAddr);
+  if (mode == 1 || mode == 6)
+  {
+    int icon = Game.readUInt16(HUD_ICON_ADDR);
+    int name = Game.readUInt16(HUD_NAME_ADDR);
+    if (icon == 0x5274 && name == 0x3174)
+    {
+      Game.write<uint16_t>(HUD_ICON_ADDR, 0x9090);
+      Game.write<uint16_t>(HUD_NAME_ADDR, 0x9090);
+    }
+  }
+}
+
+void restoreHudAddr(uintptr_t matchStructAddr)
+{
+  int icon = Game.readUInt16(HUD_ICON_ADDR);
+  int name = Game.readUInt16(HUD_NAME_ADDR);
+  if (icon == 0x9090 && name == 0x9090)
+  {
+    Game.write<uint16_t>(HUD_ICON_ADDR, 0x5274);
+    Game.write<uint16_t>(HUD_NAME_ADDR, 0x3174);
+  }
+}
+
+BOOL WINAPI ConsoleHandler(DWORD signal)
+{
+  if (signal == CTRL_CLOSE_EVENT)
+  {
+    restoreHudAddr(0);
+    return TRUE;
+  }
+  return FALSE;
+}
+
+void signalHandler(int signal = 1)
+{
+	restoreHudAddr(0);
+	std::exit(signal);
+}
+
+void atExit()
+{
+	restoreHudAddr(0);
 }
