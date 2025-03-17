@@ -33,12 +33,12 @@ int SIDE_SELECTED = 0;
 std::string BOSS_NAME;
 
 std::vector<int> STORY_REQS = {
-  Requirements::STORY_BATTLE,
-  Requirements::STORY_BATTLE_NUM,
-  Requirements::STORY_FLAGS,
-  Requirements::DLC_STORY1_BATTLE,
-  Requirements::DLC_STORY1_BATTLE_NUM,
-  Requirements::DLC_STORY1_FLAGS,
+    Requirements::STORY_BATTLE,
+    Requirements::STORY_BATTLE_NUM,
+    Requirements::STORY_FLAGS,
+    Requirements::DLC_STORY1_BATTLE,
+    Requirements::DLC_STORY1_BATTLE_NUM,
+    Requirements::DLC_STORY1_FLAGS,
 };
 
 struct EncryptedValue
@@ -88,13 +88,13 @@ int main()
   int bossCode = DEV_MODE ? BossCodes::TrueDevilKazuya : -1;
   // Set up end-program handler
   if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
-	{
-		std::cerr << "Error: Could not set control handler\n";
-		return 1;
-	}
-	std::atexit(atExit);
-	std::signal(SIGINT, signalHandler);
-	std::signal(SIGTERM, signalHandler);
+  {
+    std::cerr << "Error: Could not set control handler\n";
+    return 1;
+  }
+  std::atexit(atExit);
+  std::signal(SIGINT, signalHandler);
+  std::signal(SIGTERM, signalHandler);
   //
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
@@ -135,7 +135,8 @@ void scanAddresses()
   uintptr_t start = base;
 
   addr = Game.FastAoBScan(Tekken::PLAYER_STRUCT_SIG_BYTES, start + 0x5A00000);
-  if (addr != 0) {
+  if (addr != 0)
+  {
     start = addr; // To use as starting point for other scans
 
     // $1 + $2 + $3 - $4
@@ -144,26 +145,34 @@ void scanAddresses()
     // $3 = Relative offset to Player base address within the signature instruction
     // $4 = Game's base address
     PLAYER_STRUCT_BASE = addr + 7 + Game.readUInt32(addr + 3) - base;
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("Player Struct Base Address not found!");
   }
 
   addr = Game.FastAoBScan(Tekken::MATCH_STRUCT_SIG_BYTES, start);
-  if (addr != 0) {
+  if (addr != 0)
+  {
     // $1 + $2 + $3 - $4
     // $1 = Address at which the signature bytes were found
     // $2 = Length of the instruction where signature bytes were found
     // $3 = Relative offset to Player base address within the signature instruction
     // $4 = Game's base address
     MATCH_STRUCT_OFFSET = addr + 7 + Game.readUInt32(addr + 3) - base;
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("Match Struct Base Address not found!");
   }
 
   addr = Game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
-  if (addr != 0) {
+  if (addr != 0)
+  {
     DECRYPT_FUNC_ADDR = addr;
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("Decryption Function Address not found!");
   }
 
@@ -177,20 +186,27 @@ void scanAddresses()
   HANDLE_ICONS = HUD_ICON_ADDR && HUD_NAME_ADDR;
 
   addr = Game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, DECRYPT_FUNC_ADDR + 0x1000);
-  if (addr != 0) {
+  if (addr != 0)
+  {
     MOVESET_OFFSET = Game.readUInt32(addr + 3);
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("\"Moveset\" Offset not found!");
   }
 
   addr = Game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, base + 0x2C00000);
-  if (addr != 0) {
+  if (addr != 0)
+  {
     PERMA_DEVIL_OFFSET = Game.readUInt32(addr + 3);
-  } else {
+  }
+  else
+  {
     throw std::runtime_error("\"Permanent Devil Mode\" offset not found!");
   }
 
-  if (DEV_MODE) {
+  if (DEV_MODE)
+  {
     printf("PLAYER_STRUCT_BASE: 0x%llX\n", PLAYER_STRUCT_BASE);
     printf("MATCH_STRUCT_OFFSET: 0x%llX\n", MATCH_STRUCT_OFFSET);
     printf("DECRYPT_FUNC_ADDR: 0x%llX\n", DECRYPT_FUNC_ADDR);
@@ -833,8 +849,8 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     }
 
     // ws+2
-    addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx);                         // d/b+1
-    addr = getMoveNthCancel(addr, 1); // 2nd cancel
+    addr = getMoveAddress(moveset, 0xB253E5F2, idleStanceIdx); // d/b+1
+    addr = getMoveNthCancel(addr, 1);                          // 2nd cancel
     {
       uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 20);
       int moveId = getMoveId(moveset, 0x0AB42E52, defaultAliasIdx);
@@ -983,7 +999,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
           break;
         addr += Sizes::Moveset::Cancel;
       }
-      // 
+
       Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound1);
       addr += Sizes::Moveset::Cancel; // going to next cancel
       Game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound2);
@@ -1289,11 +1305,11 @@ BOOL WINAPI ConsoleHandler(DWORD signal)
 
 void signalHandler(int signal = 1)
 {
-	restoreHudAddr(0);
-	std::exit(signal);
+  restoreHudAddr(0);
+  std::exit(signal);
 }
 
 void atExit()
 {
-	restoreHudAddr(0);
+  restoreHudAddr(0);
 }
