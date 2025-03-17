@@ -642,7 +642,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     uintptr_t movesHeader = Game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     uintptr_t addr = movesHeader + (idleStanceIdx * Sizes::Moveset::Move);
     addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList);
-    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x8151);
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, ExtraMoveProperties::PERMA_DEVIL);
     Game.write<int>(addr + Offsets::ExtraProp::Value, 1);
 
     // Disabling some requirements for basic attacks
@@ -717,7 +717,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
       int req = Game.readUInt32(addr);
       int param = Game.readUInt32(addr + 4);
-      if ((req == 0x80dc && param >= 1) || (req == 0x8683))
+      if ((req == ExtraMoveProperties::DEVIL_STATE && param >= 1) || (req == ExtraMoveProperties::WING_ANIM))
       {
         Game.write<int>(addr, 0);
         Game.write<int>(addr + 4, 0);
@@ -732,7 +732,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
       int prop = Game.readUInt32(addr + Offsets::ExtraProp::Prop);
       int param = Game.readUInt32(addr + Offsets::ExtraProp::Value);
-      if (prop == 0x80dc || prop == 0x8683 || (prop == 0x8039 && (param == 0xC || param == 0xD)))
+      if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
       {
         Game.write<int>(addr, 0);
         Game.write<int>(addr + 4, 0);
@@ -896,7 +896,7 @@ void handleHeihachiMoveProp(uintptr_t moveset, int moveIdx)
     uintptr_t reqList = Game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
     if (!prop && !frame)
       break;
-    if (prop == 0x82e2)
+    if (prop == ExtraMoveProperties::SPEND_RAGE)
     {
       Game.write<int>(addr + Offsets::ExtraProp::Value, 0); // don't spend rage
     }
@@ -920,7 +920,7 @@ bool loadHeihachi(uintptr_t moveset, int bossCode)
   // Idle stance, set/disable Warrior Instinct
   addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // props
   addr = addr + 4 * Sizes::Moveset::ExtraMoveProperty;         // 5th prop
-  Game.write<int>(addr + Offsets::ExtraProp::Prop, 0x83F9);
+  Game.write<int>(addr + Offsets::ExtraProp::Prop, ExtraMoveProperties::HEI_WARRIOR);
   Game.write<int>(addr + Offsets::ExtraProp::Value, (int)(bossCode == BossCodes::FinalHeihachi));
 
   if (bossCode == BossCodes::ShadowHeihachi)

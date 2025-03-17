@@ -134,4 +134,14 @@ namespace Tekken
     OUTRO2 = 679, // Outro related 2
     EOL = 1100, // End of the list
   };
+
+  enum ExtraMoveProperties
+  {
+    CHARA_TRAIL_VFX = 0x8039,
+    DEVIL_STATE = 0x80dc,
+    PERMA_DEVIL = 0x8151,
+    SPEND_RAGE = 0x82e2,
+    HEI_WARRIOR = 0x83f9,
+    WING_ANIM = 0x8683,
+  };
 }
