@@ -445,32 +445,32 @@ void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
   std::string icon;
   std::string name;
   const char c = side == 0 ? 'L' : 'R';
-  if (bossCode == BossCodes::DevilJin && charId == BossCodes::DevilJin)
+  if (bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2)
   {
-    icon = buildString(c, getCharCode(6));
-    name = getNamePath(6);
+    icon = buildString(c, getCharCode(FighterId::Jin));
+    name = getNamePath(FighterId::Jin);
   }
-  else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == 6)
+  else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
   {
     icon = buildString(c, "ant2");
-    name = getNamePath(6);
+    name = getNamePath(FighterId::Jin);
   }
-  else if (bossCode == BossCodes::FinalKazuya && charId == 8)
+  else if (bossCode == BossCodes::FinalKazuya && charId == FighterId::Kazuya)
   {
     icon = buildString(c, "grl2");
-    name = getNamePath(8);
+    name = getNamePath(FighterId::Kazuya);
   }
-  else if (bossCode == BossCodes::DevilKazuya && charId == 8)
+  else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
   {
     icon = buildString(c, "grl3");
     name = getNamePath("grl2");
   }
-  else if (bossCode == BossCodes::AmnesiaHeihachi && charId == 35)
+  else if (bossCode == BossCodes::AmnesiaHeihachi && charId == FighterId::Heihachi)
   {
     icon = buildString(c, "bee2");
-    name = getNamePath(35);
+    name = getNamePath(FighterId::Heihachi);
   }
-  else if (bossCode == BossCodes::ShadowHeihachi && charId == 35)
+  else if (bossCode == BossCodes::ShadowHeihachi && charId == FighterId::Heihachi)
   {
     icon = buildString(c, "bee3");
     name = getNamePath("bee3");
@@ -544,8 +544,8 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
 
   switch (charId)
   {
-  case 6: return loadJin(moveset, bossCode);
-  case 8:
+  case FighterId::Jin: return loadJin(moveset, bossCode);
+  case FighterId::Kazuya:
   {
     if (bossCode == BossCodes::DevilKazuya)
     {
@@ -553,11 +553,11 @@ bool loadBoss(uintptr_t playerAddr, uintptr_t moveset, int bossCode)
     }
     return loadKazuya(moveset, bossCode);
   }
-  case 32: return loadAzazel(moveset, bossCode);
-  case 35: return loadHeihachi(moveset, bossCode);
-  case 117: return loadAngelJin(moveset, bossCode);
-  case 118: return loadTrueDevilKazuya(moveset, bossCode);
-  case 121: return loadStoryDevilJin(moveset, bossCode);
+  case FighterId::Azazel: return loadAzazel(moveset, bossCode);
+  case FighterId::Heihachi: return loadHeihachi(moveset, bossCode);
+  case FighterId::AngelJin: return loadAngelJin(moveset, bossCode);
+  case FighterId::TrueDevilKazuya: return loadTrueDevilKazuya(moveset, bossCode);
+  case FighterId::DevilJin2: return loadStoryDevilJin(moveset, bossCode);
   default: return false;
   }
 }
@@ -928,7 +928,7 @@ void handleHeihachiMoveProp(uintptr_t moveset, int moveIdx)
 
 bool loadHeihachi(uintptr_t moveset, int bossCode)
 {
-  if (bossCode / 10 != 35) return false;
+  if (bossCode / 10 != FighterId::Heihachi) return false;
   int defaultAliasIdx = Game.readUInt16(moveset + 0x30);
   int idleStanceIdx = Game.readUInt16(moveset + 0x32);
   uintptr_t addr = getMoveAddressByIdx(moveset, idleStanceIdx);

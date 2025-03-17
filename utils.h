@@ -188,20 +188,7 @@ std::string buildString(const char side, const std::string& code) {
 
 std::string getIconPath(int side, int charId)
 {
-  std::string code = getCharCode(charId);
-  return buildString(side == 0 ? 'L' : 'R', code);
-  // switch (bossCode)
-  // {
-  // case BossCodes::FinalJin:
-  //   {
-  //     if (charId == 6) {
-  //       return buildString(side, code);
-  //     }
-  //   }
-  //   break;
-  // default:
-  //   break;
-  // }
+  return buildString(side == 0 ? 'L' : 'R', getCharCode(charId));
 }
 
 std::string getNamePath(int charId)
