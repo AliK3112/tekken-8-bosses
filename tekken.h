@@ -117,4 +117,80 @@ namespace Tekken
   std::string DEVIL_FLAG_SIG_BYTES = "41 83 BF ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
   std::string PLAYER_STRUCT_SIG_BYTES = "4C 89 35 ?? ?? ?? ?? 41 88 5E 28 66 41 89 9E 88 00 00 00 E8 ?? ?? ?? ?? 41 88 86 8A 00 00 00";
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
+
+  enum Requirements
+  {
+    CHARA_CONTROLLER = 228,
+    STORY_BATTLE = 667,
+    STORY_BATTLE_NUM = 668,
+    INTRO_RELATED = 755,
+    STORY_FLAGS = 777,
+    DLC_STORY1_BATTLE = 801,
+    DLC_STORY1_BATTLE_NUM = 802,
+    DLC_STORY1_FLAGS = 806,
+    PRE_ROUND_ANIM = 696,
+    _697 = 697,   // Intros related
+    OUTRO1 = 675, // Outro related 1
+    OUTRO2 = 679, // Outro related 2
+    EOL = 1100,   // End of the list
+  };
+
+  enum ExtraMoveProperties
+  {
+    CHARA_TRAIL_VFX = 0x8039,
+    DEVIL_STATE = 0x80dc,
+    PERMA_DEVIL = 0x8151,
+    SPEND_RAGE = 0x82e2,
+    HEI_WARRIOR = 0x83f9,
+    WING_ANIM = 0x8683,
+  };
+
+  enum FighterId
+  {
+    Paul = 0,
+    Law = 1,
+    King = 2,
+    Yoshimitsu = 3,
+    Hwoarang = 4,
+    Xiayou = 5,
+    Jin = 6,
+    Bryan = 7,
+    Kazuya = 8,
+    Steve = 9,
+    Jack8 = 10,
+    Asuka = 11,
+    DevilJin = 12,
+    Feng = 13,
+    Lili = 14,
+    Dragunov = 15,
+    Leo = 16,
+    Lars = 17,
+    Alisa = 18,
+    Claudio = 19,
+    Shaheen = 20,
+    Nina = 21,
+    Lee = 22,
+    Kuma = 23,
+    Panda = 24,
+    Zafina = 25,
+    Leroy = 26,
+    Jun = 27,
+    Reina = 28,
+    Azucena = 29,
+    Victor = 30,
+    Raven = 31,
+    Azazel = 32,
+    Eddy = 33,
+    Lidia = 34,
+    Heihachi = 35,
+    Clive = 36,
+    Dummy = 116,
+    AngelJin = 117,
+    TrueDevilKazuya = 118,
+    Jack7 = 119,
+    Soldier = 120,
+    DevilJin2 = 121,
+    TekkenMonk = 122,
+    Seiryu = 123
+  };
 }
