@@ -1,15 +1,17 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include "game.h"
 
 // #include "game_hacking.h" // Include your game hacking logic here
 
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndCombo1, hwndCombo2, hwndButton;
+HWND hwndCombo1, hwndCombo2, hwndButton, hwndLogBox;
+GameClass game;
 
-// Boss mapping (C++ equivalent of the Python dictionary)
+// Boss mapping
 struct Boss
 {
   int id;
@@ -38,38 +40,46 @@ std::vector<Boss> bossList = {
 // Function declarations
 void InitializeUI(HWND hwnd);
 void PopulateComboBox(HWND comboBox);
+void AppendLog(const std::string &msg);
+void AttachToGame(); // TODO: Implement game attachment logic
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
 void HandleBossSelection()
 {
-  // Placeholder: Retrieve selected values
+  // TODO: Ensure game is attached before modifying memory
+
   int idx1 = SendMessageA(hwndCombo1, CB_GETCURSEL, 0, 0);
   int idx2 = SendMessageA(hwndCombo2, CB_GETCURSEL, 0, 0);
 
   if (idx1 >= 0 && idx1 < bossList.size() && idx2 >= 0 && idx2 < bossList.size())
   {
-    std::string message = "Player 1: " + std::string(bossList[idx1].name) + "\n" +
-                          "Player 2: " + std::string(bossList[idx2].name);
-    MessageBoxA(NULL, message.c_str(), "Selected Bosses", MB_OK);
+    std::string logMsg = "Player 1: " + std::string(bossList[idx1].name) +
+                         " | Player 2: " + std::string(bossList[idx2].name);
+    AppendLog(logMsg);
+
+    // TODO: Implement game-hacking logic (WriteProcessMemory, etc.)
   }
 }
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
-  WNDCLASSA wc = {}; // Use the ANSI version explicitly
+  WNDCLASSA wc = {};
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInst;
   wc.lpszClassName = CLASS_NAME;
   RegisterClassA(&wc);
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "Boss Selector",
-                            WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 400, 200,
+                            WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
 
   InitializeUI(hwnd);
   ShowWindow(hwnd, nCmdShow);
+
+  // TODO: Call AttachToGame() in a separate thread if needed
+  AttachToGame();
 
   MSG msg = {};
   while (GetMessageA(&msg, NULL, 0, 0))
@@ -95,11 +105,13 @@ void InitializeUI(HWND hwnd)
                              WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                              130, 80, 120, 30, hwnd, (HMENU)3, NULL, NULL);
 
-  // Populate dropdowns with boss names
+  hwndLogBox = CreateWindowA("EDIT", "",
+                             WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+                             20, 130, 440, 100, hwnd, NULL, NULL, NULL);
+
   PopulateComboBox(hwndCombo1);
   PopulateComboBox(hwndCombo2);
 
-  // Set default selection to the first item
   SendMessageA(hwndCombo1, CB_SETCURSEL, 0, 0);
   SendMessageA(hwndCombo2, CB_SETCURSEL, 0, 0);
 }
@@ -113,18 +125,42 @@ void PopulateComboBox(HWND comboBox)
   }
 }
 
+// Append message to log box
+void AppendLog(const std::string &msg)
+{
+  int length = GetWindowTextLengthA(hwndLogBox);
+  SendMessageA(hwndLogBox, EM_SETSEL, length, length);
+  SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(msg + "\r\n").c_str());
+}
+
+// TODO: Implement this function to attach to the game
+void AttachToGame()
+{
+  char buffer[255];
+  AppendLog("Waiting for game to start...");
+  // TODO: Implement process scanning and attachment logic
+  if (game.Attach(L"Polaris-Win64-Shipping.exe"))
+  {
+    AppendLog("Successfully attached to game!");
+    sprintf_s(buffer, "Base Address: 0x%llx", game.getBaseAddress());
+    AppendLog(buffer);
+    // TODO: Call address scanner or other game-hacking methods
+  }
+}
+
 // Window Procedure (Handles UI Events)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
   switch (msg)
   {
   case WM_COMMAND:
-    if (LOWORD(wp) == 3) // Button Clicked
+    if (LOWORD(wp) == 3) // Apply Selection button clicked
     {
-      HandleBossSelection(); // Trigger game logic when button is clicked
+      HandleBossSelection();
     }
     break;
   case WM_DESTROY:
+    // TODO: Close any open handles to the game process if necessary
     PostQuitMessage(0);
     break;
   default:
