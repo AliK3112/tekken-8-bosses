@@ -7,7 +7,7 @@
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndCombo1, hwndCombo2;
+HWND hwndCombo1, hwndCombo2, hwndButton;
 
 // Boss mapping (C++ equivalent of the Python dictionary)
 struct Boss
@@ -91,6 +91,10 @@ void InitializeUI(HWND hwnd)
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
                              200, 20, 150, 200, hwnd, (HMENU)2, NULL, NULL);
 
+  hwndButton = CreateWindowA("BUTTON", "Apply Selection",
+                             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                             130, 80, 120, 30, hwnd, (HMENU)3, NULL, NULL);
+
   // Populate dropdowns with boss names
   PopulateComboBox(hwndCombo1);
   PopulateComboBox(hwndCombo2);
@@ -115,9 +119,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   switch (msg)
   {
   case WM_COMMAND:
-    if (HIWORD(wp) == CBN_SELCHANGE) // Detects selection change
+    if (LOWORD(wp) == 3) // Button Clicked
     {
-      HandleBossSelection(); // Trigger game logic when dropdown changes
+      HandleBossSelection(); // Trigger game logic when button is clicked
     }
     break;
   case WM_DESTROY:
