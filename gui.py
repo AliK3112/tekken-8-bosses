@@ -1,11 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
 import ctypes
-import psutil
+import psutil # type: ignore
 import subprocess
+import time
+import threading
+import os
 
-DLL_PATH = "path/to/your.dll"
-GAME_NAME = "Polaris-Win64-Shipping.exe"
+dll_path = "path/to/your.dll"
+game_name = "Polaris-Win64-Shipping.exe"
+pipe_name = r"\\.\pipe\BossSelectorPipe"
 
 # Boss Codes Mapping
 boss_mapping = {
@@ -27,12 +31,11 @@ boss_mapping = {
     353: "Heihachi (Final)",
 }
 
-# Reverse lookup for value retrieval
 boss_code_list = list(boss_mapping.keys())
 boss_label_list = list(boss_mapping.values())
 
 
-def get_game_pid(game_name):
+def get_game_pid():
     for proc in psutil.process_iter(["pid", "name"]):
         if proc.info["name"] and game_name.lower() in proc.info["name"].lower():
             return proc.info["pid"]
@@ -40,62 +43,88 @@ def get_game_pid(game_name):
 
 
 def inject_dll():
-    pid = get_game_pid(GAME_NAME)
-
+    pid = get_game_pid()
     if not pid:
-        status_label.config(text="Game not found!", foreground="red")
+        log_message("Game not found!", error=True)
+        return
+
+    # Inject the DLL (comment out for GUI-only testing)
+    # subprocess.run(["injector.exe", str(pid), dll_path])
+    log_message("DLL Injected!")
+
+    # Start named pipe communication thread
+    threading.Thread(target=connect_pipe, daemon=True).start()
+
+
+def connect_pipe():
+    """Connect to the named pipe created by the DLL"""
+    global pipe
+    log_message("Connecting to named pipe...")
+    while True:
+        try:
+            pipe = open(pipe_name, "w")
+            log_message("Connected to DLL!")
+            return
+        except Exception as e:
+            time.sleep(1)
+
+
+def send_boss_selection():
+    """Send selected boss values to the DLL"""
+    if not os.path.exists(pipe_name):
+        log_message("Pipe not available, waiting...", error=True)
         return
 
     boss1_code = boss_code_list[player1_var.current()]
     boss2_code = boss_code_list[player2_var.current()]
+    message = f"{boss1_code},{boss2_code}\n"
 
-    print("Boss code 1: %d" % boss1_code)
-    print("Boss code 2: %d" % boss2_code)
+    try:
+        with open(pipe_name, "w") as pipe:
+            pipe.write(message)
+            log_message(f"Sent to DLL: {message.strip()}")
+    except Exception as e:
+        log_message(f"Error writing to pipe: {e}", error=True)
 
-    # Inject the DLL and pass boss selections (handled inside the DLL)
-    # subprocess.run(
-    #     ["injector.exe", str(pid), DLL_PATH, str(boss1_code), str(boss2_code)]
-    # )
 
-    status_label.config(text="DLL Injected!", foreground="green")
+def log_message(msg, error=False):
+    log_box.insert(tk.END, ("[ERROR] " if error else "") + msg + "\n")
+    log_box.see(tk.END)
 
 
 # Create main window
 root = tk.Tk()
 root.title("Boss Selector")
-root.geometry("550x150")
-root.maxsize(550, 150)
-root.minsize(550, 150)
+root.geometry("600x200")
+root.minsize(600,200)
+root.maxsize(1200,400)
 root.configure(bg="#2E2E2E")
 
 frame = tk.Frame(root, bg="#2E2E2E")
 frame.pack(pady=20)
 
-# Dropdowns
 player1_label = ttk.Label(
     frame, text="Player 1:", background="#2E2E2E", foreground="white"
 )
 player1_label.grid(row=0, column=0, padx=10)
-
 player1_var = ttk.Combobox(frame, values=boss_label_list, state="readonly", width=20)
 player1_var.current(0)
 player1_var.grid(row=0, column=1, padx=10)
+player1_var.bind("<<ComboboxSelected>>", lambda e: send_boss_selection())
 
 player2_label = ttk.Label(
     frame, text="Player 2:", background="#2E2E2E", foreground="white"
 )
 player2_label.grid(row=0, column=2, padx=10)
-
 player2_var = ttk.Combobox(frame, values=boss_label_list, state="readonly", width=20)
 player2_var.current(0)
 player2_var.grid(row=0, column=3, padx=10)
+player2_var.bind("<<ComboboxSelected>>", lambda e: send_boss_selection())
 
-# Inject button
 inject_button = ttk.Button(root, text="Inject DLL", command=inject_dll)
 inject_button.pack(pady=10)
 
-# Status label
-status_label = ttk.Label(root, text="", background="#2E2E2E", foreground="white")
-status_label.pack()
+log_box = tk.Text(root, height=5, width=70, bg="black", fg="white")
+log_box.pack()
 
 root.mainloop()
