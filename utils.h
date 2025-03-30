@@ -215,7 +215,7 @@ std::string getBossName(int bossCode)
   case BossCodes::ChainedJin: return "Jin (Chained)";
   case BossCodes::MishimaJin: return "Jin (Mishima)";
   case BossCodes::KazamaJin: return "Jin (Kazama)";
-  case BossCodes::FinalJin: return "Jin (Ultimate)";
+  case BossCodes::FinalJin: return "Jin (Final)";
   case BossCodes::DevilKazuya: return "Kazuya (Devil)";
   case BossCodes::FinalKazuya: return "Kazuya (Final)";
   case BossCodes::AmnesiaHeihachi: return "Heihachi (Monk)";

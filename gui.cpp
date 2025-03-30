@@ -24,17 +24,17 @@ std::vector<Boss> bossList = {
     {1, "Jin (Nerfed)"},
     {2, "Jin (Mishima)"},
     {3, "Jin (Kazama)"},
-    {4, "Jin (Ultimate)"},
+    {4, "Jin (Final)"},
     {11, "Jin (Chained)"},
-    {32, "Azazel"},
-    {97, "Kazuya (Devil)"},
     {117, "Jin (Angel)"},
-    {118, "Kazuya (True Devil)"},
     {121, "Jin (Devil)"},
+    {97, "Kazuya (Devil)"},
     {244, "Kazuya (Final)"},
+    {118, "Kazuya (True Devil)"},
     {351, "Heihachi (Monk)"},
     {352, "Heihachi (Shadow)"},
     {353, "Heihachi (Final)"},
+    {32, "Azazel"},
 };
 
 // Function declarations
