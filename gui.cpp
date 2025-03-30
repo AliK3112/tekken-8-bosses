@@ -1,7 +1,8 @@
 #include <windows.h>
 #include <vector>
 #include <string>
-#include "game.h"
+#include <cstdarg>
+#include "bosses.h"
 
 // #include "game_hacking.h" // Include your game hacking logic here
 
@@ -9,7 +10,8 @@ const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
 HWND hwndCombo1, hwndCombo2, hwndButton, hwndLogBox;
-GameClass game;
+TkBossLoader boss;
+char buffer[255];
 
 // Boss mapping
 struct Boss
@@ -19,7 +21,7 @@ struct Boss
 };
 
 std::vector<Boss> bossList = {
-    {-1, "No Boss Selected"},
+    {-1, "None"},
     {0, "Jin (Boosted)"},
     {1, "Jin (Nerfed)"},
     {2, "Jin (Mishima)"},
@@ -41,23 +43,22 @@ std::vector<Boss> bossList = {
 void InitializeUI(HWND hwnd);
 void PopulateComboBox(HWND comboBox);
 void AppendLog(const std::string &msg);
-void AttachToGame(); // TODO: Implement game attachment logic
+void AppendLog(const char *format, ...);
+void AttachToGame();
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
+unsigned int __stdcall AttachToGameThread(void *param);
 
 void HandleBossSelection()
 {
-  // TODO: Ensure game is attached before modifying memory
-
   int idx1 = SendMessageA(hwndCombo1, CB_GETCURSEL, 0, 0);
   int idx2 = SendMessageA(hwndCombo2, CB_GETCURSEL, 0, 0);
 
   if (idx1 >= 0 && idx1 < bossList.size() && idx2 >= 0 && idx2 < bossList.size())
   {
-    std::string logMsg = "Player 1: " + std::string(bossList[idx1].name) +
-                         " | Player 2: " + std::string(bossList[idx2].name);
-    AppendLog(logMsg);
-
-    // TODO: Implement game-hacking logic (WriteProcessMemory, etc.)
+    boss.setBossCodes(bossList[idx1].id, bossList[idx2].id);
+    AppendLog("Boss Code L: %d", boss.getBossCode_L());
+    AppendLog("Boss Code R: %d", boss.getBossCode_R());
+    // boss.bossLoadMainLoop();
   }
 }
 
@@ -79,8 +80,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   InitializeUI(hwnd);
   ShowWindow(hwnd, nCmdShow);
 
-  // TODO: Call AttachToGame() in a separate thread if needed
-  AttachToGame();
+  // Run AttachToGame in a separate thread
+  HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, AttachToGameThread, NULL, 0, NULL);
+  if (hThread)
+  {
+    CloseHandle(hThread); // Close handle as we don't need to track the thread
+  }
 
   MSG msg = {};
   while (GetMessageA(&msg, NULL, 0, 0))
@@ -137,24 +142,55 @@ void PopulateComboBox(HWND comboBox)
 // Append message to log box
 void AppendLog(const std::string &msg)
 {
+  if (msg.empty())
+    return; // Prevent appending empty messages
+
+  // Get current text length
   int length = GetWindowTextLengthA(hwndLogBox);
+
+  // Ensure no excessive newlines
+  std::string trimmedMsg = msg;
+  while (!trimmedMsg.empty() && (trimmedMsg.back() == '\n' || trimmedMsg.back() == '\r'))
+  {
+    trimmedMsg.pop_back();
+  }
+
+  // Append text properly
   SendMessageA(hwndLogBox, EM_SETSEL, length, length);
-  SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(msg + "\r\n").c_str());
+  SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(trimmedMsg + "\r\n").c_str());
 }
 
-// TODO: Implement this function to attach to the game
+// Append message to log box (overloaded for formatted strings)
+void AppendLog(const char *format, ...)
+{
+  char buffer[255]; // Adjust size as needed
+  va_list args;
+  va_start(args, format);
+  vsprintf_s(buffer, sizeof(buffer), format, args);
+  va_end(args);
+
+  AppendLog(std::string(buffer));
+}
+
 void AttachToGame()
 {
-  char buffer[255];
   AppendLog("Waiting for game to start...");
-  // TODO: Implement process scanning and attachment logic
-  if (game.Attach(L"Polaris-Win64-Shipping.exe"))
+  bool flag = false;
+  while (true)
   {
-    AppendLog("Successfully attached to game!");
-    sprintf_s(buffer, "Base Address: 0x%llx", game.getBaseAddress());
-    AppendLog(buffer);
-    // TODO: Call address scanner or other game-hacking methods
+    if (boss.attach())
+    {
+      AppendLog("Successfully attached to game!");
+      AppendLog(buffer, "Base Address: 0x%llx", boss.game.getBaseAddress());
+      break;
+    }
+    Sleep(100);
   }
+  AppendLog(buffer, "Boss Code L: %d", boss.getBossCode_L());
+  AppendLog(buffer, "Boss Code R: %d", boss.getBossCode_R());
+
+  boss.attachToLogBox(hwndLogBox);
+  boss.bossLoadMainLoop();
 }
 
 // Window Procedure (Handles UI Events)
@@ -175,5 +211,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   default:
     return DefWindowProcA(hwnd, msg, wp, lp);
   }
+  return 0;
+}
+
+unsigned int __stdcall AttachToGameThread(void *param)
+{
+  AttachToGame();
   return 0;
 }

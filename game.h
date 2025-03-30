@@ -23,7 +23,9 @@ public:
   ~GameClass()
   {
     if (processHandle != nullptr)
+    {
       CloseHandle(processHandle);
+    }
   }
 
   uintptr_t getBaseAddress()
@@ -83,7 +85,10 @@ public:
     uintptr_t address = baseAddress;
     for (DWORD offset : offsets)
     {
-      address = read<uintptr_t>(address + (uintptr_t)offset);
+      uintptr_t addr = address + (uintptr_t)offset;
+      address = read<uintptr_t>(addr);
+      if (address == 0)
+        return 0;
     }
     return address;
   }
@@ -237,16 +242,27 @@ public:
   template <typename T>
   T read(uintptr_t address)
   {
-    T value;
-    SIZE_T bytesRead;
-    if (!ReadProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), &value, sizeof(T), &bytesRead))
+    T value = {0};
+    SIZE_T bytesRead = 0;
+
+    if (!ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), &value, sizeof(T), &bytesRead))
     {
-      // std::cerr << "Error: Failed to read memory at address " << std::hex << address << std::endl;
+      DWORD error = GetLastError();
+      char errorMessage[256];
+
+      FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                     NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                     errorMessage, sizeof(errorMessage), NULL);
+
+      std::cerr << "Error: Failed to read memory at address 0x" << std::hex << address
+                << " | Error Code: " << error << " | Message: " << errorMessage << std::endl;
     }
-    if (bytesRead != sizeof(T))
+    else if (bytesRead != sizeof(T))
     {
-      // std::cerr << "Error: Incomplete read at address " << std::hex << address << std::endl;
+      std::cerr << "Error: Incomplete read at address 0x" << std::hex << address
+                << " | Expected: " << sizeof(T) << " bytes, Read: " << bytesRead << " bytes." << std::endl;
     }
+
     return value;
   }
 

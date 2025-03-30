@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 enum BossCodes {
+  None = -1,
   RegularJin, // 0
   NerfedJin, // 1
   MishimaJin, // 2
