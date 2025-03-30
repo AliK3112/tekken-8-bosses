@@ -193,6 +193,93 @@ private:
     AppendLog("Addresses successfully scanned...\n");
   }
 
+  // Modifies the instructions that allows for custom HUD icon loading
+  void modifyHudAddr(uintptr_t matchStructAddr)
+  {
+    int mode = game.readInt32(matchStructAddr);
+    if (mode == 1 || mode == 6)
+    {
+      int icon = game.readUInt16(hudIconAddr);
+      int name = game.readUInt16(hudNameAddr);
+      if (icon == 0x5274 && name == 0x3174)
+      {
+        game.write<uint16_t>(hudIconAddr, 0x9090);
+        game.write<uint16_t>(hudNameAddr, 0x9090);
+      }
+    }
+  }
+
+  void restoreHudAddr(uintptr_t matchStructAddr)
+  {
+    int icon = game.readUInt16(hudIconAddr);
+    int name = game.readUInt16(hudNameAddr);
+    if (icon == 0x9090 && name == 0x9090)
+    {
+      game.write<uint16_t>(hudIconAddr, 0x5274);
+      game.write<uint16_t>(hudNameAddr, 0x3174);
+    }
+  }
+
+  void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
+  {
+    if (bossCode == BossCodes::None)
+      return;
+    std::string icon;
+    std::string name;
+    const char c = side == 0 ? 'L' : 'R';
+    if (bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2)
+    {
+      icon = buildString(c, getCharCode(FighterId::Jin));
+      name = getNamePath(FighterId::Jin);
+    }
+    else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
+    {
+      icon = buildString(c, "ant2");
+      name = getNamePath(FighterId::Jin);
+    }
+    else if (bossCode == BossCodes::FinalKazuya && charId == FighterId::Kazuya)
+    {
+      icon = buildString(c, "grl2");
+      name = getNamePath(FighterId::Kazuya);
+    }
+    else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
+    {
+      icon = buildString(c, "grl3");
+      name = getNamePath("grl2");
+    }
+    else if (bossCode == BossCodes::AmnesiaHeihachi && charId == FighterId::Heihachi)
+    {
+      icon = buildString(c, "bee2");
+      name = getNamePath(FighterId::Heihachi);
+    }
+    else if (bossCode == BossCodes::ShadowHeihachi && charId == FighterId::Heihachi)
+    {
+      icon = buildString(c, "bee3");
+      name = getNamePath("bee3");
+    }
+    if (!icon.empty())
+      game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
+    if (!name.empty())
+      game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
+  }
+
+  void hudHandler(uintptr_t matchStruct)
+  {
+    int char1 = game.readInt32(matchStruct + 0x10);
+    int char2 = game.readInt32(matchStruct + 0x94);
+    std::string icon1 = getIconPath(0, char1);
+    std::string icon2 = getIconPath(1, char2);
+    std::string name1 = getNamePath(char1);
+    std::string name2 = getNamePath(char2);
+    game.writeString(matchStruct + 0x2C0, icon1);
+    game.writeString(matchStruct + 0x3C0, icon2);
+    game.writeString(matchStruct + 0x4C0, name1);
+    game.writeString(matchStruct + 0x5C0, name2);
+
+    loadBossHud(matchStruct, 0, char1, this->bossCode_L);
+    loadBossHud(matchStruct, 1, char2, this->bossCode_R);
+  }
+
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
@@ -362,7 +449,6 @@ private:
 
       // CD+1+2
       addr = moveset.getMoveAddress(0x0C9CE140, idleStanceIdx);
-      uintptr_t storyReq = moveset.getMoveNthCancel1stReqAddr(addr, 0);
       moveset.editCancelReqAddr(moveset.getMoveNthCancel(addr, 0), reqHeader);
 
       // b+2,2
@@ -372,8 +458,7 @@ private:
       // NEW b+2,2. Disabling laser cancel
       addr = moveset.getMoveAddress(0x8FE28C6A, defaultAliasIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      uintptr_t cancelExtradata = moveset.getNthCancelFlagAddr(60);
-      game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
+      moveset.editCancelExtradata(addr, moveset.getNthCancelExtradataAddr(60));
 
       // Disabling u/b+1+2 laser
       addr = moveset.getMoveAddress(0x07F32E0C, 2000);
@@ -382,7 +467,7 @@ private:
           addr,
           0,
           reqHeader,
-          moveset.getNthCancelFlagAddr(16),
+          moveset.getNthCancelExtradataAddr(16),
           -1,
           -1,
           1,
@@ -411,7 +496,6 @@ private:
 
       // Adjusting d/b+1+2 to cancel into this on frame-1
       int moveId_db1 = moveset.getMoveId(0xFE501006, moveId_db2);
-      cancelExtradata = moveset.getNthCancelFlagAddr(20);
       addr = moveset.getMoveAddress(0x73EBDBA2, moveId_db1);
       addr = moveset.getMoveNthCancel(addr, 0);
       moveset.editCancelReqAddr(addr, reqHeader);
@@ -424,7 +508,7 @@ private:
           addr,
           0,
           reqHeader,
-          moveset.getNthCancelFlagAddr(20),
+          moveset.getNthCancelExtradataAddr(20),
           5,
           5,
           5,
@@ -444,6 +528,12 @@ public:
     this->bossCode_R = bossCode_R;
     this->attached = false;
   }
+
+  ~TkBossLoader()
+  {
+    restoreHudAddr(0);
+  }
+
   void attachToLogBox(HWND hwndLogBox)
   {
     this->hwndLogBox = hwndLogBox;
@@ -495,8 +585,8 @@ public:
       return;
     }
 
-    bool isWritten = false;
-    bool flag = false;
+    // bool isWritten = false;
+    // bool flag = false;
     while (this->attached)
     {
       // Main Loop
@@ -510,10 +600,12 @@ public:
       {
         continue;
       }
+
       if (handleIcons)
       {
-        // TODO: modifyHudAddr
+        modifyHudAddr(matchStructAddr);
       }
+
       if (!isEligible(matchStructAddr))
       {
         continue;
@@ -523,7 +615,7 @@ public:
 
       if (handleIcons)
       {
-        // TODO: hudHandler
+        hudHandler(matchStructAddr);
       }
 
       uintptr_t playerAddr = getPlayerAddress(0);
@@ -536,25 +628,22 @@ public:
       uintptr_t movesetAddr = getMovesetAddress(playerAddr);
       if (movesetAddr == 0)
       {
-        flag = false;
-        isWritten = false;
         continue;
       }
 
       if (handleIcons)
       {
-        // TODO: restoreHudAddr(matchStructAddr);
+        restoreHudAddr(matchStructAddr);
       }
 
       if (!movesetExists(movesetAddr))
       {
-        isWritten = false;
         continue;
       }
 
       if (!isMovesetEdited(movesetAddr))
       {
-        isWritten = false;
+        // isWritten = false;
       }
 
       // if (!isWritten)
