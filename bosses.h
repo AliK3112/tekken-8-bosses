@@ -6,6 +6,13 @@ bool DEV_MODE = false;
 
 using namespace Tekken;
 
+std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
+std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
+std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
+std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
+std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
+
 class TkBossLoader
 {
 private:
@@ -280,6 +287,79 @@ private:
     loadBossHud(matchStruct, 1, char2, this->bossCode_R);
   }
 
+  void loadCharacter(uintptr_t matchStructAddr, int side, int bossCode)
+  {
+    int charId = -1;
+    int currCharId = game.readInt32(matchStructAddr + 0x10 + side * 0x84);
+    switch (bossCode)
+    {
+    // In these cases, the bossCode is the chara ID itself
+    case BossCodes::Azazel:
+    case BossCodes::AngelJin:
+    case BossCodes::TrueDevilKazuya:
+    case BossCodes::DevilJin:
+      charId = bossCode;
+      break;
+    default:
+      return;
+    }
+    if (charId != -1 && isEligible(matchStructAddr))
+    {
+      game.write<int>(matchStructAddr + 0x10 + side * 0x84, charId);
+      if (charId == BossCodes::DevilJin)
+      {
+        loadCostume(matchStructAddr, side, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
+      }
+    }
+  }
+
+  void loadCostume(uintptr_t matchStructAddr, int side, int costumeId, std::string costumePath)
+  {
+    game.write<int>(matchStructAddr + 0x6F0 + side * 0x6760, costumeId);
+    game.writeString(matchStructAddr + 0x13D78 + side * 0x100, costumePath);
+  }
+
+  void costumeHandler(uintptr_t matchStructAddr, int side, int bossCode)
+  {
+    if (!matchStructAddr)
+      return;
+    std::string costumePath;
+    switch (bossCode)
+    {
+    case BossCodes::RegularJin:
+    case BossCodes::NerfedJin:
+    case BossCodes::DevilKazuya:
+    case BossCodes::FinalHeihachi:
+    case BossCodes::Azazel:
+    case BossCodes::AngelJin:
+    case BossCodes::TrueDevilKazuya:
+      return loadCostume(matchStructAddr, side, 0, "");
+    case BossCodes::ChainedJin:
+      costumePath = CHAINED_JIN_COSTUME_PATH;
+      break;
+    case BossCodes::MishimaJin:
+    case BossCodes::KazamaJin:
+    case BossCodes::FinalJin:
+      costumePath = FINAL_JIN_COSTUME_PATH;
+      break;
+    case BossCodes::FinalKazuya:
+      costumePath = FINAL_KAZ_COSTUME_PATH;
+      break;
+    case BossCodes::DevilJin:
+      costumePath = DEVIL_JIN_COSTUME_PATH;
+      break;
+    case BossCodes::AmnesiaHeihachi:
+      costumePath = HEIHACHI_MONK_COSTUME_PATH;
+      break;
+    case BossCodes::ShadowHeihachi:
+      costumePath = HEIHACHI_SHADOW_COSTUME_PATH;
+      break;
+    default:
+      return;
+    }
+    loadCostume(matchStructAddr, side, 51, costumePath);
+  }
+
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
@@ -519,6 +599,12 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
+
+  bool loadStoryDevilJin(uintptr_t movesetAddr, int bossCode)
+  {
+    return markMovesetEdited(movesetAddr);
+  }
+
 public:
   GameClass game;
 
@@ -611,7 +697,8 @@ public:
         continue;
       }
 
-      // TODO: loadCharacter
+      loadCharacter(matchStructAddr, 0, this->bossCode_L);
+      loadCharacter(matchStructAddr, 1, this->bossCode_R);
 
       if (handleIcons)
       {
@@ -621,7 +708,8 @@ public:
       uintptr_t playerAddr = getPlayerAddress(0);
       if (playerAddr == 0)
       {
-        // TODO: costumeHandler(matchStructAddr, bossCode);
+        costumeHandler(matchStructAddr, 0, this->bossCode_L);
+        costumeHandler(matchStructAddr, 1, this->bossCode_R);
         continue;
       }
 
@@ -702,7 +790,7 @@ public:
     case FighterId::TrueDevilKazuya:
       // return loadTrueDevilKazuya(movesetAddr, bossCode);
     case FighterId::DevilJin2:
-      // return loadStoryDevilJin(movesetAddr, bossCode);
+      return loadStoryDevilJin(movesetAddr, bossCode);
     default:
       return false;
     }
