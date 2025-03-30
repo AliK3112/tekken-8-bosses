@@ -228,9 +228,210 @@ private:
         game.write<short>(movesetAddr + 0xAA, moveId);
       }
     }
+    break;
+    case BossCodes::ChainedJin:
+    {
+      uintptr_t reqHeader = moveset.getRequirementsHeader();
+      std::vector<std::pair<int, int>> moves = {
+          {0xCAD0CF3C, 1500}, // 1+2
+          {0xE383D012, 2000}, // f,f+2
+          {0xEEE71DFB, 1400}, // b+1+2
+          {0x9B789D36, 1600}  // d/b+1+2
+      };
+
+      for (const auto &move : moves)
+      {
+        uintptr_t moveAddr = moveset.getMoveAddress(move.first, move.second);
+        if (moveAddr)
+        {
+          moveset.editCancelReqAddr(moveset.getMoveNthCancel(moveAddr, 0), reqHeader);
+        }
+      }
+    }
+    break;
     default:
       return false;
     }
+    return markMovesetEdited(movesetAddr);
+  }
+
+  bool loadKazuya(uintptr_t movesetAddr, int bossCode)
+  {
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
+    int idleStanceIdx = moveset.getAliasMoveId(0x8001);
+    if (bossCode == BossCodes::DevilKazuya)
+    {
+      // Enabling permanent Devil form
+      uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      moveset.editMoveExtraprop(addr, 0, ExtraMoveProperties::PERMA_DEVIL, 1);
+
+      // Disabling some requirements for basic attacks
+      // 0x8000 alias
+      // addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
+      // 32th cancel
+      // disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), Requirements::STORY_FLAGS);
+
+      addr = moveset.getMoveAddress(0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE, -1);
+      if (addr != 0)
+      {
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        // Move 2 cancels forward
+        addr += Sizes::Moveset::Cancel * 2;
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      }
+
+      // 1,1,2
+      addr = moveset.getMoveAddress(0x2226A9EE, idleStanceIdx);
+      // 3rd cancel
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 2));
+
+      // Juggle Escape
+      addr = moveset.getMoveAddress(0xDEBED999, 5);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
+      // 6th cancel
+      moveset.disableStoryRelatedReqs(addr);
+      // 7th cancel
+      moveset.disableStoryRelatedReqs(moveset.iterateCancel(addr, 1));
+
+      // f,f+2 (story version)
+      addr = moveset.getMoveAddress(0x1A571FA1, idleStanceIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      addr += Sizes::Moveset::Cancel; // Move 1 cancel forward
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+
+      // d/b+1+2
+      addr = moveset.getMoveAddress(0x73EBDBA2, idleStanceIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
+      moveset.editCancelReqAddr(addr, moveset.getRequirementsHeader());
+
+      // d/b+4
+      addr = moveset.getMoveAddress(0x9364E2F5, idleStanceIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
+      addr = moveset.getCancelReqAddr(addr);
+      moveset.disableStoryRelatedReqs(addr);
+      // Disabling standing req
+      game.write<int>(addr + Sizes::Moveset::Requirement, 0);
+    }
+    else if (bossCode == BossCodes::FinalKazuya)
+    {
+      // Go through reqs and props to disable his devil form
+      // requirements
+      uintptr_t start = moveset.getRequirementsHeader();
+      uintptr_t count = moveset.getRequirementsCount();
+      for (uintptr_t i = 4530; i < count - 2000; i++)
+      {
+        uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
+        int req = game.readUInt32(addr);
+        int param = game.readUInt32(addr + 4);
+        if ((req == ExtraMoveProperties::DEVIL_STATE && param >= 1) || (req == ExtraMoveProperties::WING_ANIM))
+        {
+          moveset.editRequirement(addr, 0, 0);
+        }
+      }
+
+      // extraprops
+      start = moveset.getExtraMovePropsHeader();
+      count = moveset.getExtraMovePropsCount();
+      for (uintptr_t i = 2200; i < count; i++)
+      {
+        uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
+        int prop = game.readUInt32(addr + Offsets::ExtraProp::Prop);
+        int param = game.readUInt32(addr + Offsets::ExtraProp::Value);
+        if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
+        {
+          moveset.editRequirement(addr, 0, 0);
+        }
+      }
+
+      // Single-spin uppercut
+      uintptr_t addr = moveset.getMoveAddress(0xD172C176, idleStanceIdx);
+      addr = moveset.getMoveNthCancel(addr, 1);
+      moveset.editCancelCommand(addr, 0x10);
+      moveset.editCancelOption(addr, 0x50);
+
+      uintptr_t reqHeader = moveset.getRequirementsHeader();
+
+      // Ultra-wavedash
+      addr = moveset.getMoveAddress(0x77314B09, idleStanceIdx);
+      addr = moveset.getMoveNthCancel(addr, 1);
+      game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+
+      // CD+1+2
+      addr = moveset.getMoveAddress(0x0C9CE140, idleStanceIdx);
+      uintptr_t storyReq = moveset.getMoveNthCancel1stReqAddr(addr, 0);
+      moveset.editCancelReqAddr(moveset.getMoveNthCancel(addr, 0), reqHeader);
+
+      // b+2,2
+      addr = moveset.getMoveAddress(0x8B5BFA6C, idleStanceIdx);
+      moveset.editCancelReqAddr(moveset.getMoveNthCancel(addr, 0), reqHeader);
+
+      // NEW b+2,2. Disabling laser cancel
+      addr = moveset.getMoveAddress(0x8FE28C6A, defaultAliasIdx);
+      addr = moveset.getMoveNthCancel(addr, 1);
+      uintptr_t cancelExtradata = moveset.getNthCancelFlagAddr(60);
+      game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
+
+      // Disabling u/b+1+2 laser
+      addr = moveset.getMoveAddress(0x07F32E0C, 2000);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.editMoveCancel(
+          addr,
+          0,
+          reqHeader,
+          moveset.getNthCancelFlagAddr(16),
+          -1,
+          -1,
+          1,
+          moveset.getMoveId(0x1376C644, idleStanceIdx),
+          65);
+
+      // d/f+3+4, 1
+      addr = moveset.getMoveAddress(0x6562FA84, idleStanceIdx);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      int moveId = moveset.getCancelMoveId(moveset.iterateCancel(addr, 1));
+      moveset.editCancelMoveId(addr, (short)moveId);
+
+      // d/b+1, 2
+      addr = moveset.getMoveAddress(0xFE501006, idleStanceIdx); // d/b+1
+      addr = moveset.getMoveNthCancel(addr, 0);
+      // Grabbing move ID from 3rd cancel
+      int moveId_db2 = moveset.getCancelMoveId(moveset.iterateCancel(addr, 2));
+      addr = moveset.iterateCancel(addr, 9); // 10th cancel
+      moveset.editCancelFrames(addr, 19, 19, 19);
+      moveset.editCancelMoveId(addr, moveId_db2);
+
+      // 11th cancel
+      addr = moveset.iterateCancel(addr, 1);
+      moveset.editCancelFrames(addr, 19, 19, 19);
+      moveset.editCancelMoveId(addr, moveId_db2);
+
+      // Adjusting d/b+1+2 to cancel into this on frame-1
+      int moveId_db1 = moveset.getMoveId(0xFE501006, moveId_db2);
+      cancelExtradata = moveset.getNthCancelFlagAddr(20);
+      addr = moveset.getMoveAddress(0x73EBDBA2, moveId_db1);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.editCancelReqAddr(addr, reqHeader);
+      moveset.editCancelMoveId(addr, (short)moveId_db1);
+
+      // ws+2
+      addr = moveset.getMoveAddress(0xB253E5F2, idleStanceIdx);
+      addr = moveset.getMoveNthCancel(addr, 1);
+      moveset.editMoveCancel(
+          addr,
+          0,
+          reqHeader,
+          moveset.getNthCancelFlagAddr(20),
+          5,
+          5,
+          5,
+          moveset.getMoveId(0x0AB42E52, defaultAliasIdx),
+          65);
+    }
+
     return markMovesetEdited(movesetAddr);
   }
 
@@ -401,7 +602,7 @@ public:
       {
         game.write<int>(playerAddr + permaDevilOffset, 1);
       }
-      // return loadKazuya(movesetAddr, bossCode);
+      return loadKazuya(movesetAddr, bossCode);
     }
     case FighterId::Azazel:
       // return loadAzazel(movesetAddr, bossCode);
