@@ -360,6 +360,23 @@ private:
     loadCostume(matchStructAddr, side, 51, costumePath);
   }
 
+  void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
+  {
+    uintptr_t reqHeader = game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+    uintptr_t reqCount = game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+    uintptr_t requirement = 0;
+    int req = -1;
+    for (int i = start; i < reqCount; i++)
+    {
+      requirement = reqHeader + i * Sizes::Moveset::Requirement;
+      req = game.readInt32(requirement);
+      if (req == Requirements::INTRO_RELATED)
+      {
+        game.write(requirement + 4, bossCode);
+      }
+    }
+  }
+
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
@@ -599,9 +616,87 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
+  bool loadAzazel(uintptr_t movesetAddr, int bossCode)
+  {
+    if (bossCode != BossCodes::Azazel)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
+
+    uintptr_t addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
+    addr = moveset.getMoveNthCancel1stReqAddr(addr, 0); // 1st req
+    moveset.editRequirement(addr, -1, 8);
+    addr = moveset.iterateRequirements(addr, 1); // 2nd req
+    moveset.editRequirement(addr, Requirements::OUTRO1, 0);
+    addr = moveset.iterateRequirements(addr, 1); // 3rd req
+    moveset.editRequirement(addr, Requirements::OUTRO2, 0);
+
+    return markMovesetEdited(movesetAddr);
+  }
+
+  bool loadAngelJin(uintptr_t movesetAddr, int bossCode)
+  {
+    if (bossCode != BossCodes::AngelJin)
+      return false;
+    adjustIntroOutroReq(movesetAddr, bossCode, 2085); // I know targetReq is first seen after index 2085
+
+    return markMovesetEdited(movesetAddr);
+  }
+
+  bool loadTrueDevilKazuya(uintptr_t movesetAddr, int bossCode)
+  {
+    if (bossCode != BossCodes::TrueDevilKazuya)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    adjustIntroOutroReq(movesetAddr, bossCode, 2900); // I know targetReq is first seen after index 2900
+    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
+    // d/f+1, 2
+    uintptr_t addr = moveset.getMoveAddress(0x4339a4bd, 1673);
+    moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 22), 473); // 23rd cancel
+    return markMovesetEdited(movesetAddr);
+  }
 
   bool loadStoryDevilJin(uintptr_t movesetAddr, int bossCode)
   {
+    if (bossCode != BossCodes::DevilJin)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
+    uintptr_t addr = 0;
+
+    adjustIntroOutroReq(movesetAddr, bossCode, 2000); // I know targetReq is first seen after index 2000
+
+    // Adjusting winposes
+    {
+      int enderId = moveset.getMoveId(0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
+      // Grabbing ID of the first intro from alias 0x8000
+      addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
+      addr = moveset.getMoveNthCancel(addr, 1); // 2nd Cancel
+      int start = moveset.getCancelMoveId(addr);
+
+      uintptr_t cancel = 0;
+      addr = moveset.getMoveAddress(0xD9CDC1C0, start);
+      for (int i = 0; i < 3; i++)
+      {
+        cancel = moveset.getMoveNthCancel(addr, 0);
+        moveset.editCancelMoveId(cancel, enderId);
+        addr += Sizes::Moveset::Move;
+      }
+
+      // Rage Art init (0xa02e070b)
+      addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      // I know these are extraprops but `getCancelReqAddr` also works to grab req addresses
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      // Rage Art throw (0xfe2cd621)
+      addr = moveset.getMoveAddress(0xfe2cd621, defaultAliasIdx - 15);
+      // 1st extraprop
+      addr = moveset.getMoveExtrapropAddr(addr);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      // 5th extraprop
+      addr = moveset.iterateExtraprops(addr, 4);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+    }
     return markMovesetEdited(movesetAddr);
   }
 
@@ -782,13 +877,13 @@ public:
       return loadKazuya(movesetAddr, bossCode);
     }
     case FighterId::Azazel:
-      // return loadAzazel(movesetAddr, bossCode);
+      return loadAzazel(movesetAddr, bossCode);
     case FighterId::Heihachi:
       // return loadHeihachi(movesetAddr, bossCode);
     case FighterId::AngelJin:
-      // return loadAngelJin(movesetAddr, bossCode);
+      return loadAngelJin(movesetAddr, bossCode);
     case FighterId::TrueDevilKazuya:
-      // return loadTrueDevilKazuya(movesetAddr, bossCode);
+      return loadTrueDevilKazuya(movesetAddr, bossCode);
     case FighterId::DevilJin2:
       return loadStoryDevilJin(movesetAddr, bossCode);
     default:

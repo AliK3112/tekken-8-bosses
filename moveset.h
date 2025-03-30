@@ -209,6 +209,12 @@ public:
     return game.readUInt64(move + Offsets::Move::ExtraPropList);
   }
 
+  // Moves `n` Extraprops forward given a prop's address
+  uintptr_t iterateExtraprops(uintptr_t addr, int n)
+  {
+    return addr + n * Sizes::Moveset::ExtraMoveProperty;
+  }
+
   void editCancelReqAddr(uintptr_t cancel, uintptr_t value)
   {
     game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, value);
@@ -343,5 +349,11 @@ public:
   uintptr_t iterateCancel(uintptr_t cancel, int n)
   {
     return cancel + (n * Sizes::Moveset::Cancel);
+  }
+
+  // Moves `n` requirements forward given a requirement's address
+  uintptr_t iterateRequirements(uintptr_t requirement, int n)
+  {
+    return requirement + (n * Sizes::Moveset::Requirement);
   }
 };
