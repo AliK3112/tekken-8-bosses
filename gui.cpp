@@ -70,7 +70,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   RegisterClassA(&wc);
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "Boss Selector",
-                            WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
+                            WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -93,21 +94,29 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 // Initialize UI components
 void InitializeUI(HWND hwnd)
 {
+  const int padding = 20;
+  const int comboWidth = 180;
+  const int comboHeight = 200;
+  const int buttonWidth = 120;
+  const int buttonHeight = 30;
+  const int logWidth = 440;
+  const int logHeight = 100;
+
   hwndCombo1 = CreateWindowA("COMBOBOX", NULL,
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             20, 20, 150, 200, hwnd, (HMENU)1, NULL, NULL);
+                             padding, padding, comboWidth, comboHeight, hwnd, (HMENU)1, NULL, NULL);
 
   hwndCombo2 = CreateWindowA("COMBOBOX", NULL,
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             200, 20, 150, 200, hwnd, (HMENU)2, NULL, NULL);
+                             padding + comboWidth + 20, padding, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
 
   hwndButton = CreateWindowA("BUTTON", "Apply Selection",
                              WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                             130, 80, 120, 30, hwnd, (HMENU)3, NULL, NULL);
+                             (500 - buttonWidth) / 2, padding + 50, buttonWidth, buttonHeight, hwnd, (HMENU)3, NULL, NULL);
 
   hwndLogBox = CreateWindowA("EDIT", "",
                              WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-                             20, 130, 440, 100, hwnd, NULL, NULL, NULL);
+                             padding, 150, logWidth, logHeight, hwnd, NULL, NULL, NULL);
 
   PopulateComboBox(hwndCombo1);
   PopulateComboBox(hwndCombo2);
