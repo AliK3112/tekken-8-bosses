@@ -4,12 +4,10 @@
 #include <cstdarg>
 #include "bosses.h"
 
-// #include "game_hacking.h" // Include your game hacking logic here
-
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndCombo1, hwndCombo2, hwndButton, hwndLogBox;
+HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndButton, hwndLogBox;
 TkBossLoader boss;
 char buffer[255];
 
@@ -56,9 +54,6 @@ void HandleBossSelection()
   if (idx1 >= 0 && idx1 < bossList.size() && idx2 >= 0 && idx2 < bossList.size())
   {
     boss.setBossCodes(bossList[idx1].id, bossList[idx2].id);
-    AppendLog("Boss Code L: %d", boss.getBossCode_L());
-    AppendLog("Boss Code R: %d", boss.getBossCode_R());
-    // boss.bossLoadMainLoop();
   }
 }
 
@@ -80,11 +75,10 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   InitializeUI(hwnd);
   ShowWindow(hwnd, nCmdShow);
 
-  // Run AttachToGame in a separate thread
   HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, AttachToGameThread, NULL, 0, NULL);
   if (hThread)
   {
-    CloseHandle(hThread); // Close handle as we don't need to track the thread
+    CloseHandle(hThread);
   }
 
   MSG msg = {};
@@ -96,7 +90,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   return 0;
 }
 
-// Initialize UI components
 void InitializeUI(HWND hwnd)
 {
   const int padding = 20;
@@ -106,18 +99,30 @@ void InitializeUI(HWND hwnd)
   const int buttonHeight = 30;
   const int logWidth = 440;
   const int logHeight = 100;
+  const int windowWidth = 500;
+
+  int combo1X = (windowWidth / 2) - comboWidth - 10;
+  int combo2X = (windowWidth / 2) + 10;
+
+  hwndLabel1 = CreateWindowA("STATIC", "Player 1 Boss Character",
+                             WS_CHILD | WS_VISIBLE | SS_CENTER,
+                             combo1X, padding, comboWidth, 20, hwnd, NULL, NULL, NULL);
+
+  hwndLabel2 = CreateWindowA("STATIC", "Player 2 Boss Character",
+                             WS_CHILD | WS_VISIBLE | SS_CENTER,
+                             combo2X, padding, comboWidth, 20, hwnd, NULL, NULL, NULL);
 
   hwndCombo1 = CreateWindowA("COMBOBOX", NULL,
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             padding, padding, comboWidth, comboHeight, hwnd, (HMENU)1, NULL, NULL);
+                             combo1X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)1, NULL, NULL);
 
   hwndCombo2 = CreateWindowA("COMBOBOX", NULL,
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             padding + comboWidth + 20, padding, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
+                             combo2X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
 
   hwndButton = CreateWindowA("BUTTON", "Apply Selection",
                              WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                             (500 - buttonWidth) / 2, padding + 50, buttonWidth, buttonHeight, hwnd, (HMENU)3, NULL, NULL);
+                             (windowWidth - buttonWidth) / 2, padding + 75, buttonWidth, buttonHeight, hwnd, (HMENU)3, NULL, NULL);
 
   hwndLogBox = CreateWindowA("EDIT", "",
                              WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
@@ -130,7 +135,6 @@ void InitializeUI(HWND hwnd)
   SendMessageA(hwndCombo2, CB_SETCURSEL, 0, 0);
 }
 
-// Populate a ComboBox with boss names
 void PopulateComboBox(HWND comboBox)
 {
   for (const auto &boss : bossList)
@@ -139,43 +143,29 @@ void PopulateComboBox(HWND comboBox)
   }
 }
 
-// Append message to log box
 void AppendLog(const std::string &msg)
 {
   if (msg.empty())
-    return; // Prevent appending empty messages
+    return;
 
-  // Get current text length
   int length = GetWindowTextLengthA(hwndLogBox);
-
-  // Ensure no excessive newlines
-  std::string trimmedMsg = msg;
-  while (!trimmedMsg.empty() && (trimmedMsg.back() == '\n' || trimmedMsg.back() == '\r'))
-  {
-    trimmedMsg.pop_back();
-  }
-
-  // Append text properly
   SendMessageA(hwndLogBox, EM_SETSEL, length, length);
-  SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(trimmedMsg + "\r\n").c_str());
+  SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(msg + "\r\n").c_str());
 }
 
-// Append message to log box (overloaded for formatted strings)
 void AppendLog(const char *format, ...)
 {
-  char buffer[255]; // Adjust size as needed
+  char buffer[255];
   va_list args;
   va_start(args, format);
   vsprintf_s(buffer, sizeof(buffer), format, args);
   va_end(args);
-
   AppendLog(std::string(buffer));
 }
 
 void AttachToGame()
 {
   AppendLog("Waiting for game to start...");
-  bool flag = false;
   while (true)
   {
     if (boss.attach())
@@ -186,26 +176,21 @@ void AttachToGame()
     }
     Sleep(100);
   }
-  AppendLog(buffer, "Boss Code L: %d", boss.getBossCode_L());
-  AppendLog(buffer, "Boss Code R: %d", boss.getBossCode_R());
-
   boss.attachToLogBox(hwndLogBox);
   boss.bossLoadMainLoop();
 }
 
-// Window Procedure (Handles UI Events)
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
   switch (msg)
   {
   case WM_COMMAND:
-    if (LOWORD(wp) == 3) // Apply Selection button clicked
+    if (LOWORD(wp) == 3)
     {
       HandleBossSelection();
     }
     break;
   case WM_DESTROY:
-    // TODO: Close any open handles to the game process if necessary
     PostQuitMessage(0);
     break;
   default:

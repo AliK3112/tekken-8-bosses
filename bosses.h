@@ -104,7 +104,7 @@ private:
 
   void scanAddresses()
   {
-    printf("Scanning for addresses...\n");
+    AppendLog("Scanning for addresses...\n");
     uintptr_t addr = 0;
     uintptr_t base = game.getBaseAddress();
     uintptr_t start = base;
@@ -190,15 +190,12 @@ private:
       printf("movesetOffset: 0x%llX\n", movesetOffset);
       printf("permaDevilOffset: 0x%llX\n", permaDevilOffset);
     }
-    printf("Addresses successfully scanned...\n");
+    AppendLog("Addresses successfully scanned...\n");
   }
 
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
-    // AppendLog("TRYING TO LOAD JIN");
-    // AppendLog("MOVESET: 0x%llx", moveset.getMoveset());
-    // AppendLog("CODE: 0x%llx", moveset.());
     int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
     moveset.disableRequirements(Requirements::STORY_FLAGS, _777param);
 
@@ -359,19 +356,25 @@ public:
         isWritten = false;
       }
 
-      if (!isWritten)
+      // if (!isWritten)
+      // {
+      //   isWritten = loadBoss(this->bossCode_L, 0);
+      //   if (isWritten) {
+      //     AppendLog("Loaded Boss: %d", this->bossCode_L);
+      //     // break;
+      //   }
+      // }
+      if (loadBoss(this->bossCode_L, 0))
       {
-        isWritten = loadBoss(this->bossCode_L, 0);
-        if (isWritten) {
-          AppendLog("Loaded Boss: %d", this->bossCode_L);
-          // break;
-        }
+        AppendLog("Loaded Boss %s for Player 1", getBossName(this->bossCode_L).c_str());
       }
-      loadBoss(this->bossCode_R, 1);
+      if (loadBoss(this->bossCode_R, 1))
+      {
+        AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
+      }
 
-      Sleep(100);
+      // Sleep(100);
     }
-    AppendLog("BYE!");
   }
 
   // Code = Boss Code, Side = P1 or P2
@@ -385,7 +388,7 @@ public:
     uintptr_t movesetAddr = getMovesetAddress(playerAddr);
 
     if (isMovesetEdited(movesetAddr))
-      return true;
+      return false;
 
     int charId = game.readInt32(playerAddr + 0x168);
     switch (charId)
