@@ -168,7 +168,7 @@ public:
     return getCancelReqAddr(getMoveNthCancel(move, n));
   }
 
-  uintptr_t getNthCancelFlagAddr(int n)
+  uintptr_t getNthCancelExtradataAddr(int n)
   {
     return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
   }
@@ -307,6 +307,11 @@ public:
   void editCancelCommand(uintptr_t cancel, int value)
   {
     game.write<int>(cancel + Offsets::Cancel::Command, value);
+  }
+
+  void editCancelExtradata(uintptr_t cancel, uintptr_t value)
+  {
+    game.write<int>(cancel + Offsets::Cancel::CancelExtradata, value);
   }
 
   void editCancelFrames(uintptr_t cancel, int windowStart, int windowEnd, int startingFrame)
