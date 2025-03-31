@@ -13,21 +13,10 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
-bool isCorrectHeihachiFlag(int storyFlag, int param)
-{
-  switch (storyFlag)
-  {
-  case 1:
-    return (param >= 0x501 && param < 0x601);
-  case 2:
-    return (param >= 0x601 && param < 0x701);
-  case 3:
-    return (param >= 0x801);
-  default:
-    break;
-  }
-  return false;
-}
+bool isValidJinBoss(int bossCode);
+bool isValidKazuyaBoss(int bossCode);
+bool isValidHeihachiBoss(int bossCode);
+bool isCorrectHeihachiFlag(int storyFlag, int param);
 
 class TkBossLoader
 {
@@ -438,6 +427,8 @@ private:
 
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
+    if (!isValidJinBoss(bossCode))
+      return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
     int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
     moveset.disableRequirements(Requirements::STORY_FLAGS, _777param);
@@ -496,6 +487,8 @@ private:
 
   bool loadKazuya(uintptr_t movesetAddr, int bossCode)
   {
+    if (!isValidKazuyaBoss(bossCode))
+      return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     int idleStanceIdx = moveset.getAliasMoveId(0x8001);
@@ -667,9 +660,11 @@ private:
           5,
           moveset.getMoveId(0x0AB42E52, defaultAliasIdx),
           65);
+
+      return markMovesetEdited(movesetAddr);
     }
 
-    return markMovesetEdited(movesetAddr);
+    return false;
   }
 
   bool loadAzazel(uintptr_t movesetAddr, int bossCode)
@@ -701,7 +696,7 @@ private:
 
   bool loadHeihachi(uintptr_t movesetAddr, int bossCode)
   {
-    if (bossCode / 10 != FighterId::Heihachi)
+    if (!isValidHeihachiBoss(bossCode))
       return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
@@ -1033,3 +1028,42 @@ public:
     }
   }
 };
+
+bool isValidJinBoss(int bossCode)
+{
+  return bossCode == BossCodes::RegularJin ||
+         bossCode == BossCodes::NerfedJin ||
+         bossCode == BossCodes::MishimaJin ||
+         bossCode == BossCodes::KazamaJin ||
+         bossCode == BossCodes::FinalJin ||
+         bossCode == BossCodes::ChainedJin;
+}
+
+bool isValidKazuyaBoss(int bossCode)
+{
+  return bossCode == BossCodes::DevilKazuya ||
+         bossCode == BossCodes::FinalKazuya;
+}
+
+bool isValidHeihachiBoss(int bossCode)
+{
+  return bossCode == BossCodes::FinalHeihachi ||
+         bossCode == BossCodes::ShadowHeihachi ||
+         bossCode == BossCodes::AmnesiaHeihachi;
+}
+
+bool isCorrectHeihachiFlag(int storyFlag, int param)
+{
+  switch (storyFlag)
+  {
+  case 1:
+    return (param >= 0x501 && param < 0x601);
+  case 2:
+    return (param >= 0x601 && param < 0x701);
+  case 3:
+    return (param >= 0x801);
+  default:
+    break;
+  }
+  return false;
+}
