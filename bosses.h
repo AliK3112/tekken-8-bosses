@@ -755,20 +755,10 @@ private:
       {
         uintptr_t defaultAliasAddr = moveset.getMoveAddrByIdx(defaultAliasIdx);
         addr = moveset.findMoveCancelByCondition(defaultAliasAddr, Requirements::PRE_ROUND_ANIM, -1, 50);
-        // addr = moveset.getMoveNthCancel(defaultAliasAddr, 50);
-        // while (true)
-        // {
-        //   if (moveset.cancelHasCondition(addr, Requirements::PRE_ROUND_ANIM, -1))
-        //     break;
-        //   addr += Sizes::Moveset::Cancel;
-        // }
 
         moveset.editCancelMoveId(addr, preRound1);
         moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), preRound2);
 
-        // game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound1);
-        // addr += Sizes::Moveset::Cancel; // going to next cancel
-        // game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound2);
         // Now enabling story reqs inside their props
         handleHeihachiMoveProp(movesetAddr, preRound1);
         handleHeihachiMoveProp(movesetAddr, preRound2);
@@ -999,8 +989,6 @@ public:
       {
         AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
       }
-
-      // Sleep(100);
     }
   }
 
