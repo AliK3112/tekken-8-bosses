@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdarg>
 #include "bosses.h"
+#include "resource.h"
 
 const char CLASS_NAME[] = "BossSelectorWindow";
 
@@ -60,6 +61,7 @@ void HandleBossSelection()
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
   WNDCLASSA wc = {};
+  wc.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_MYICON));
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInst;
   wc.lpszClassName = CLASS_NAME;
