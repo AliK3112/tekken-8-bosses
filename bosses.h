@@ -510,8 +510,7 @@ private:
       if (addr != 0)
       {
         moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
-        // Move 2 cancels forward
-        addr += Sizes::Moveset::Cancel * 2;
+        addr = moveset.iterateCancel(addr, 2); // Move 2 cancels forward
         moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
       }
 
@@ -547,6 +546,8 @@ private:
       moveset.disableStoryRelatedReqs(addr);
       // Disabling standing req
       game.write<int>(addr + Sizes::Moveset::Requirement, 0);
+
+      return markMovesetEdited(movesetAddr);
     }
     else if (bossCode == BossCodes::FinalKazuya)
     {
