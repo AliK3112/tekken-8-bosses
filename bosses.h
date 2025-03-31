@@ -73,7 +73,7 @@ private:
     return value == 1 || value == 2 || value == 5 || value == 6 || value == 12;
   }
 
-  // Side, 0 = P1, 1 = P2
+  // Side: 0 = P1, 1 = P2
   uintptr_t getPlayerAddress(int side)
   {
     return game.getAddress({(DWORD)playerStructOffset, (DWORD)(0x30 + side * 8)});
@@ -82,6 +82,23 @@ private:
   uintptr_t getMovesetAddress(int playerAddr)
   {
     return game.ReadUnsignedLong(playerAddr + movesetOffset);
+  }
+
+  int getCharId(uintptr_t playerAddr)
+  {
+    return game.readInt32(playerAddr + 0x168);
+  }
+
+  // Side: 0 = P1, 1 = P2
+  int getCharId(uintptr_t matchStructAddr, int side)
+  {
+    return game.readInt32(matchStructAddr + 0x10 + side * 0x84);
+  }
+
+  // Side: 0 = P1, 1 = P2
+  void setCharId(uintptr_t matchStructAddr, int side, int charId)
+  {
+    game.write(matchStructAddr + 0x10 + side * 0x84, charId);
   }
 
   bool movesetExists(uintptr_t moveset)
@@ -290,7 +307,7 @@ private:
   void loadCharacter(uintptr_t matchStructAddr, int side, int bossCode)
   {
     int charId = -1;
-    int currCharId = game.readInt32(matchStructAddr + 0x10 + side * 0x84);
+    int currCharId = getCharId(matchStructAddr, side);
     switch (bossCode)
     {
     // In these cases, the bossCode is the chara ID itself
@@ -305,7 +322,7 @@ private:
     }
     if (charId != -1 && isEligible(matchStructAddr))
     {
-      game.write<int>(matchStructAddr + 0x10 + side * 0x84, charId);
+      setCharId(matchStructAddr, side, charId);
       if (charId == BossCodes::DevilJin)
       {
         loadCostume(matchStructAddr, side, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
@@ -387,12 +404,8 @@ private:
     uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
     if (rageArt && bossCode != 0)
     {
-      uintptr_t cancel = game.readUInt64(rageArt + Offsets::Move::CancelList);
-      int regularRA = moveset.getMoveId(0x1ADAB0CB, 2000);
-      if (regularRA != -1)
-      {
-        game.write<short>(cancel + Offsets::Cancel::Move, regularRA);
-      }
+      uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
+      moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
     }
 
     switch (bossCode)
@@ -863,7 +876,7 @@ public:
     if (isMovesetEdited(movesetAddr))
       return false;
 
-    int charId = game.readInt32(playerAddr + 0x168);
+    int charId = getCharId(playerAddr);
     switch (charId)
     {
     case FighterId::Jin:

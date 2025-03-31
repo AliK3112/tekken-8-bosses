@@ -332,6 +332,8 @@ public:
 
   void editCancelMoveId(uintptr_t cancel, short moveId)
   {
+    if (moveId == -1)
+      return;
     game.write<short>(cancel + Offsets::Cancel::Move, moveId);
   }
 
