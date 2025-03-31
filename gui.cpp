@@ -95,14 +95,15 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 void InitializeUI(HWND hwnd)
 {
   const int padding = 20;
+  const int spacing = 10;
   const int comboWidth = 180;
   const int comboHeight = 200;
   const int logWidth = 440;
   const int logHeight = 100;
   const int windowWidth = 500;
 
-  int combo1X = (windowWidth / 2) - comboWidth - 10;
-  int combo2X = (windowWidth / 2) + 10;
+  int combo1X = (windowWidth / 2) - comboWidth - spacing;
+  int combo2X = (windowWidth / 2) + spacing;
 
   hwndLabel1 = CreateWindowA("STATIC", "Player 1 Boss Character",
                              WS_CHILD | WS_VISIBLE | SS_CENTER,
@@ -120,9 +121,25 @@ void InitializeUI(HWND hwnd)
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
                              combo2X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
 
+  // Instruction Group Box with extra padding
+  int groupBoxY = padding + 60;
+  int groupBoxHeight = 70; // Increased height
+  HWND hwndGroupBox = CreateWindowA("BUTTON", "Instructions",
+                                    WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                                    padding - 5, groupBoxY, logWidth + 10, groupBoxHeight, hwnd, NULL, NULL, NULL);
+
+  // Instruction Label inside Group Box (More padding from edges)
+  HWND hwndInstruction = CreateWindowA("STATIC",
+                                       " 1. If the boss or costume doesn't load on first try, reload.\r\n"
+                                       " 2. You need to reload after changing a dropdown value.",
+                                       WS_CHILD | WS_VISIBLE | SS_LEFT,
+                                       padding + 5, groupBoxY + 20, logWidth - 10, 40, hwnd, NULL, NULL, NULL);
+
+  // Log Box with extra spacing
+  int logBoxY = groupBoxY + groupBoxHeight + spacing;
   hwndLogBox = CreateWindowA("EDIT", "",
-                             WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-                             padding, 150, logWidth, logHeight, hwnd, NULL, NULL, NULL);
+                             WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+                             padding, logBoxY, logWidth, logHeight, hwnd, NULL, NULL, NULL);
 
   PopulateComboBox(hwndCombo1);
   PopulateComboBox(hwndCombo2);
