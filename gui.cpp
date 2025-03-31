@@ -67,7 +67,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   wc.lpszClassName = CLASS_NAME;
   RegisterClassA(&wc);
 
-  HWND hwnd = CreateWindowA(CLASS_NAME, "Boss Selector",
+  HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
                             CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
                             NULL, NULL, hInst, NULL);
