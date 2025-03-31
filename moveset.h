@@ -173,31 +173,6 @@ public:
     return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
   }
 
-  uintptr_t getRequirementsHeader()
-  {
-    return game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
-  }
-
-  uintptr_t getRequirementsCount()
-  {
-    return game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
-  }
-
-  uintptr_t getExtraMovePropsHeader()
-  {
-    return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
-  }
-
-  uintptr_t getExtraMovePropsCount()
-  {
-    return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
-  }
-
-  uintptr_t getMovesHeader()
-  {
-    return game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-  }
-
   uintptr_t getMoveAddrByIdx(int idx)
   {
     uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
@@ -209,10 +184,44 @@ public:
     return game.readUInt64(move + Offsets::Move::ExtraPropList);
   }
 
+  uintptr_t getExtrapropValue(uintptr_t addr, std::string column)
+  {
+    if (column == "frame")
+      return game.readInt32(addr + Offsets::ExtraProp::Type);
+    else if (column == "requirements")
+      return game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
+    else if (column == "prop")
+      return game.readInt32(addr + Offsets::ExtraProp::Prop);
+    else if (column == "value")
+      return game.readInt32(addr + Offsets::ExtraProp::Value);
+    else if (column == "value2")
+      return game.readInt32(addr + Offsets::ExtraProp::Value2);
+    else if (column == "value3")
+      return game.readInt32(addr + Offsets::ExtraProp::Value3);
+    else if (column == "value4")
+      return game.readInt32(addr + Offsets::ExtraProp::Value4);
+    else if (column == "value5")
+      return game.readInt32(addr + Offsets::ExtraProp::Value5);
+
+    return 0;
+  }
+
   // Moves `n` Extraprops forward given a prop's address
   uintptr_t iterateExtraprops(uintptr_t addr, int n)
   {
     return addr + n * Sizes::Moveset::ExtraMoveProperty;
+  }
+
+  void editExtraprop(uintptr_t propAddr, int propId, int paramValue = -1)
+  {
+    if (propId != -1)
+    {
+      game.write<int>(propAddr + Offsets::ExtraProp::Prop, propId);
+    }
+    if (paramValue != -1)
+    {
+      game.write<int>(propAddr + Offsets::ExtraProp::Value, paramValue);
+    }
   }
 
   void editCancelReqAddr(uintptr_t cancel, uintptr_t value)
@@ -251,11 +260,12 @@ public:
     return false;
   }
 
-  uintptr_t findMoveCancelByCondition(uintptr_t move, int targetReq, int targetParam = -1)
+  uintptr_t findMoveCancelByCondition(uintptr_t move, int targetReq, int targetParam = -1, int start = 0)
   {
     if (!move)
       return 0;
-    uintptr_t cancel = getMoveNthCancel(move, 0);
+    start = start < 0 ? 0 : start;
+    uintptr_t cancel = getMoveNthCancel(move, start);
     for (; true; cancel += Sizes::Moveset::Cancel)
     {
       if (cancelHasCondition(cancel, targetReq, targetParam))
@@ -266,12 +276,67 @@ public:
     return 0;
   }
 
+  uintptr_t findMoveExtraprop(uintptr_t move, int targetProp, int targetFrame = -1, int targetParam = -1)
+  {
+    uintptr_t addr = getMoveExtrapropAddr(move);
+    while (true)
+    {
+      int frame = game.readInt32(addr + Offsets::ExtraProp::Type);
+      int prop = game.readInt32(addr + Offsets::ExtraProp::Prop);
+      int param = game.readInt32(addr + Offsets::ExtraProp::Value);
+      if (!prop && !frame && !param)
+        break;
+      if ((targetFrame == frame || targetFrame == -1) && targetProp == prop && (targetParam == param || targetParam == -1))
+      {
+        return addr;
+      }
+      addr += Sizes::Moveset::ExtraMoveProperty;
+    }
+    return 0;
+  }
+
   void editRequirement(uintptr_t addr, int req, int param = -1)
   {
     if (req != -1)
       game.write<int>(addr, 0);
     if (param != -1)
       game.write<int>(addr + 4, 0);
+  }
+
+  bool reqListHas(uintptr_t addr, int tReq, int tParam = -1)
+  {
+    while (true)
+    {
+      int req = getRequirementValue(addr, "req");
+      int param = getRequirementValue(addr, "param");
+      if (req == tReq && (param == tParam || tParam == -1))
+        return true;
+      if (req == Requirements::EOL)
+        break;
+      addr = iterateRequirements(addr, 1);
+    }
+    return false;
+  }
+
+  int getRequirementValue(uintptr_t addr, std::string column)
+  {
+    if (column == "req")
+      return game.readInt32(addr);
+    else if (column == "param")
+      return game.readInt32(addr + 4);
+    return 0;
+  }
+
+  void editExtraprop(uintptr_t addr, int prop, int frame, int value)
+  {
+    if (addr == 0)
+      return;
+    if (prop != -1)
+      game.write(addr + Offsets::ExtraProp::Prop, prop);
+    if (frame != -1)
+      game.write(addr + Offsets::ExtraProp::Type, frame);
+    if (value != -1)
+      game.write(addr + Offsets::ExtraProp::Value, value);
   }
 
   void editMoveCancel(
@@ -347,6 +412,28 @@ public:
     return game.readInt16(cancel + Offsets::Cancel::Move);
   }
 
+  uintptr_t getCancelValue(uintptr_t addr, std::string column)
+  {
+    if (column == "command")
+      return game.readInt32(addr + Offsets::Cancel::Command);
+    else if (column == "requirements")
+      return game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    else if (column == "extradata")
+      return game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
+    else if (column == "start")
+      return game.readInt32(addr + Offsets::Cancel::WindowStart);
+    else if (column == "end")
+      return game.readInt32(addr + Offsets::Cancel::WindowEnd);
+    else if (column == "transition")
+      return game.readInt32(addr + Offsets::Cancel::TransitionFrame);
+    else if (column == "move")
+      return game.readInt16(addr + Offsets::Cancel::Move);
+    else if (column == "option")
+      return game.readInt16(addr + Offsets::Cancel::Option);
+
+    return 0;
+  }
+
   // Moves `n` cancels forward given a cancel's address
   uintptr_t iterateCancel(uintptr_t cancel, int n)
   {
@@ -357,5 +444,97 @@ public:
   uintptr_t iterateRequirements(uintptr_t requirement, int n)
   {
     return requirement + (n * Sizes::Moveset::Requirement);
+  }
+
+  uintptr_t getMovesetHeader(std::string column)
+  {
+    if (column == "reactions")
+      return game.readUInt64(moveset + Offsets::Moveset::ReactionsHeader);
+    else if (column == "requirements")
+      return game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+    else if (column == "hit_conditions")
+      return game.readUInt64(moveset + Offsets::Moveset::HitConditionsHeader);
+    else if (column == "projectiles")
+      return game.readUInt64(moveset + Offsets::Moveset::ProjectilesHeader);
+    else if (column == "pushbacks")
+      return game.readUInt64(moveset + Offsets::Moveset::PushbacksHeader);
+    else if (column == "pushback_extra_data")
+      return game.readUInt64(moveset + Offsets::Moveset::PushbackExtraDataHeader);
+    else if (column == "cancels")
+      return game.readUInt64(moveset + Offsets::Moveset::CancelsHeader);
+    else if (column == "group_cancels")
+      return game.readUInt64(moveset + Offsets::Moveset::GroupCancelsHeader);
+    else if (column == "cancel_extra_datas")
+      return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader);
+    else if (column == "extra_move_properties")
+      return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
+    else if (column == "move_start_props")
+      return game.readUInt64(moveset + Offsets::Moveset::MoveStartPropsHeader);
+    else if (column == "move_end_props")
+      return game.readUInt64(moveset + Offsets::Moveset::MoveEndPropsHeader);
+    else if (column == "moves")
+      return game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+    else if (column == "voiceclips")
+      return game.readUInt64(moveset + Offsets::Moveset::VoiceclipsHeader);
+    else if (column == "input_sequences")
+      return game.readUInt64(moveset + Offsets::Moveset::InputSequencesHeader);
+    else if (column == "input_extra_data")
+      return game.readUInt64(moveset + Offsets::Moveset::InputExtraDataHeader);
+    else if (column == "parry_list")
+      return game.readUInt64(moveset + Offsets::Moveset::ParryListHeader);
+    else if (column == "throw_extras")
+      return game.readUInt64(moveset + Offsets::Moveset::ThrowExtrasHeader);
+    else if (column == "throws")
+      return game.readUInt64(moveset + Offsets::Moveset::ThrowsHeader);
+    else if (column == "dialogues")
+      return game.readUInt64(moveset + Offsets::Moveset::DialoguesHeader);
+
+    return 0;
+  }
+
+  uintptr_t getMovesetCount(std::string column)
+  {
+    if (column == "reactions")
+      return game.readUInt64(moveset + Offsets::Moveset::ReactionsCount);
+    else if (column == "requirements")
+      return game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+    else if (column == "hit_conditions")
+      return game.readUInt64(moveset + Offsets::Moveset::HitConditionsCount);
+    else if (column == "projectiles")
+      return game.readUInt64(moveset + Offsets::Moveset::ProjectilesCount);
+    else if (column == "pushbacks")
+      return game.readUInt64(moveset + Offsets::Moveset::PushbacksCount);
+    else if (column == "pushback_extra_data")
+      return game.readUInt64(moveset + Offsets::Moveset::PushbackExtraDataCount);
+    else if (column == "cancels")
+      return game.readUInt64(moveset + Offsets::Moveset::CancelsCount);
+    else if (column == "group_cancels")
+      return game.readUInt64(moveset + Offsets::Moveset::GroupCancelsCount);
+    else if (column == "cancel_extra_datas")
+      return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasCount);
+    else if (column == "extra_move_properties")
+      return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
+    else if (column == "move_start_props")
+      return game.readUInt64(moveset + Offsets::Moveset::MoveStartPropsCount);
+    else if (column == "move_end_props")
+      return game.readUInt64(moveset + Offsets::Moveset::MoveEndPropsCount);
+    else if (column == "moves")
+      return game.readUInt64(moveset + Offsets::Moveset::MovesCount);
+    else if (column == "voiceclips")
+      return game.readUInt64(moveset + Offsets::Moveset::VoiceclipsCount);
+    else if (column == "input_sequences")
+      return game.readUInt64(moveset + Offsets::Moveset::InputSequencesCount);
+    else if (column == "input_extra_data")
+      return game.readUInt64(moveset + Offsets::Moveset::InputExtraDataCount);
+    else if (column == "parry_list")
+      return game.readUInt64(moveset + Offsets::Moveset::ParryListCount);
+    else if (column == "throw_extras")
+      return game.readUInt64(moveset + Offsets::Moveset::ThrowExtrasCount);
+    else if (column == "throws")
+      return game.readUInt64(moveset + Offsets::Moveset::ThrowsCount);
+    else if (column == "dialogues")
+      return game.readUInt64(moveset + Offsets::Moveset::DialoguesCount);
+
+    return 0;
   }
 };

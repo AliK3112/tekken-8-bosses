@@ -174,7 +174,7 @@ void AttachToGame()
       AppendLog(buffer, "Base Address: 0x%llx", boss.game.getBaseAddress());
       break;
     }
-    Sleep(100);
+    Sleep(1000);
   }
   boss.attachToLogBox(hwndLogBox);
   boss.bossLoadMainLoop();

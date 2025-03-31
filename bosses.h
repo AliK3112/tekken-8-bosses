@@ -13,6 +13,22 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
+bool isCorrectHeihachiFlag(int storyFlag, int param)
+{
+  switch (storyFlag)
+  {
+  case 1:
+    return (param >= 0x501 && param < 0x601);
+  case 2:
+    return (param >= 0x601 && param < 0x701);
+  case 3:
+    return (param >= 0x801);
+  default:
+    break;
+  }
+  return false;
+}
+
 class TkBossLoader
 {
 private:
@@ -394,6 +410,32 @@ private:
     }
   }
 
+  void handleHeihachiMoveProp(uintptr_t movesetAddr, int moveIdx)
+  {
+    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    uintptr_t addr = moveset.getMoveAddrByIdx(moveIdx);
+    addr = moveset.getMoveExtrapropAddr(addr);
+    while (true)
+    {
+      int frame = moveset.getExtrapropValue(addr, "frame");
+      int prop = moveset.getExtrapropValue(addr, "prop");
+      uintptr_t reqList = game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
+      if (!prop && !frame)
+        break;
+      if (prop == ExtraMoveProperties::SPEND_RAGE)
+      {
+        moveset.editExtraprop(addr, -1, -1, 0); // don't spend rage
+      }
+      // Cancels & Props both have requirements at offset 0x8
+      if (moveset.cancelHasCondition(addr, Requirements::DLC_STORY1_BATTLE_NUM, 2050))
+      {
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        break;
+      }
+      addr += Sizes::Moveset::ExtraMoveProperty;
+    }
+  }
+
   bool loadJin(uintptr_t movesetAddr, int bossCode)
   {
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
@@ -428,7 +470,7 @@ private:
     break;
     case BossCodes::ChainedJin:
     {
-      uintptr_t reqHeader = moveset.getRequirementsHeader();
+      uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
       std::vector<std::pair<int, int>> moves = {
           {0xCAD0CF3C, 1500}, // 1+2
           {0xE383D012, 2000}, // f,f+2
@@ -462,7 +504,7 @@ private:
       // Enabling permanent Devil form
       uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
       addr = moveset.getMoveExtrapropAddr(addr);
-      moveset.editMoveExtraprop(addr, 0, ExtraMoveProperties::PERMA_DEVIL, 1);
+      moveset.editExtraprop(addr, ExtraMoveProperties::PERMA_DEVIL, 1);
 
       // Disabling some requirements for basic attacks
       // 0x8000 alias
@@ -503,7 +545,7 @@ private:
       // d/b+1+2
       addr = moveset.getMoveAddress(0x73EBDBA2, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
-      moveset.editCancelReqAddr(addr, moveset.getRequirementsHeader());
+      moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
 
       // d/b+4
       addr = moveset.getMoveAddress(0x9364E2F5, idleStanceIdx);
@@ -517,13 +559,13 @@ private:
     {
       // Go through reqs and props to disable his devil form
       // requirements
-      uintptr_t start = moveset.getRequirementsHeader();
-      uintptr_t count = moveset.getRequirementsCount();
+      uintptr_t start = moveset.getMovesetHeader("requirements");
+      uintptr_t count = moveset.getMovesetCount("requirements");
       for (uintptr_t i = 4530; i < count - 2000; i++)
       {
         uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
-        int req = game.readUInt32(addr);
-        int param = game.readUInt32(addr + 4);
+        int req = moveset.getRequirementValue(addr, "req");
+        int param = moveset.getRequirementValue(addr, "param");
         if ((req == ExtraMoveProperties::DEVIL_STATE && param >= 1) || (req == ExtraMoveProperties::WING_ANIM))
         {
           moveset.editRequirement(addr, 0, 0);
@@ -531,13 +573,14 @@ private:
       }
 
       // extraprops
-      start = moveset.getExtraMovePropsHeader();
-      count = moveset.getExtraMovePropsCount();
+      start = moveset.getMovesetHeader("extra_move_properties");
+      count = moveset.getMovesetCount("extra_move_properties");
+
       for (uintptr_t i = 2200; i < count; i++)
       {
         uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
-        int prop = game.readUInt32(addr + Offsets::ExtraProp::Prop);
-        int param = game.readUInt32(addr + Offsets::ExtraProp::Value);
+        int prop = moveset.getExtrapropValue(addr, "prop");
+        int param = moveset.getExtrapropValue(addr, "value");
         if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
         {
           moveset.editRequirement(addr, 0, 0);
@@ -550,12 +593,12 @@ private:
       moveset.editCancelCommand(addr, 0x10);
       moveset.editCancelOption(addr, 0x50);
 
-      uintptr_t reqHeader = moveset.getRequirementsHeader();
+      uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
 
       // Ultra-wavedash
       addr = moveset.getMoveAddress(0x77314B09, idleStanceIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+      moveset.editCancelReqAddr(addr, reqHeader);
 
       // CD+1+2
       addr = moveset.getMoveAddress(0x0C9CE140, idleStanceIdx);
@@ -653,6 +696,104 @@ private:
       return false;
     adjustIntroOutroReq(movesetAddr, bossCode, 2085); // I know targetReq is first seen after index 2085
 
+    return markMovesetEdited(movesetAddr);
+  }
+
+  bool loadHeihachi(uintptr_t movesetAddr, int bossCode)
+  {
+    if (bossCode / 10 != FighterId::Heihachi)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
+    int idleStanceIdx = moveset.getAliasMoveId(0x8001);
+    uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+
+    // Idle stance, set/disable Warrior Instinct
+    addr = moveset.iterateExtraprops(moveset.getMoveExtrapropAddr(addr), 4); // 5th prop
+    moveset.editExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR, (int)(bossCode == BossCodes::FinalHeihachi));
+
+    if (bossCode == BossCodes::ShadowHeihachi)
+    {
+      addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      uintptr_t cancel1 = moveset.getMoveNthCancel(addr, 0);
+      uintptr_t reqListCancel1 = moveset.getCancelReqAddr(cancel1);
+      uintptr_t reqListCancel2 = moveset.getMoveNthCancel1stReqAddr(addr, 1);
+      moveset.editCancelReqAddr(cancel1, reqListCancel2);
+      moveset.disableStoryRelatedReqs(reqListCancel1);
+      // TODO: b,f+2 functional
+      // TODO: Broken Toy functional
+      return markMovesetEdited(movesetAddr);
+    }
+
+    if (bossCode == BossCodes::FinalHeihachi)
+    {
+      // Enable most of the moves by modifying 2,2
+      addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
+      addr = moveset.getMoveNthCancel(addr, 1);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      int new22 = moveset.getCancelMoveId(addr);
+      addr = moveset.getMoveAddrByIdx(new22);
+      // 2,2,2
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 5));
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 6));
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 7));
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 8));
+      // 1,1 > 1+3 throw
+      addr = moveset.getMoveAddress(0x10E04C8A, 2000);
+      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0));
+      // Parry cancels from idle stance
+      addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 3);
+      // 4-cancels for parries
+      for (int i = 0; i < 4; i++)
+      {
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(moveset.iterateCancel(addr, i)));
+      }
+
+      int preRound1 = defaultAliasIdx - 3;
+      int preRound2 = defaultAliasIdx - 2;
+      {
+        uintptr_t defaultAliasAddr = moveset.getMoveAddrByIdx(defaultAliasIdx);
+        addr = moveset.findMoveCancelByCondition(defaultAliasAddr, Requirements::PRE_ROUND_ANIM, -1, 50);
+        // addr = moveset.getMoveNthCancel(defaultAliasAddr, 50);
+        // while (true)
+        // {
+        //   if (moveset.cancelHasCondition(addr, Requirements::PRE_ROUND_ANIM, -1))
+        //     break;
+        //   addr += Sizes::Moveset::Cancel;
+        // }
+
+        moveset.editCancelMoveId(addr, preRound1);
+        moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), preRound2);
+
+        // game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound1);
+        // addr += Sizes::Moveset::Cancel; // going to next cancel
+        // game.write<uint16_t>(addr + Offsets::Cancel::Move, preRound2);
+        // Now enabling story reqs inside their props
+        handleHeihachiMoveProp(movesetAddr, preRound1);
+        handleHeihachiMoveProp(movesetAddr, preRound2);
+      }
+      return markMovesetEdited(movesetAddr);
+    }
+
+    // TODO: Redo monk Heihachi. This approach isn't good
+    uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+    uintptr_t reqCount = moveset.getMovesetCount("requirements");
+    int req = 0, param = 0;
+    int storyFlag = bossCode - 350;
+    for (uintptr_t i = 0; i < reqCount; i++)
+    {
+      addr = reqHeader + i * Sizes::Moveset::Requirement;
+      req = moveset.getRequirementValue(addr, "req");
+      param = moveset.getRequirementValue(addr, "param");
+      if (
+          (req == Requirements::DLC_STORY1_FLAGS && param == storyFlag) ||
+          req == Requirements::DLC_STORY1_BATTLE ||
+          (req == Requirements::DLC_STORY1_BATTLE_NUM && isCorrectHeihachiFlag(storyFlag, param)))
+      {
+        moveset.editRequirement(addr, 0);
+      }
+    }
     return markMovesetEdited(movesetAddr);
   }
 
@@ -892,7 +1033,7 @@ public:
     case FighterId::Azazel:
       return loadAzazel(movesetAddr, bossCode);
     case FighterId::Heihachi:
-      // return loadHeihachi(movesetAddr, bossCode);
+      return loadHeihachi(movesetAddr, bossCode);
     case FighterId::AngelJin:
       return loadAngelJin(movesetAddr, bossCode);
     case FighterId::TrueDevilKazuya:
