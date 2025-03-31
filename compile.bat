@@ -7,7 +7,7 @@ set WINDRES=windres
 set SRC=gui.cpp
 set RC=resource.rc
 set RES_OBJ=resource.o
-set OUTPUT=gui.exe
+set OUTPUT=tekken8_bosses.exe
 
 echo Compiling resource file...
 %WINDRES% %RC% -o %RES_OBJ%
