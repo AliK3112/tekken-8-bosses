@@ -7,7 +7,7 @@
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndButton, hwndLogBox;
+HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox;
 TkBossLoader boss;
 char buffer[255];
 
@@ -95,8 +95,6 @@ void InitializeUI(HWND hwnd)
   const int padding = 20;
   const int comboWidth = 180;
   const int comboHeight = 200;
-  const int buttonWidth = 120;
-  const int buttonHeight = 30;
   const int logWidth = 440;
   const int logHeight = 100;
   const int windowWidth = 500;
@@ -119,10 +117,6 @@ void InitializeUI(HWND hwnd)
   hwndCombo2 = CreateWindowA("COMBOBOX", NULL,
                              WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
                              combo2X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
-
-  hwndButton = CreateWindowA("BUTTON", "Apply Selection",
-                             WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                             (windowWidth - buttonWidth) / 2, padding + 75, buttonWidth, buttonHeight, hwnd, (HMENU)3, NULL, NULL);
 
   hwndLogBox = CreateWindowA("EDIT", "",
                              WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
@@ -185,9 +179,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   switch (msg)
   {
   case WM_COMMAND:
-    if (LOWORD(wp) == 3)
+    if (HIWORD(wp) == CBN_SELCHANGE)
     {
-      HandleBossSelection();
+      if ((HWND)lp == hwndCombo1 || (HWND)lp == hwndCombo2)
+      {
+        HandleBossSelection();
+      }
     }
     break;
   case WM_DESTROY:
