@@ -84,7 +84,7 @@ private:
     return game.getAddress({(DWORD)playerStructOffset, (DWORD)(0x30 + side * 8)});
   }
 
-  uintptr_t getMovesetAddress(int playerAddr)
+  uintptr_t getMovesetAddress(uintptr_t playerAddr)
   {
     return game.ReadUnsignedLong(playerAddr + movesetOffset);
   }
