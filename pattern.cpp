@@ -2,56 +2,69 @@
 #include "tekken.h"
 #include <chrono>
 
+GameClass game;
+
+uintptr_t scanForOffset(std::string pattern, uintptr_t start = 0, uintptr_t end = 0)
+{
+  uintptr_t addr = game.FastAoBScan(pattern, start, end);
+  return addr - game.getBaseAddress();
+}
+
+uintptr_t readOffsetFromInstr(uintptr_t instrAddr, int instrLen)
+{
+  return instrAddr + instrLen + game.readUInt32(instrAddr + 3) - game.getBaseAddress();
+}
+
+uintptr_t readOffsetFromInstr(uintptr_t instrAddr)
+{
+  return game.readUInt32(instrAddr + 3);
+}
+
 int main()
 {
-  GameClass game;
   if (game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
     auto start = std::chrono::high_resolution_clock::now(); // Start timer
     uintptr_t addr = 0;
-    uintptr_t startAddr = game.getBaseAddress();
+    uintptr_t base = game.getBaseAddress();
+    uintptr_t startAddr = base;
 
     // Player Struct Base Address
-    addr = game.FastAoBScan(Tekken::PLAYER_STRUCT_SIG_BYTES, startAddr + 0x5A00000);
+    addr = scanForOffset(Tekken::PLAYER_STRUCT_SIG_BYTES, startAddr + 0x5A00000);
     // addr = addr + 7 + game.readUInt32(addr + 3);
-    startAddr = addr;
-    addr -= game.getBaseAddress();
-    printf("Player Struct Base Address: 0x%llX\n", addr);
+    startAddr = startAddr + addr;
+    printf("player_struct_base_addr_offset=0x%llX\n", addr);
+    printf("player_struct_base=0x%llX\n", readOffsetFromInstr(addr + base, 7));
 
     // Match Struct Base Address
-    addr = game.FastAoBScan(Tekken::MATCH_STRUCT_SIG_BYTES, startAddr);
-    // addr = addr + 7 + game.readUInt32(addr + 3);
-    addr -= game.getBaseAddress();
-    printf("Match Struct Base Address: 0x%llX\n", addr);
+    addr = scanForOffset(Tekken::MATCH_STRUCT_SIG_BYTES, startAddr);
+    printf("match_struct_base_addr_offset=0x%llX\n", addr);
+    printf("match_struct_base=0x%llX\n", readOffsetFromInstr(addr + base, 7));
 
     // Encryption Method
-    addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, game.getBaseAddress() + 0x1700000);
-    addr -= game.getBaseAddress();
-    printf("Encryption Method Address: 0x%llX\n", addr);
+    addr = scanForOffset(Tekken::ENC_SIG_BYTES, game.getBaseAddress() + 0x1700000);
+    printf("decryption_function_offset=0x%llX\n", addr);
 
     // HUD Icon
-    addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, startAddr);
+    addr = scanForOffset(Tekken::HUD_ICON_SIG_BYTES, startAddr);
     addr += 13;
-    addr -= game.getBaseAddress();
-    printf("HUD Icon Address: 0x%llX\n", addr);
+    printf("hud_icon_addr_offset=0x%llX\n", addr);
 
     // HUD Name
-    addr = game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
+    addr = scanForOffset(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
     addr += 13;
-    addr -= game.getBaseAddress();
-    printf("HUD Name Address: 0x%llX\n", addr);
+    printf("hud_name_addr_offset=0x%llX\n", addr);
 
     // Moveset Offset
-    addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, game.getBaseAddress() + 0x1800000);
-    // addr = game.readInt32(addr + 3);
-    addr -= game.getBaseAddress();
-    printf("Moveset Offset Address: 0x%llX\n", addr);
+    addr = scanForOffset(Tekken::MOVSET_OFFSET_SIG_BYTES, game.getBaseAddress() + 0x1800000);
+    printf("moveset_offset_addr_offset=0x%llX\n", addr);
+    printf("moveset_offset=0x%llX\n", readOffsetFromInstr(addr + base));
 
     // Devil Flag Offset
-    addr = game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, game.getBaseAddress() + 0x2C00000);
+    addr = scanForOffset(Tekken::DEVIL_FLAG_SIG_BYTES, game.getBaseAddress() + 0x2C00000);
     // addr = game.readInt32(addr + 3);
-    addr -= game.getBaseAddress();
-    printf("Devil Flag Offset Address: 0x%llX\n", addr);
+    printf("permanent_devil_offset_addr_offset=0x%llX\n", addr);
+    printf("permanent_devil_offset=0x%llX\n", readOffsetFromInstr(addr + base));
 
     auto end = std::chrono::high_resolution_clock::now(); // End timer
 
