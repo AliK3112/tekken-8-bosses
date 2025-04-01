@@ -441,6 +441,11 @@ private:
       moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
     }
 
+    // TODO: Disable ff+1+2 new move (key: 0xEB242623)
+    /*
+    Cancel from f,f needs to be removed. Index 6
+    */
+
     switch (bossCode)
     {
     case BossCodes::RegularJin:
