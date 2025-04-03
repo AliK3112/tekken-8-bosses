@@ -833,7 +833,7 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
     addr = getMoveAddress(moveset, 0x8FE28C6A, defaultAliasIdx); // 2nd hit of b+2,2
     {
       addr = getMoveNthCancel(addr, 1); // 2nd cancel
-      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 60);
+      uintptr_t cancelExtradata = getNthCancelFlagAddr(moveset, 61);
       Game.write<int>(addr + Offsets::Cancel::CancelExtradata, cancelExtradata);
     }
 
