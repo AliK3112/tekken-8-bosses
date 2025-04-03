@@ -85,7 +85,7 @@ void atExit();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::NerfedJin : -1;
+  int bossCode = DEV_MODE ? BossCodes::FinalKazuya : -1;
   // Set up end-program handler
   if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
   {
@@ -853,12 +853,29 @@ bool loadKazuya(uintptr_t moveset, int bossCode)
       Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
 
+    // d/f+3+4, 1, 2. Last hit key: 0xD63CD0E6
     // d/f+3+4, 1 key: 0x6562FA84
-    addr = getMoveAddress(moveset, 0x6562FA84, idleStanceIdx); // (d/f+3+4),1
+    int df34_1 = getMoveId(moveset, 0x6562FA84, idleStanceIdx);
+    addr = getMoveAddressByIdx(moveset, df34_1); // (d/f+3+4),1
     addr = getMoveNthCancel(addr, 0);
     {
-      int moveId = Game.readInt16((addr + Sizes::Moveset::Cancel) + Offsets::Cancel::Move);
-      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
+      int df34_1_n2 = Game.readInt16(addr + Offsets::Cancel::Move); // Grabbing move ID from 1st cancel
+      int df34_1_2 = getMoveId(moveset, 0xD63CD0E6, df34_1);
+      while (true)
+      {
+        if (Game.readInt32(addr + Offsets::Cancel::Command) == 0x8000)
+          break;
+        int moveId = Game.readInt16(addr + Offsets::Cancel::Move);
+        if (moveId == df34_1_2)
+        {
+
+          Game.write<short>(addr + Offsets::Cancel::Move, (short)df34_1_n2);
+          addr += Sizes::Moveset::Cancel;
+          Game.write<short>(addr + Offsets::Cancel::Move, (short)df34_1_n2);
+          break;
+        }
+        addr += Sizes::Moveset::Cancel;
+      }
     }
 
     // d/b+1, 2
