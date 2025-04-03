@@ -173,6 +173,19 @@ public:
     return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
   }
 
+  uintptr_t findCancelExtradata(int target)
+  {
+    uintptr_t start = getMovesetHeader("cancel_extra_datas");
+    uintptr_t count = getMovesetCount("cancel_extra_datas");
+    for (uintptr_t i = 0; i < count; i++)
+    {
+      uintptr_t addr = start + i * Sizes::Moveset::CancelExtradata;
+      if (game.readInt32(addr) == target)
+        return addr;
+    }
+    return 0;
+  }
+
   uintptr_t getMoveAddrByIdx(int idx)
   {
     uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
@@ -272,6 +285,20 @@ public:
       {
         return cancel;
       }
+    }
+    return 0;
+  }
+
+  uintptr_t findCancel(uintptr_t cancel, std::string column, uintptr_t value)
+  {
+    if (!cancel)
+      return 0;
+    for (; true; cancel += Sizes::Moveset::Cancel)
+    {
+      if (getCancelValue(cancel, "command") == 0x8000)
+        return 0;
+      if (getCancelValue(cancel, column) == value)
+        return cancel;
     }
     return 0;
   }

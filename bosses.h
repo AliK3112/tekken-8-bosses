@@ -441,11 +441,6 @@ private:
       moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
     }
 
-    // TODO: Disable ff+1+2 new move (key: 0xEB242623)
-    /*
-    Cancel from f,f needs to be removed. Index 6
-    */
-
     // Disabling glowing eyes for new season 2 ZEN > CD cancels
     if (bossCode != BossCodes::RegularJin)
     {
@@ -654,7 +649,7 @@ private:
       // NEW b+2,2. Disabling laser cancel
       addr = moveset.getMoveAddress(0x8FE28C6A, defaultAliasIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.editCancelExtradata(addr, moveset.getNthCancelExtradataAddr(60));
+      moveset.editCancelExtradata(addr, moveset.findCancelExtradata(16383));
 
       // Disabling u/b+1+2 laser
       addr = moveset.getMoveAddress(0x07F32E0C, 2000);
@@ -663,7 +658,7 @@ private:
           addr,
           0,
           reqHeader,
-          moveset.getNthCancelExtradataAddr(16),
+          moveset.findCancelExtradata(386),
           -1,
           -1,
           1,
@@ -710,7 +705,7 @@ private:
           addr,
           0,
           reqHeader,
-          moveset.getNthCancelExtradataAddr(20),
+          moveset.findCancelExtradata(1025),
           5,
           5,
           5,
