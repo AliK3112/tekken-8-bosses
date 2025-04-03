@@ -66,6 +66,7 @@ private:
     va_list args;
     va_start(args, format);
     vsprintf_s(buffer, sizeof(buffer), format, args);
+    // vprintf(format, args);
     va_end(args);
 
     AppendLog(std::string(buffer));
@@ -104,6 +105,11 @@ private:
   void setCharId(uintptr_t matchStructAddr, int side, int charId)
   {
     game.write(matchStructAddr + 0x10 + side * 0x84, charId);
+  }
+
+  int getCode(int selectedSide)
+  {
+    return selectedSide ? this->bossCode_R : this->bossCode_L;
   }
 
   bool movesetExists(uintptr_t moveset)
@@ -900,6 +906,14 @@ public:
     this->attached = false;
   }
 
+  TkBossLoader(GameClass& game)
+  {
+    this->game = game;
+    this->bossCode_L = BossCodes::None;
+    this->bossCode_R = BossCodes::None;
+    this->attached = false;
+  }
+
   ~TkBossLoader()
   {
     restoreHudAddr(0);
@@ -941,12 +955,20 @@ public:
     this->bossCode_L = codeL;
     this->bossCode_R = codeR;
   }
+  void setBossCodeForSelectedSide(int selectedSide, int bossCode)
+  {
+    (selectedSide != 0) ? this->bossCode_R = bossCode : this->bossCode_L = bossCode;
+  }
+  void scanForAddresses()
+  {
+    scanAddresses();
+  }
   // Utility methods
-  void bossLoadMainLoop()
+  void bossLoadMainLoop(int selectedSide = -1)
   {
     if (!this->attached)
       return;
-    scanAddresses();
+    if (selectedSide == -1) scanAddresses();
     const std::vector<DWORD> offsets = {(DWORD)matchStructOffset, 0x50, 0x8, 0x18, 0x8};
     uintptr_t matchStructAddr = game.getAddress(offsets);
     if (!matchStructAddr)
@@ -956,8 +978,6 @@ public:
       return;
     }
 
-    // bool isWritten = false;
-    // bool flag = false;
     while (this->attached)
     {
       // Main Loop
@@ -982,8 +1002,15 @@ public:
         continue;
       }
 
-      loadCharacter(matchStructAddr, 0, this->bossCode_L);
-      loadCharacter(matchStructAddr, 1, this->bossCode_R);
+      if (selectedSide != -1)
+      {
+        loadCharacter(matchStructAddr, selectedSide, getCode(selectedSide));
+      }
+      else
+      {
+        loadCharacter(matchStructAddr, 0, this->bossCode_L);
+        loadCharacter(matchStructAddr, 1, this->bossCode_R);
+      }
 
       if (handleIcons)
       {
@@ -993,8 +1020,15 @@ public:
       uintptr_t playerAddr = getPlayerAddress(0);
       if (playerAddr == 0)
       {
-        costumeHandler(matchStructAddr, 0, this->bossCode_L);
-        costumeHandler(matchStructAddr, 1, this->bossCode_R);
+        if (selectedSide != -1)
+        {
+          costumeHandler(matchStructAddr, selectedSide, getCode(selectedSide));
+        }
+        else
+        {
+          costumeHandler(matchStructAddr, 0, this->bossCode_L);
+          costumeHandler(matchStructAddr, 1, this->bossCode_R);
+        }
         continue;
       }
 
@@ -1014,26 +1048,24 @@ public:
         continue;
       }
 
-      if (!isMovesetEdited(movesetAddr))
+      if (selectedSide != -1)
       {
-        // isWritten = false;
+        int code = getCode(selectedSide);
+        if (loadBoss(code, selectedSide))
+        {
+          AppendLog("Loaded Boss %s for Player %d", getBossName(code).c_str(), selectedSide + 1);
+        }
       }
-
-      // if (!isWritten)
-      // {
-      //   isWritten = loadBoss(this->bossCode_L, 0);
-      //   if (isWritten) {
-      //     AppendLog("Loaded Boss: %d", this->bossCode_L);
-      //     // break;
-      //   }
-      // }
-      if (loadBoss(this->bossCode_L, 0))
+      else
       {
-        AppendLog("Loaded Boss %s for Player 1", getBossName(this->bossCode_L).c_str());
-      }
-      if (loadBoss(this->bossCode_R, 1))
-      {
-        AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
+        if (loadBoss(this->bossCode_L, 0))
+        {
+          AppendLog("Loaded Boss %s for Player 1", getBossName(this->bossCode_L).c_str());
+        }
+        if (loadBoss(this->bossCode_R, 1))
+        {
+          AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
+        }
       }
     }
   }
