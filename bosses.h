@@ -435,7 +435,7 @@ private:
 
     // Adjusting Rage Art
     uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
-    if (rageArt && bossCode != 0)
+    if (rageArt && bossCode != BossCodes::RegularJin)
     {
       uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
       moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
@@ -445,6 +445,50 @@ private:
     /*
     Cancel from f,f needs to be removed. Index 6
     */
+
+    // Disabling glowing eyes for new season 2 ZEN > CD cancels
+    if (bossCode != BossCodes::RegularJin)
+    {
+      // FC df4 ~ f ~ df
+      uintptr_t addr = moveset.getMoveAddress(0xDA8608B7, 1750);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      // Disabling first 3 props
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
+
+      // ZEN 1+2 ~ df
+      addr = moveset.getMoveAddress(0x459C84C1, 1750);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.iterateExtraprops(addr, 2);
+      // Disabling the next 3 props
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
+
+      // Replace the new f,f+1+2 with f,f+2
+      int moveId = moveset.getMoveId(0xE383D012, 2200); // f,f+2
+      if (moveId != -1)
+      {
+        // f,f+1+2
+        addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
+        addr = moveset.getMoveNthCancel(addr, 0);
+        uintptr_t extradata = moveset.getNthCancelExtradataAddr(13);
+        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+
+        // Modifying 1st cancel
+        moveset.editMoveCancel(
+            addr,
+            0,
+            reqHeader,
+            extradata,
+            1,
+            1,
+            1,
+            (short)moveId,
+            65);
+      }
+    }
 
     switch (bossCode)
     {
@@ -627,10 +671,16 @@ private:
           65);
 
       // d/f+3+4, 1
-      addr = moveset.getMoveAddress(0x6562FA84, idleStanceIdx);
-      addr = moveset.getMoveNthCancel(addr, 0);
-      int moveId = moveset.getCancelMoveId(moveset.iterateCancel(addr, 1));
-      moveset.editCancelMoveId(addr, (short)moveId);
+      {
+        int df34_1 = moveset.getMoveId(0x6562FA84, idleStanceIdx);
+        addr = moveset.getMoveAddrByIdx(df34_1);
+        addr = moveset.getMoveNthCancel(addr, 0);
+        int df34_1_db2 = moveset.getCancelMoveId(addr);
+        int df34_1_2 = moveset.getMoveId(0xD63CD0E6, df34_1);
+        addr = moveset.findCancelByMoveId(addr, df34_1_2);
+        moveset.editCancelMoveId(moveset.iterateCancel(addr, 0), df34_1_db2);
+        moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), df34_1_db2);
+      }
 
       // d/b+1, 2
       addr = moveset.getMoveAddress(0xFE501006, idleStanceIdx); // d/b+1

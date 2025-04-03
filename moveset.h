@@ -276,6 +276,28 @@ public:
     return 0;
   }
 
+  uintptr_t findCancelByMoveId(uintptr_t cancel, int targetMoveId)
+  {
+    if (!cancel)
+      return 0;
+    for (; true; cancel += Sizes::Moveset::Cancel)
+    {
+      if (getCancelValue(cancel, "command") == 0x8000)
+        return 0;
+      if (getCancelValue(cancel, "move") == targetMoveId)
+        return cancel;
+    }
+    return 0;
+  }
+
+  uintptr_t findMoveCancelByMoveId(uintptr_t move, int targetMoveId, int start = 0)
+  {
+    if (!move)
+      return 0;
+    start = start < 0 ? 0 : start;
+    return findCancelByMoveId(getMoveNthCancel(move, start), targetMoveId);
+  }
+
   uintptr_t findMoveExtraprop(uintptr_t move, int targetProp, int targetFrame = -1, int targetParam = -1)
   {
     uintptr_t addr = getMoveExtrapropAddr(move);
@@ -397,6 +419,8 @@ public:
 
   void editCancelMoveId(uintptr_t cancel, short moveId)
   {
+    if (cancel == 0)
+      return;
     if (moveId == -1)
       return;
     game.write<short>(cancel + Offsets::Cancel::Move, moveId);
@@ -437,7 +461,7 @@ public:
   // Moves `n` cancels forward given a cancel's address
   uintptr_t iterateCancel(uintptr_t cancel, int n)
   {
-    return cancel + (n * Sizes::Moveset::Cancel);
+    return cancel ? cancel + (n * Sizes::Moveset::Cancel) : 0;
   }
 
   // Moves `n` requirements forward given a requirement's address
