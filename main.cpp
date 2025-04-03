@@ -85,7 +85,7 @@ void atExit();
 
 int main()
 {
-  int bossCode = DEV_MODE ? BossCodes::TrueDevilKazuya : -1;
+  int bossCode = DEV_MODE ? BossCodes::NerfedJin : -1;
   // Set up end-program handler
   if (!SetConsoleCtrlHandler(ConsoleHandler, TRUE))
   {
@@ -584,13 +584,55 @@ bool loadJin(uintptr_t moveset, int bossCode)
 
   // Adjusting Rage Art
   uintptr_t rageArt = getMoveAddress(moveset, 0x9BAE061E, 2100);
-  if (rageArt && bossCode != 0)
+  if (rageArt && bossCode != BossCodes::RegularJin)
   {
     uintptr_t cancel = Game.readUInt64(rageArt + Offsets::Move::CancelList);
     int regularRA = getMoveId(moveset, 0x1ADAB0CB, 2000);
     if (regularRA != -1)
     {
       Game.write<short>(cancel + Offsets::Cancel::Move, regularRA);
+    }
+  }
+
+  // Disabling glowing eyes for new season 2 ZEN > CD cancels
+  if (bossCode != BossCodes::RegularJin)
+  {
+    // FC df4 ~ f ~ df
+    uintptr_t addr = getMoveAddress(moveset, 0xDA8608B7, 1750);
+    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // Extraprop list address
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0); // 1st prop
+    addr += Sizes::Moveset::ExtraMoveProperty; // Going to 2nd prop
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0);
+    addr += Sizes::Moveset::ExtraMoveProperty; // Going to 3rd prop
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0);
+
+    // ZEN 1+2 ~ df
+    addr = getMoveAddress(moveset, 0x459C84C1, 1750);
+    addr = Game.readUInt64(addr + Offsets::Move::ExtraPropList); // Extraprop list address
+    addr += 2 * Sizes::Moveset::ExtraMoveProperty; // Going to 3rd prop
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0);
+    addr += Sizes::Moveset::ExtraMoveProperty; // Going to 4th prop
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0);
+    addr += Sizes::Moveset::ExtraMoveProperty; // Going to 5th prop
+    Game.write<int>(addr + Offsets::ExtraProp::Prop, 0);
+
+    // Replace the new f,f+1+2 with f,f+2
+    int moveId = getMoveId(moveset, 0xE383D012, 2200); // f,f+2
+    if (moveId != -1)
+    {
+      // f,f+1+2
+      addr = getMoveAddress(moveset, 0xEB242623, 1750); // f,f+1+2
+      addr = getMoveNthCancel(addr, 0);
+      uintptr_t extradata = getNthCancelFlagAddr(moveset, 13);
+      uintptr_t reqHeader = Game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+      // Modifying 1st cancel
+      Game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, reqHeader);
+      Game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, extradata);
+      Game.write<int>(addr + Offsets::Cancel::WindowStart, 1);
+      Game.write<int>(addr + Offsets::Cancel::WindowEnd, 1);
+      Game.write<int>(addr + Offsets::Cancel::TransitionFrame, 1);
+      Game.write<short>(addr + Offsets::Cancel::Move, (short)moveId);
+      Game.write<short>(addr + Offsets::Cancel::Option, 65);
     }
   }
 
@@ -1175,9 +1217,9 @@ int getMoveId(uintptr_t moveset, int moveNameKey, int start = 0)
         return i;
     }
   }
-  std::ostringstream oss;
-  oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
-  throw std::runtime_error(oss.str());
+  // std::ostringstream oss;
+  // oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+  // throw std::runtime_error(oss.str());
   return -1;
 }
 
