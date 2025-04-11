@@ -198,14 +198,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   switch (msg)
   {
   case WM_COMMAND:
-    if (HIWORD(wp) == CBN_SELCHANGE)
+  {
+    int controlId = LOWORD(wp);
+    int notificationCode = HIWORD(wp);
+
+    if (notificationCode == CBN_SELCHANGE && (controlId == 1 || controlId == 2))
     {
-      if ((HWND)lp == hwndCombo1 || (HWND)lp == hwndCombo2)
-      {
-        HandleBossSelection();
-      }
+      HandleBossSelection();
     }
-    break;
+  }
+  break;
   case WM_DESTROY:
     PostQuitMessage(0);
     break;
