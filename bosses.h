@@ -25,6 +25,7 @@ private:
   int bossCode_L = BossCodes::None;
   int bossCode_R = BossCodes::None;
   bool attached = false;
+  bool ready = false;
   // ADDRESSES
   uintptr_t playerStructOffset = 0;
   uintptr_t matchStructOffset = 0;
@@ -139,7 +140,6 @@ private:
 
   void scanAddresses()
   {
-    AppendLog("Scanning for addresses...\n");
     uintptr_t addr = 0;
     uintptr_t base = game.getBaseAddress();
     uintptr_t start = base;
@@ -225,7 +225,7 @@ private:
       printf("movesetOffset: 0x%llX\n", movesetOffset);
       printf("permaDevilOffset: 0x%llX\n", permaDevilOffset);
     }
-    AppendLog("Addresses successfully scanned...\n");
+    this->ready = true; // Ready to load bosses
   }
 
   // Modifies the instructions that allows for custom HUD icon loading
@@ -941,6 +941,10 @@ public:
   {
     return this->bossCode_R;
   }
+  bool isReady()
+  {
+    return this->ready;
+  }
   // Setters
   void setBossCode_L(int code)
   {
@@ -968,7 +972,7 @@ public:
   {
     if (!this->attached)
       return;
-    if (selectedSide == -1) scanAddresses();
+
     const std::vector<DWORD> offsets = {(DWORD)matchStructOffset, 0x50, 0x8, 0x18, 0x8};
     uintptr_t matchStructAddr = game.getAddress(offsets);
     if (!matchStructAddr)

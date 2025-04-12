@@ -179,18 +179,34 @@ void AppendLog(const char *format, ...)
 void AttachToGame()
 {
   AppendLog("Waiting for game to start...");
+
+  EnableWindow(hwndCombo1, FALSE);
+  EnableWindow(hwndCombo2, FALSE);
+
   while (true)
   {
     if (boss.attach())
     {
       AppendLog("Successfully attached to game!");
-      AppendLog(buffer, "Base Address: 0x%llx", boss.game.getBaseAddress());
+      // AppendLog(buffer, "Base Address: 0x%llx", boss.game.getBaseAddress());
       break;
     }
     Sleep(1000);
   }
+
   boss.attachToLogBox(hwndLogBox);
-  boss.bossLoadMainLoop();
+
+  AppendLog("Scanning for addresses...\n");
+  boss.scanForAddresses();
+  AppendLog("Addresses successfully scanned...\n");
+
+  if (boss.isReady())
+  {
+    EnableWindow(hwndCombo1, TRUE);
+    EnableWindow(hwndCombo2, TRUE);
+
+    boss.bossLoadMainLoop();
+  }
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
