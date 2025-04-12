@@ -474,7 +474,7 @@ private:
         // f,f+1+2
         addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
         addr = moveset.getMoveNthCancel(addr, 0);
-        uintptr_t extradata = moveset.getNthCancelExtradataAddr(13);
+        uintptr_t extradata = moveset.findCancelExtradata(389);
         uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
 
         // Modifying 1st cancel
@@ -856,7 +856,7 @@ private:
   {
     if (bossCode != BossCodes::DevilJin)
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
@@ -882,7 +882,7 @@ private:
       // Rage Art init (0xa02e070b)
       addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20);
       addr = moveset.getMoveExtrapropAddr(addr);
-      // I know these are extraprops but `getCancelReqAddr` also works to grab req addresses
+      // `getCancelReqAddr` can also be used to grab extraprop's req addr
       moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
       // Rage Art throw (0xfe2cd621)
       addr = moveset.getMoveAddress(0xfe2cd621, defaultAliasIdx - 15);

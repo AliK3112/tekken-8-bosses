@@ -105,13 +105,15 @@ public:
       }
     }
     std::ostringstream oss;
-    oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+    oss << "Failed to find ID for move 0x" << std::hex << moveNameKey;
     throw std::runtime_error(oss.str());
     return -1;
   }
 
   uintptr_t getMoveAddress(int moveNameKey, int start = 0)
   {
+    if (start < 0)
+      return 0;
     uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
     start = start >= movesCount ? 0 : start;
@@ -137,10 +139,13 @@ public:
     std::ostringstream oss;
     oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
     throw std::runtime_error(oss.str());
+    return 0;
   }
 
   void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = Requirements::CHARA_CONTROLLER)
   {
+    if (!requirements)
+      return;
     for (uintptr_t addr = requirements; true; addr += Sizes::Requirement)
     {
       int req = game.readUInt32(addr);
@@ -155,12 +160,12 @@ public:
 
   uintptr_t getCancelReqAddr(uintptr_t cancel)
   {
-    return game.readUInt64(cancel + Offsets::Cancel::RequirementsList);
+    return cancel ? game.readUInt64(cancel + Offsets::Cancel::RequirementsList) : 0;
   }
 
   uintptr_t getMoveNthCancel(uintptr_t move, int n)
   {
-    return game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n;
+    return move ? game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n : 0;
   }
 
   uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
@@ -168,9 +173,10 @@ public:
     return getCancelReqAddr(getMoveNthCancel(move, n));
   }
 
-  uintptr_t getNthCancelExtradataAddr(int n)
+  // Returns the address of cancel extradata given index
+  uintptr_t getCancelExtradataAddr(int index)
   {
-    return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * n;
+    return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * index;
   }
 
   uintptr_t findCancelExtradata(int target)
@@ -189,12 +195,12 @@ public:
   uintptr_t getMoveAddrByIdx(int idx)
   {
     uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-    return head + (idx * Sizes::Moveset::Move);
+    return head ? head + (idx * Sizes::Moveset::Move) : 0;
   }
 
   uintptr_t getMoveExtrapropAddr(uintptr_t move)
   {
-    return game.readUInt64(move + Offsets::Move::ExtraPropList);
+    return move ? game.readUInt64(move + Offsets::Move::ExtraPropList) : 0;
   }
 
   uintptr_t getExtrapropValue(uintptr_t addr, std::string column)
@@ -222,11 +228,13 @@ public:
   // Moves `n` Extraprops forward given a prop's address
   uintptr_t iterateExtraprops(uintptr_t addr, int n)
   {
-    return addr + n * Sizes::Moveset::ExtraMoveProperty;
+    return addr ? addr + n * Sizes::Moveset::ExtraMoveProperty : 0;
   }
 
   void editExtraprop(uintptr_t propAddr, int propId, int paramValue = -1)
   {
+    if (propAddr == 0)
+      return;
     if (propId != -1)
     {
       game.write<int>(propAddr + Offsets::ExtraProp::Prop, propId);
@@ -239,6 +247,8 @@ public:
 
   void editCancelReqAddr(uintptr_t cancel, uintptr_t value)
   {
+    if (!cancel)
+      return;
     game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, value);
   }
 
@@ -249,15 +259,10 @@ public:
     return game.readUInt16(moveset + 0x30 + (idx - 0x8000) * 2);
   }
 
-  void editMoveExtraprop(uintptr_t extraPropListAddr, int idx, int prop, int propVal)
-  {
-    extraPropListAddr += (idx * Sizes::Moveset::ExtraMoveProperty);
-    game.write<int>(extraPropListAddr + Offsets::ExtraProp::Prop, prop);
-    game.write<int>(extraPropListAddr + Offsets::ExtraProp::Value, propVal);
-  }
-
   bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
   {
+    if (!cancel)
+      return false;
     uintptr_t requirements = getCancelReqAddr(cancel);
     for (uintptr_t addr = requirements; true; addr += Sizes::Moveset::Requirement)
     {
@@ -460,7 +465,7 @@ public:
 
   int getCancelMoveId(uintptr_t cancel)
   {
-    return game.readInt16(cancel + Offsets::Cancel::Move);
+    return cancel ? game.readInt16(cancel + Offsets::Cancel::Move) : -1;
   }
 
   uintptr_t getCancelValue(uintptr_t addr, std::string column)
