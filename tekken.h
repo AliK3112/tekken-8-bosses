@@ -121,6 +121,7 @@ namespace Tekken
   enum Requirements
   {
     CHARA_CONTROLLER = 228,
+    IS_PERMA_DEVIL = 473,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
     INTRO_RELATED = 755,
