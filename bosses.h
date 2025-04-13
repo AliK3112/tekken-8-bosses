@@ -73,6 +73,13 @@ private:
     AppendLog(std::string(buffer));
   }
 
+  void setKazuyaPermaDevil(uintptr_t playerAddr, int value)
+  {
+    if (!playerAddr || !permaDevilOffset)
+      return;
+    game.write<int>(playerAddr + permaDevilOffset, value);
+  }
+
   // Checks if it's eligible to load the boss character
   bool isEligible(uintptr_t matchStructAddr)
   {
@@ -388,10 +395,10 @@ private:
     loadCostume(matchStructAddr, side, 51, costumePath);
   }
 
-  void adjustIntroOutroReq(uintptr_t moveset, int bossCode, int start = 0)
+  void adjustIntroOutroReq(TkMoveset& moveset, int bossCode, int start = 0)
   {
-    uintptr_t reqHeader = game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
-    uintptr_t reqCount = game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+    uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+    uintptr_t reqCount = moveset.getMovesetCount("requirements");
     uintptr_t requirement = 0;
     int req = -1;
     for (int i = start; i < reqCount; i++)
@@ -746,7 +753,8 @@ private:
   {
     if (bossCode != BossCodes::AngelJin)
       return false;
-    adjustIntroOutroReq(movesetAddr, bossCode, 2085); // I know targetReq is first seen after index 2085
+    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
     return markMovesetEdited(movesetAddr);
   }
@@ -755,7 +763,7 @@ private:
   {
     if (!isValidHeihachiBoss(bossCode))
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     int idleStanceIdx = moveset.getAliasMoveId(0x8001);
     uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
@@ -843,12 +851,8 @@ private:
   {
     if (bossCode != BossCodes::TrueDevilKazuya)
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
-    adjustIntroOutroReq(movesetAddr, bossCode, 2900); // I know targetReq is first seen after index 2900
-    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
-    // d/f+1, 2
-    uintptr_t addr = moveset.getMoveAddress(0x4339a4bd, 1673);
-    moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 22), 473); // 23rd cancel
+    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
     return markMovesetEdited(movesetAddr);
   }
 
@@ -860,7 +864,7 @@ private:
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
-    adjustIntroOutroReq(movesetAddr, bossCode, 2000); // I know targetReq is first seen after index 2000
+    adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
 
     // Adjusting winposes
     {
@@ -1096,7 +1100,7 @@ public:
     {
       if (bossCode == BossCodes::DevilKazuya)
       {
-        game.write<int>(playerAddr + permaDevilOffset, 1);
+        setKazuyaPermaDevil(playerAddr, 1);
       }
       return loadKazuya(movesetAddr, bossCode);
     }
@@ -1107,7 +1111,13 @@ public:
     case FighterId::AngelJin:
       return loadAngelJin(movesetAddr, bossCode);
     case FighterId::TrueDevilKazuya:
+    {
+      if (bossCode == BossCodes::TrueDevilKazuya)
+      {
+        setKazuyaPermaDevil(playerAddr, 1);
+      }
       return loadTrueDevilKazuya(movesetAddr, bossCode);
+    }
     case FighterId::DevilJin2:
       return loadStoryDevilJin(movesetAddr, bossCode);
     default:
