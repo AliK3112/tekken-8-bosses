@@ -506,6 +506,8 @@ private:
       moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0), 0);
     }
     break;
+    case BossCodes::NerfedJin:
+    break;
     case BossCodes::MishimaJin:
     case BossCodes::KazamaJin:
     {
