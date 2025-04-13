@@ -479,7 +479,11 @@ private:
       if (moveId != -1)
       {
         // f,f+1+2
-        addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
+        try {
+          addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
+        } catch (...) {
+          addr = 0; // If somebody is using the mod on pre-S2, this shouldn't crash
+        }
         addr = moveset.getMoveNthCancel(addr, 0);
         uintptr_t extradata = moveset.findCancelExtradata(389);
         uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
