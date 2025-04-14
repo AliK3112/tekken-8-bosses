@@ -117,6 +117,7 @@ namespace Tekken
   std::string DEVIL_FLAG_SIG_BYTES = "41 83 BF ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
   std::string PLAYER_STRUCT_SIG_BYTES = "4C 89 35 ?? ?? ?? ?? 41 88 5E 28 66 41 89 9E 88 00 00 00 E8 ?? ?? ?? ?? 41 88 86 8A 00 00 00";
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
+  std::string P_MOVE_ID_SIG_BYTES = "89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 E8 ?? ?? ?? ?? 85 C0";
 
   enum Requirements
   {
@@ -141,6 +142,7 @@ namespace Tekken
     CHARA_TRAIL_VFX = 0x8039,
     DEVIL_STATE = 0x80dc,
     PERMA_DEVIL = 0x8151,
+    FORCE_MOVE = 0x8244,
     SPEND_RAGE = 0x82e2,
     HEI_WARRIOR = 0x83f9,
     WING_ANIM = 0x8683,
