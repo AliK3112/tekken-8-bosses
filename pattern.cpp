@@ -1,5 +1,6 @@
 #include "game.h"
 #include "tekken.h"
+#include <conio.h>
 #include <chrono>
 
 GameClass game;
@@ -24,6 +25,8 @@ int main()
 {
   if (game.Attach(L"Polaris-Win64-Shipping.exe"))
   {
+    printf("Press any key to scan\n");
+    _getch();
     auto start = std::chrono::high_resolution_clock::now(); // Start timer
     uintptr_t addr = 0;
     uintptr_t base = game.getBaseAddress();
@@ -31,7 +34,6 @@ int main()
 
     // Player Struct Base Address
     addr = scanForOffset(Tekken::PLAYER_STRUCT_SIG_BYTES, startAddr + 0x5A00000);
-    // addr = addr + 7 + game.readUInt32(addr + 3);
     startAddr = startAddr + addr;
     printf("player_struct_base_addr_offset=0x%llX\n", addr);
     printf("player_struct_base=0x%llX\n", readOffsetFromInstr(addr + base, 7));
@@ -71,7 +73,9 @@ int main()
     // Calculate elapsed time in milliseconds
     std::chrono::duration<double, std::milli> elapsed = end - start;
 
-    std::cout << "Time taken: " << elapsed.count() / 1000.0 << " s" << std::endl;
+    printf("Time taken: %lfs\n", (elapsed.count() / 1000.0));
   }
+  printf("Press any key to close\n");
+  _getch();
   return 0;
 }
