@@ -142,6 +142,23 @@ public:
     return 0;
   }
 
+  uintptr_t getMoveAddressByAnimKey(int animKey, int start = 0)
+  {
+    if (start < 0)
+      return 0;
+    uintptr_t movesHead = getMovesetHeader("moves");
+    uintptr_t movesCount = getMovesetCount("moves");
+    start = start >= movesCount ? 0 : start;
+    for (int i = start; i < movesCount; i++)
+    {
+      uintptr_t addr = (movesHead + i * Sizes::Moveset::Move);
+      int value = game.readInt32(addr + Offsets::Move::AnimAddr1);
+      if (value == animKey)
+        return addr;
+    }
+    return 0;
+  }
+
   void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = Requirements::CHARA_CONTROLLER)
   {
     if (!requirements)
