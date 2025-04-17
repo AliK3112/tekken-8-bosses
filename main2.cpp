@@ -3,7 +3,6 @@
 
 bool _DEV_MODE = 1;
 
-void mainFunc(TkBossLoader &bossLoader, int bossCode, int selectedSide);
 int getSideSelection();
 int takeInput();
 
@@ -28,21 +27,17 @@ int main()
   if (selectedSide == -1)
     return 0;
 
-
   bossCode = _DEV_MODE ? bossCode : takeInput();
 
   if (bossCode != -1)
-    mainFunc(bossLoader, bossCode, selectedSide);
+  {
+    bossLoader.setBossCodeForSelectedSide(selectedSide, bossCode);
+    bossLoader.bossLoadMainLoop(selectedSide);
+  }
 
   printf("Press any key to close the script\n");
   _getch();
   return 0;
-}
-
-void mainFunc(TkBossLoader &bossLoader, int bossCode, int selectedSide)
-{
-  bossLoader.setBossCodeForSelectedSide(selectedSide, bossCode);
-  bossLoader.bossLoadMainLoop(selectedSide);
 }
 
 int getSideSelection()
