@@ -146,6 +146,8 @@ namespace Tekken
     SPEND_RAGE = 0x82e2,
     HEI_WARRIOR = 0x83f9,
     WING_ANIM = 0x8683,
+    CAMERA_TRANSITION = 0x8695,
+    CAMERA_ORBIT = 0x8697,
   };
 
   enum FighterId
