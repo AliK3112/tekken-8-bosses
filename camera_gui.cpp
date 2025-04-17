@@ -7,19 +7,18 @@
 const char CLASS_NAME[] = "CleanRadioWindow";
 
 GameClass game;
-TkMoveset moveset;
 HWND hwndLogBox;
-HWND hwndRadio1, hwndRadio2;
+HWND hwndCheckTornado, hwndCheckHeat;
 
 uintptr_t PLAYER_STRUCT_BASE = 0;
 uintptr_t MOVESET_OFFSET = 0;
 uintptr_t DECRYPT_FUNC_ADDR = 0;
 bool ATTACHED = false;
 bool READY = false;
+bool CHECK_TORNADO = false;
+bool CHECK_HEAT_BURST = false;
 
 void AppendLog(const char *format, ...);
-void setToField(HWND hwndField, int value);
-void setToField(HWND hwndField, const char *text);
 void InitializeUI(HWND hwnd);
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 unsigned int __stdcall AttachToGameThread(void *param);
@@ -27,6 +26,8 @@ void AttachToGame();
 void scanAddresses();
 void mainLoop();
 bool movesetExists(uintptr_t moveset);
+bool removeCameras(int side);
+void disableCameraReqs(uintptr_t requirements);
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
@@ -46,6 +47,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   InitializeUI(hwnd);
   ShowWindow(hwnd, nCmdShow);
 
+  HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, AttachToGameThread, NULL, 0, NULL);
+
   MSG msg = {};
   while (GetMessageA(&msg, NULL, 0, 0))
   {
@@ -61,30 +64,17 @@ void InitializeUI(HWND hwnd)
   int spacing = 10;
   int y = padding;
 
-  hwndRadio1 = CreateWindowA("BUTTON", "Disable Tornado", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
-                             padding, y, 300, 20, hwnd, (HMENU)101, NULL, NULL);
+  hwndCheckTornado = CreateWindowA("BUTTON", "Disable Tornado Camera", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                   padding, y, 300, 20, hwnd, (HMENU)101, NULL, NULL);
   y += 30;
 
-  hwndRadio2 = CreateWindowA("BUTTON", "Placeholder Option", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
-                             padding, y, 300, 20, hwnd, (HMENU)102, NULL, NULL);
+  hwndCheckHeat = CreateWindowA("BUTTON", "Disable Heat Burst Camera", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                padding, y, 300, 20, hwnd, (HMENU)102, NULL, NULL);
   y += 30;
 
   hwndLogBox = CreateWindowA("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL,
                              padding, y, 340, 80, hwnd, NULL, NULL, NULL);
 }
-
-void setToField(HWND hwndField, int value)
-{
-  char buffer[32];
-  _snprintf_s(buffer, sizeof(buffer), "%d", value);
-  SetWindowTextA(hwndField, buffer);
-}
-
-void setToField(HWND hwndField, const char *text)
-{
-  SetWindowTextA(hwndField, text);
-}
-
 
 void AppendLog(const char *format, ...)
 {
@@ -107,11 +97,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch (LOWORD(wp))
     {
     case 101:
-      AppendLog("Disable Tornado selected.");
+    {
+      BOOL checked = SendMessageA(hwndCheckTornado, BM_GETCHECK, 0, 0) == BST_CHECKED;
+      CHECK_TORNADO = checked;
       break;
+    }
     case 102:
-      AppendLog("Placeholder option selected.");
+    {
+      BOOL checked = SendMessageA(hwndCheckHeat, BM_GETCHECK, 0, 0) == BST_CHECKED;
+      CHECK_HEAT_BURST = checked;
       break;
+    }
     }
     break;
   case WM_DESTROY:
@@ -146,7 +142,7 @@ void AttachToGame()
 
   if (READY)
   {
-    // mainLoop();
+    mainLoop();
   }
 }
 
@@ -207,22 +203,26 @@ uintptr_t getMovesetAddress(uintptr_t playerAddr)
 
 void mainLoop()
 {
+  uintptr_t player;
   while (true)
   {
     Sleep(100);
 
-    if (!getPlayerAddress(0))
+    player = getPlayerAddress(0);
+    if (!player)
+      continue;
+
+    if (!movesetExists(getMovesetAddress(player)))
+      continue;
+
+    if (removeCameras(0))
     {
-      // setToField(hwndPlayer1, "???");
-      // setToField(hwndPlayer2, "???");
-      continue;
+      AppendLog("Player 1 Moveset Modified!");
     }
-
-    if (!movesetExists(getMovesetAddress(0)))
-      continue;
-
-    // setToField(hwndPlayer1, getCurrentMoveId(getPlayerAddress(0)));
-    // setToField(hwndPlayer2, getCurrentMoveId(getPlayerAddress(1)));
+    if (removeCameras(1))
+    {
+      AppendLog("Player 2 Moveset Modified!");
+    }
   }
 }
 
@@ -230,4 +230,40 @@ bool movesetExists(uintptr_t moveset)
 {
   std::string str = game.ReadString(moveset + 8, 3);
   return str.compare("TEK") == 0;
+}
+
+bool removeCameras(int side)
+{
+  uintptr_t player = getPlayerAddress(side);
+  if (!player)
+    return false;
+
+  uintptr_t movesetAddr = getMovesetAddress(player);
+  if (!movesetAddr)
+    return false;
+
+  TkMoveset moveset(game, movesetAddr, DECRYPT_FUNC_ADDR);
+
+  if (CHECK_TORNADO)
+  {
+    uintptr_t addr = moveset.getMoveAddressByAnimKey(0x2a1eb12b);
+    disableCameraReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0));
+    disableCameraReqs(moveset.getMoveNthCancel1stReqAddr(addr, 1));
+  }
+
+  return CHECK_TORNADO || CHECK_HEAT_BURST;
+}
+
+void disableCameraReqs(uintptr_t requirements)
+{
+  for (uintptr_t addr = requirements; true; addr += Sizes::Requirement)
+  {
+    int req = game.readUInt32(addr);
+    if (req == Requirements::EOL)
+      break;
+    if (req == ExtraMoveProperties::CAMERA_TRANSITION || req == ExtraMoveProperties::CAMERA_ORBIT)
+    {
+      game.write<uintptr_t>(addr, 0);
+    }
+  }
 }
