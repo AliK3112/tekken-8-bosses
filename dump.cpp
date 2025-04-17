@@ -9,7 +9,6 @@ uintptr_t PLAYER_STRUCT_BASE = 0x09B15B38;
 uintptr_t MOVESET_OFFSET = 0x3308;
 
 uintptr_t getPlayerAddress(int side);
-uintptr_t getMovesetAddress(int side);
 uintptr_t getMovesetAddress(uintptr_t player);
 bool movesetExists(uintptr_t moveset);
 uint64_t getMovesetSize(uintptr_t moveset);
@@ -52,11 +51,6 @@ int main()
 uintptr_t getPlayerAddress(int side)
 {
   return Game.getAddress({(DWORD)(PLAYER_STRUCT_BASE), (DWORD)(0x30 + side * 8)});
-}
-
-uintptr_t getMovesetAddress(int side)
-{
-  return Game.getAddress({(DWORD)(PLAYER_STRUCT_BASE), (DWORD)(0x30 + side * 8), (DWORD)MOVESET_OFFSET});
 }
 
 uintptr_t getMovesetAddress(uintptr_t player)
