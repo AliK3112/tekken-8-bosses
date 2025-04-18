@@ -180,12 +180,12 @@ public:
     return cancel ? game.readUInt64(cancel + Offsets::Cancel::RequirementsList) : 0;
   }
 
-  uintptr_t getMoveNthCancel(uintptr_t move, int n)
+  uintptr_t getMoveNthCancel(uintptr_t move, int n = 0)
   {
     return move ? game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n : 0;
   }
 
-  uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
+  uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n = 0)
   {
     return getCancelReqAddr(getMoveNthCancel(move, n));
   }
@@ -211,6 +211,8 @@ public:
 
   uintptr_t getMoveAddrByIdx(int idx)
   {
+    if (idx < 0)
+      return 0;
     uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     return head ? head + (idx * Sizes::Moveset::Move) : 0;
   }
@@ -311,29 +313,16 @@ public:
     return 0;
   }
 
-  uintptr_t findCancel(uintptr_t cancel, std::string column, uintptr_t value)
+  uintptr_t findCancel(uintptr_t cancel, std::string column, uintptr_t value, bool isGroupCancel = false)
   {
     if (!cancel)
       return 0;
+    uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     for (; true; cancel += Sizes::Moveset::Cancel)
     {
-      if (getCancelValue(cancel, "command") == 0x8000)
+      if (getCancelValue(cancel, "command") == endValue)
         return 0;
       if (getCancelValue(cancel, column) == value)
-        return cancel;
-    }
-    return 0;
-  }
-
-  uintptr_t findCancelByMoveId(uintptr_t cancel, int targetMoveId)
-  {
-    if (!cancel)
-      return 0;
-    for (; true; cancel += Sizes::Moveset::Cancel)
-    {
-      if (getCancelValue(cancel, "command") == 0x8000)
-        return 0;
-      if (getCancelValue(cancel, "move") == targetMoveId)
         return cancel;
     }
     return 0;
@@ -344,12 +333,19 @@ public:
     if (!move)
       return 0;
     start = start < 0 ? 0 : start;
-    return findCancelByMoveId(getMoveNthCancel(move, start), targetMoveId);
+    return findCancel(getMoveNthCancel(move, start), "move", targetMoveId);
   }
 
   uintptr_t findMoveExtraprop(uintptr_t move, int targetProp, int targetFrame = -1, int targetParam = -1)
   {
     uintptr_t addr = getMoveExtrapropAddr(move);
+    return findExtraProp(addr, targetProp, targetFrame, targetParam);
+  }
+
+  uintptr_t findExtraProp(uintptr_t addr, int targetProp, int targetFrame = -1, int targetParam = -1)
+  {
+    if (!addr)
+      return 0;
     while (true)
     {
       int frame = game.readInt32(addr + Offsets::ExtraProp::Type);
@@ -488,7 +484,7 @@ public:
   uintptr_t getCancelValue(uintptr_t addr, std::string column)
   {
     if (column == "command")
-      return game.readInt32(addr + Offsets::Cancel::Command);
+      return game.readUInt64(addr + Offsets::Cancel::Command);
     else if (column == "requirements")
       return game.readUInt64(addr + Offsets::Cancel::RequirementsList);
     else if (column == "extradata")
@@ -609,5 +605,10 @@ public:
       return game.readUInt64(moveset + Offsets::Moveset::DialoguesCount);
 
     return 0;
+  }
+
+  uintptr_t getItemAddress(uintptr_t start, uintptr_t idx, size_t size)
+  {
+    return start ? start + idx * size : 0;
   }
 };

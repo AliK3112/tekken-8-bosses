@@ -26,6 +26,8 @@ void AttachToGame();
 void scanAddresses();
 void mainLoop();
 bool movesetExists(uintptr_t moveset);
+bool isMovesetEdited(uintptr_t moveset);
+bool markMovesetEdited(uintptr_t moveset);
 bool removeCameras(int side);
 void disableCameraReqs(uintptr_t requirements);
 
@@ -37,7 +39,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   wc.lpszClassName = CLASS_NAME;
   RegisterClassA(&wc);
 
-  HWND hwnd = CreateWindowA(CLASS_NAME, "Game Mod GUI",
+  HWND hwnd = CreateWindowA(CLASS_NAME, "Moveset Camera Tweaker",
                             WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME,
                             CW_USEDEFAULT, CW_USEDEFAULT, 400, 250,
                             NULL, NULL, hInst, NULL);
@@ -203,7 +205,7 @@ uintptr_t getMovesetAddress(uintptr_t playerAddr)
 
 void mainLoop()
 {
-  uintptr_t player;
+  uintptr_t player = 0, moveset = 0;
   while (true)
   {
     Sleep(100);
@@ -212,16 +214,16 @@ void mainLoop()
     if (!player)
       continue;
 
-    if (!movesetExists(getMovesetAddress(player)))
+    moveset = getMovesetAddress(player);
+    if (!movesetExists(moveset))
       continue;
 
-    if (removeCameras(0))
+    if (isMovesetEdited(moveset))
+      continue;
+
+    if (removeCameras(0) && removeCameras(1))
     {
-      AppendLog("Player 1 Moveset Modified!");
-    }
-    if (removeCameras(1))
-    {
-      AppendLog("Player 2 Moveset Modified!");
+      AppendLog("Moveset Modified!");
     }
   }
 }
@@ -229,7 +231,26 @@ void mainLoop()
 bool movesetExists(uintptr_t moveset)
 {
   std::string str = game.ReadString(moveset + 8, 3);
-  return str.compare("TEK") == 0;
+  return str.compare("ALI") == 0 || str.compare("TEK") == 0;
+}
+
+bool isMovesetEdited(uintptr_t moveset)
+{
+  std::string str = game.ReadString(moveset + 8, 3);
+  return str.compare("ALI") == 0;
+}
+
+bool markMovesetEdited(uintptr_t moveset)
+{
+  try
+  {
+    game.writeString(moveset + 8, "ALI");
+    return true;
+  }
+  catch (...)
+  {
+    return false;
+  }
 }
 
 bool removeCameras(int side)
@@ -251,7 +272,52 @@ bool removeCameras(int side)
     disableCameraReqs(moveset.getMoveNthCancel1stReqAddr(addr, 1));
   }
 
-  return CHECK_TORNADO || CHECK_HEAT_BURST;
+  if (CHECK_HEAT_BURST)
+  {
+    int idleStanceIdx = moveset.getAliasMoveId(0x8001);
+    uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+    // Finding the 1st group cancel inside idle stance cancel list
+    addr = moveset.getMoveNthCancel(addr);
+    addr = moveset.findCancel(addr, "command", Cancels::GROUP_CANCEL_START);
+    int groupCancelStart = moveset.getCancelValue(addr, "move");
+    int groupCancelLength = moveset.getCancelValue(addr, "transition");
+    uintptr_t groupCancelHeader = moveset.getMovesetHeader("group_cancels");
+    addr = moveset.getItemAddress(groupCancelHeader, groupCancelStart, Sizes::Moveset::Cancel);
+    while (true)
+    {
+      addr = moveset.findCancel(addr, "command", 0x4000000600000020, true);
+      if (addr)
+      {
+        // Finding the cancel that has the conditions for Heat Burst cancel
+        if (
+            moveset.cancelHasCondition(addr, Requirements::HEAT_AVAILABLE, 1) &&
+            moveset.cancelHasCondition(addr, Requirements::NOT_BACKTURNED) &&
+            moveset.cancelHasCondition(addr, Requirements::_452))
+        {
+          uintptr_t move = moveset.getMoveAddrByIdx(moveset.getCancelValue(addr, "move"));
+          // Finding and disabling the heat camera props
+          addr = moveset.getMoveExtrapropAddr(move);
+          addr = moveset.findExtraProp(addr, ExtraMoveProperties::HEAT_CAMERA);
+          moveset.editExtraprop(addr, 0);
+          // Finding and disabling the 2 opponent visibility props
+          addr = moveset.findExtraProp(addr, ExtraMoveProperties::OPP_VISIBILTY);
+          moveset.editExtraprop(addr, 0);
+          addr = moveset.iterateExtraprops(addr, 1);
+          moveset.editExtraprop(addr, 0);
+
+          break;
+        }
+        else
+        {
+          addr = moveset.iterateCancel(addr, 1); // going to next cancel
+        }
+      }
+      else
+        break;
+    }
+  }
+
+  return (CHECK_TORNADO || CHECK_HEAT_BURST) ? markMovesetEdited(movesetAddr) : false;
 }
 
 void disableCameraReqs(uintptr_t requirements)
