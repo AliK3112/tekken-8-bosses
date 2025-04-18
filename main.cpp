@@ -1113,7 +1113,7 @@ bool loadTrueDevilKazuya(uintptr_t moveset, int bossCode)
         break;
       uintptr_t reqs = getCancelReqAddr(cancel);
       int req = Game.readInt32(reqs);
-      if (Game.readUInt16(cancel + Offsets::Cancel::Move) == introId && req == Requirements::_697)
+      if (Game.readUInt16(cancel + Offsets::Cancel::Move) == introId && req == Requirements::INTROS_RELATED)
       {
         // printf("addr: 0x%llX\n", reqs);
         for (int j = 0; j < 3; j++)
