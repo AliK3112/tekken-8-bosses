@@ -141,7 +141,7 @@ namespace Tekken
     DLC_STORY1_BATTLE_NUM = 802,
     DLC_STORY1_FLAGS = 806,
     PRE_ROUND_ANIM = 696,
-    _697 = 697,   // Intros related
+    INTROS_RELATED = 697,   // Intros related
     OUTRO1 = 675, // Outro related 1
     OUTRO2 = 679, // Outro related 2
     EOL = 1100,   // End of the list
