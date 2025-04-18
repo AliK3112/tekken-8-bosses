@@ -292,7 +292,7 @@ bool removeCameras(int side)
         if (
             moveset.cancelHasCondition(addr, Requirements::HEAT_AVAILABLE, 1) &&
             moveset.cancelHasCondition(addr, Requirements::NOT_BACKTURNED) &&
-            moveset.cancelHasCondition(addr, Requirements::_452))
+            moveset.cancelHasCondition(addr, Requirements::HEAT_ACTIVE_RELATED))
         {
           uintptr_t move = moveset.getMoveAddrByIdx(moveset.getCancelValue(addr, "move"));
           // Finding and disabling the heat camera props

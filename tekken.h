@@ -131,7 +131,7 @@ namespace Tekken
     NOT_BACKTURNED = 73,
     CHARA_CONTROLLER = 228,
     HEAT_AVAILABLE = 442,
-    _452 = 452,
+    HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
     IS_PERMA_DEVIL = 473,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
