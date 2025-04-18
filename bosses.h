@@ -691,7 +691,7 @@ private:
         addr = moveset.getMoveNthCancel(addr, 0);
         int df34_1_db2 = moveset.getCancelMoveId(addr);
         int df34_1_2 = moveset.getMoveId(0xD63CD0E6, df34_1);
-        addr = moveset.findCancelByMoveId(addr, df34_1_2);
+        addr = moveset.findCancel(addr, "move", df34_1_2);
         moveset.editCancelMoveId(moveset.iterateCancel(addr, 0), df34_1_db2);
         moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), df34_1_db2);
       }

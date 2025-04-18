@@ -119,9 +119,19 @@ namespace Tekken
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
   std::string P_MOVE_ID_SIG_BYTES = "89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 E8 ?? ?? ?? ?? 85 C0";
 
+  enum Cancels
+  {
+    CANCEL_END = 0x8000,
+    GROUP_CANCEL_START = 0x8012,
+    GROUP_CANCEL_END = 0x8013,
+  };
+
   enum Requirements
   {
+    NOT_BACKTURNED = 73,
     CHARA_CONTROLLER = 228,
+    HEAT_AVAILABLE = 442,
+    HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
     IS_PERMA_DEVIL = 473,
     ARCADE_BATTLE = 664,
     STORY_BATTLE = 667,
@@ -144,9 +154,13 @@ namespace Tekken
     DEVIL_STATE = 0x80dc,
     PERMA_DEVIL = 0x8151,
     FORCE_MOVE = 0x8244,
+    OPP_VISIBILTY = 0x82c2,
     SPEND_RAGE = 0x82e2,
     HEI_WARRIOR = 0x83f9,
     WING_ANIM = 0x8683,
+    HEAT_CAMERA = 0x86b0,
+    CAMERA_TRANSITION = 0x8695,
+    CAMERA_ORBIT = 0x8697,
   };
 
   enum FighterId

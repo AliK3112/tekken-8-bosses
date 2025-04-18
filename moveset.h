@@ -225,6 +225,8 @@ public:
 
   uintptr_t getMoveAddrByIdx(int idx)
   {
+    if (idx < 0)
+      return 0;
     uintptr_t start = getMovesetHeader("moves");
     if (!start)
       return 0;
@@ -331,16 +333,17 @@ public:
     return 0;
   }
 
-  uintptr_t findCancel(uintptr_t cancel, std::string column, uintptr_t value)
+  uintptr_t findCancel(uintptr_t cancel, std::string column, uintptr_t value, bool isGroupCancel = false)
   {
     if (!cancel)
       return 0;
     uintptr_t start = getMovesetHeader("cancels");
     uintptr_t count = getMovesetCount("cancels");
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
+    uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     while (cancel >= start && cancel < end)
     {
-      if (getCancelValue(cancel, "command") == 0x8000)
+      if (getCancelValue(cancel, "command") == endValue)
         return 0;
       if (getCancelValue(cancel, column) == value)
         return cancel;
@@ -349,22 +352,24 @@ public:
     return 0;
   }
 
-  uintptr_t findCancelByMoveId(uintptr_t cancel, int targetMoveId)
-  {
-    return cancel ? findCancel(cancel, "move", targetMoveId) : 0;
-  }
-
   uintptr_t findMoveCancelByMoveId(uintptr_t move, int targetMoveId, int start = 0)
   {
     if (!move)
       return 0;
     start = start < 0 ? 0 : start;
-    return findCancelByMoveId(getMoveNthCancel(move, start), targetMoveId);
+    return findCancel(getMoveNthCancel(move, start), "move", targetMoveId);
   }
 
   uintptr_t findMoveExtraprop(uintptr_t move, int targetProp, int targetFrame = -1, int targetParam = -1)
   {
     uintptr_t addr = getMoveExtrapropAddr(move);
+    return findExtraProp(addr, targetProp, targetFrame, targetParam);
+  }
+
+  uintptr_t findExtraProp(uintptr_t addr, int targetProp, int targetFrame = -1, int targetParam = -1)
+  {
+    if (!addr)
+      return 0;
     uintptr_t start = getMovesetHeader("extra_move_properties");
     uintptr_t count = getMovesetCount("extra_move_properties");
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::ExtraMoveProperty);
@@ -511,7 +516,7 @@ public:
   uintptr_t getCancelValue(uintptr_t addr, std::string column)
   {
     if (column == "command")
-      return game.readInt32(addr + Offsets::Cancel::Command);
+      return game.readUInt64(addr + Offsets::Cancel::Command);
     else if (column == "requirements")
       return game.readUInt64(addr + Offsets::Cancel::RequirementsList);
     else if (column == "extradata")
