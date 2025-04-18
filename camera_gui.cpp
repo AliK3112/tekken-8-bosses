@@ -3,6 +3,7 @@
 #include <cstdarg>
 #include <process.h>
 #include "moveset.h"
+#include "resource.h"
 
 const char CLASS_NAME[] = "CleanRadioWindow";
 
@@ -27,8 +28,8 @@ void scanAddresses();
 void mainLoop();
 bool movesetExists(uintptr_t moveset);
 bool isMovesetEdited(uintptr_t moveset);
-bool markMovesetEdited(uintptr_t moveset);
-bool removeCameras(int side);
+bool markMovesetEdited(uintptr_t moveset, int value);
+int removeCameras(int side);
 void disableCameraReqs(uintptr_t requirements);
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
@@ -37,6 +38,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInst;
   wc.lpszClassName = CLASS_NAME;
+  wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1); // <- light gray background
   RegisterClassA(&wc);
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "Moveset Camera Tweaker",
@@ -62,20 +64,31 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
 void InitializeUI(HWND hwnd)
 {
-  int padding = 20;
-  int spacing = 10;
-  int y = padding;
+  const int margin = 20;
+  const int controlHeight = 24;
+  const int controlWidth = 340;
+  const int spacing = 12;
 
-  hwndCheckTornado = CreateWindowA("BUTTON", "Disable Tornado Camera", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                                   padding, y, 300, 20, hwnd, (HMENU)101, NULL, NULL);
-  y += 30;
+  int x = margin;
+  int y = margin;
 
-  hwndCheckHeat = CreateWindowA("BUTTON", "Disable Heat Burst Camera", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                                padding, y, 300, 20, hwnd, (HMENU)102, NULL, NULL);
-  y += 30;
+  hwndCheckTornado = CreateWindowA("BUTTON", "Disable Tornado Camera",
+                                   WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                   x, y, controlWidth, controlHeight,
+                                   hwnd, (HMENU)101, NULL, NULL);
+  y += controlHeight + spacing;
 
-  hwndLogBox = CreateWindowA("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL,
-                             padding, y, 340, 80, hwnd, NULL, NULL, NULL);
+  hwndCheckHeat = CreateWindowA("BUTTON", "Disable Heat Burst Camera",
+                                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                x, y, controlWidth, controlHeight,
+                                hwnd, (HMENU)102, NULL, NULL);
+  y += controlHeight + spacing;
+
+  hwndLogBox = CreateWindowA("EDIT", "",
+                             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE |
+                                 ES_AUTOVSCROLL | ES_READONLY | WS_VSCROLL,
+                             x, y, controlWidth, 100,
+                             hwnd, NULL, NULL, NULL);
 }
 
 void AppendLog(const char *format, ...)
@@ -179,16 +192,16 @@ void scanAddresses()
     AppendLog("Moveset Offset not found!");
   }
 
-  addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
-  if (addr != 0)
-  {
-    DECRYPT_FUNC_ADDR = addr;
-    AppendLog("Decryption Function Address: 0x%llx", addr - base);
-  }
-  else
-  {
-    AppendLog("Decryption Function Address not found!");
-  }
+  // addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
+  // if (addr != 0)
+  // {
+  //   DECRYPT_FUNC_ADDR = addr;
+  //   AppendLog("Decryption Function Address: 0x%llx", addr - base);
+  // }
+  // else
+  // {
+  //   AppendLog("Decryption Function Address not found!");
+  // }
 
   READY = true;
 }
@@ -228,23 +241,52 @@ void mainLoop()
   }
 }
 
+int getTargetValue()
+{
+  int value = 0;
+  if (CHECK_TORNADO)
+    value |= 1;
+  if (CHECK_HEAT_BURST)
+    value |= 2;
+  return value;
+}
+
+int getMoveset0x8(uintptr_t moveset)
+{
+  return game.readInt32(moveset + 8);
+}
+
 bool movesetExists(uintptr_t moveset)
 {
-  std::string str = game.ReadString(moveset + 8, 3);
-  return str.compare("ALI") == 0 || str.compare("TEK") == 0;
+  // std::string str = game.ReadString(moveset + 8, 3);
+  // int value = getMoveset0x8(moveset);
+  // return value == getTargetValue() || str.compare("TEK") == 0;
+
+  uintptr_t value = game.readUInt64(moveset + 0x10);
+  if (value == 0)
+    return false;
+
+  constexpr size_t offsets[] = {0x18, 0x20, 0x28};
+  for (size_t offset : offsets)
+  {
+    if (game.readUInt64(moveset + offset) != value)
+      return false;
+  }
+
+  return true;
 }
 
 bool isMovesetEdited(uintptr_t moveset)
 {
-  std::string str = game.ReadString(moveset + 8, 3);
-  return str.compare("ALI") == 0;
+  return getMoveset0x8(moveset) == getTargetValue();
 }
 
-bool markMovesetEdited(uintptr_t moveset)
+bool markMovesetEdited(uintptr_t moveset, int value)
 {
   try
   {
-    game.writeString(moveset + 8, "ALI");
+    // game.writeString(moveset + 8, "ALI");
+    game.write<int>(moveset + 8, value);
     return true;
   }
   catch (...)
@@ -253,7 +295,7 @@ bool markMovesetEdited(uintptr_t moveset)
   }
 }
 
-bool removeCameras(int side)
+int removeCameras(int side)
 {
   uintptr_t player = getPlayerAddress(side);
   if (!player)
@@ -264,12 +306,15 @@ bool removeCameras(int side)
     return false;
 
   TkMoveset moveset(game, movesetAddr, DECRYPT_FUNC_ADDR);
+  int returnValue = 0;
+  // int _0x8 = getMoveset0x8(movesetAddr); // TODO: See if we can use this to stop unnecessary operations
 
   if (CHECK_TORNADO)
   {
     uintptr_t addr = moveset.getMoveAddressByAnimKey(0x2a1eb12b);
     disableCameraReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0));
     disableCameraReqs(moveset.getMoveNthCancel1stReqAddr(addr, 1));
+    returnValue |= 1;
   }
 
   if (CHECK_HEAT_BURST)
@@ -280,7 +325,6 @@ bool removeCameras(int side)
     addr = moveset.getMoveNthCancel(addr);
     addr = moveset.findCancel(addr, "command", Cancels::GROUP_CANCEL_START);
     int groupCancelStart = moveset.getCancelValue(addr, "move");
-    int groupCancelLength = moveset.getCancelValue(addr, "transition");
     uintptr_t groupCancelHeader = moveset.getMovesetHeader("group_cancels");
     addr = moveset.getItemAddress(groupCancelHeader, groupCancelStart, Sizes::Moveset::Cancel);
     while (true)
@@ -315,9 +359,10 @@ bool removeCameras(int side)
       else
         break;
     }
+    returnValue |= 2;
   }
 
-  return (CHECK_TORNADO || CHECK_HEAT_BURST) ? markMovesetEdited(movesetAddr) : false;
+  return (CHECK_TORNADO || CHECK_HEAT_BURST) ? markMovesetEdited(movesetAddr, returnValue) : false;
 }
 
 void disableCameraReqs(uintptr_t requirements)

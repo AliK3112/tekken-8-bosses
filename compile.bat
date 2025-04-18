@@ -4,10 +4,10 @@ setlocal
 REM Compiler and filenames
 set COMPILER=g++
 set WINDRES=windres
-set SRC=gui.cpp
+set SRC=camera_gui.cpp
 set RC=resource.rc
 set RES_OBJ=resource.o
-set OUTPUT=tekken8_bosses.exe
+set OUTPUT=tk_camera_tweaker.exe
 
 echo Compiling resource file...
 %WINDRES% %RC% -o %RES_OBJ%
