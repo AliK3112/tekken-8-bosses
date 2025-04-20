@@ -791,6 +791,23 @@ private:
       return markMovesetEdited(movesetAddr);
     }
 
+    if (bossCode == BossCodes::AmnesiaHeihachi)
+    {
+      // 2nd hit of regular 2,2
+      addr = moveset.getMoveAddress(0xf69e2bef, idleStanceIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      // Alternate 2nd hit of 2,2
+      addr = moveset.getMoveAddress(0xaffba07b, defaultAliasIdx);
+      addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
+      for (int i = 0; i < 4; i++) // 4 cancels have the req that need to be disabled
+      {
+        uintptr_t reqs = moveset.getCancelReqAddr(moveset.iterateCancel(addr, i));
+        moveset.disableStoryRelatedReqs(reqs);
+      }
+      return markMovesetEdited(movesetAddr);
+    }
+
     if (bossCode == BossCodes::FinalHeihachi)
     {
       // Enable most of the moves by modifying 2,2
@@ -832,25 +849,7 @@ private:
       return markMovesetEdited(movesetAddr);
     }
 
-    // TODO: Redo monk Heihachi. This approach isn't good
-    uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
-    uintptr_t reqCount = moveset.getMovesetCount("requirements");
-    int req = 0, param = 0;
-    int storyFlag = bossCode - 350;
-    for (uintptr_t i = 0; i < reqCount; i++)
-    {
-      addr = reqHeader + i * Sizes::Moveset::Requirement;
-      req = moveset.getRequirementValue(addr, "req");
-      param = moveset.getRequirementValue(addr, "param");
-      if (
-          (req == Requirements::DLC_STORY1_FLAGS && param == storyFlag) ||
-          req == Requirements::DLC_STORY1_BATTLE ||
-          (req == Requirements::DLC_STORY1_BATTLE_NUM && isCorrectHeihachiFlag(storyFlag, param)))
-      {
-        moveset.editRequirement(addr, 0);
-      }
-    }
-    return markMovesetEdited(movesetAddr);
+    return false;
   }
 
   bool loadTrueDevilKazuya(uintptr_t movesetAddr, int bossCode)

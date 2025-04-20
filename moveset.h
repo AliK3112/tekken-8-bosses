@@ -163,12 +163,12 @@ public:
     return cancel ? game.readUInt64(cancel + Offsets::Cancel::RequirementsList) : 0;
   }
 
-  uintptr_t getMoveNthCancel(uintptr_t move, int n)
+  uintptr_t getMoveNthCancel(uintptr_t move, int n = 0)
   {
     return move ? game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n : 0;
   }
 
-  uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n)
+  uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n = 0)
   {
     return getCancelReqAddr(getMoveNthCancel(move, n));
   }
@@ -284,6 +284,15 @@ public:
       return 0;
     start = start < 0 ? 0 : start;
     uintptr_t cancel = getMoveNthCancel(move, start);
+    return findCancelByCondition(cancel, targetReq, targetParam, start);
+  }
+
+  uintptr_t findCancelByCondition(uintptr_t cancel, int targetReq, int targetParam = -1, int start = 0)
+  {
+    if (!cancel)
+      return 0;
+    start = start < 0 ? 0 : start;
+    cancel = iterateCancel(cancel, start);
     for (; true; cancel += Sizes::Moveset::Cancel)
     {
       if (cancelHasCondition(cancel, targetReq, targetParam))
@@ -310,16 +319,7 @@ public:
 
   uintptr_t findCancelByMoveId(uintptr_t cancel, int targetMoveId)
   {
-    if (!cancel)
-      return 0;
-    for (; true; cancel += Sizes::Moveset::Cancel)
-    {
-      if (getCancelValue(cancel, "command") == 0x8000)
-        return 0;
-      if (getCancelValue(cancel, "move") == targetMoveId)
-        return cancel;
-    }
-    return 0;
+    return cancel ? findCancel(cancel, "move", targetMoveId) : 0;
   }
 
   uintptr_t findMoveCancelByMoveId(uintptr_t move, int targetMoveId, int start = 0)
