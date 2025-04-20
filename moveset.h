@@ -4,6 +4,8 @@
 
 using namespace Tekken;
 
+const int ALIASES = 60;
+
 std::vector<int> STORY_REQS = {
     Requirements::STORY_BATTLE,
     Requirements::STORY_BATTLE_NUM,
@@ -254,9 +256,10 @@ public:
 
   int getAliasMoveId(int idx)
   {
-    if (idx < 0x8000 || idx > (0x8000 + 60))
+    idx = idx & 0x0FFF;
+    if (idx < 0 || idx >= ALIASES)
       return -1;
-    return game.readUInt16(moveset + 0x30 + (idx - 0x8000) * 2);
+    return moveset ? game.readUInt16(moveset + 0x30 + idx * 2) : 0;
   }
 
   bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
