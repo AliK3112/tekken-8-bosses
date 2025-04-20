@@ -857,6 +857,13 @@ private:
     if (bossCode != BossCodes::TrueDevilKazuya)
       return false;
     TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    uintptr_t addr = moveset.getMoveAddress(0xc8c48167, moveset.getAliasMoveId(0x8030));
+    addr = moveset.getMoveNthCancel(addr);
+    addr = moveset.findCancelByCondition(addr, Requirements::ARCADE_BATTLE);
+    moveset.disableRequirement(moveset.getCancelReqAddr(addr), Requirements::ARCADE_BATTLE);
+    addr = moveset.iterateCancel(addr, 1); // Next cancel
+    moveset.disableRequirement(moveset.getCancelReqAddr(addr), Requirements::ARCADE_BATTLE);
+    // Move this in the beginning if I figure out how to get the correct intros to play
     adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
     return markMovesetEdited(movesetAddr);
   }

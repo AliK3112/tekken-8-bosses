@@ -64,6 +64,27 @@ public:
   }
 
   // Utility methods
+
+  // Disable a single requirement given a requirement list address
+  void disableRequirement(uintptr_t requirements, int targetReq)
+  {
+    if (!requirements)
+      return;
+    uintptr_t addr = requirements;
+    while (true)
+    {
+      int req = getRequirementValue(addr, "req");
+      if (req == targetReq)
+      {
+        editRequirement(addr, 0, 0);
+        break;
+      }
+      if (req == Requirements::EOL)
+        break;
+      addr = iterateRequirements(addr, 1);
+    }
+  }
+
   bool disableRequirements(int targetReq, int targetParam)
   {
     uintptr_t requirements = game.ReadUnsignedLong(moveset + Offsets::Moveset::RequirementsHeader);
@@ -267,18 +288,7 @@ public:
     if (!cancel)
       return false;
     uintptr_t requirements = getCancelReqAddr(cancel);
-    for (uintptr_t addr = requirements; true; addr += Sizes::Moveset::Requirement)
-    {
-      int req = game.readInt32(addr);
-      int param = game.readInt32(addr + 4);
-      if (req == Requirements::EOL)
-        return false;
-      if (req == targetReq && (targetParam == -1 || param == targetParam))
-      {
-        return true;
-      }
-    }
-    return false;
+    return reqListHas(requirements, targetReq, targetParam);
   }
 
   uintptr_t findMoveCancelByCondition(uintptr_t move, int targetReq, int targetParam = -1, int start = 0)
@@ -287,21 +297,19 @@ public:
       return 0;
     start = start < 0 ? 0 : start;
     uintptr_t cancel = getMoveNthCancel(move, start);
-    return findCancelByCondition(cancel, targetReq, targetParam, start);
+    return findCancelByCondition(cancel, targetReq, targetParam);
   }
 
-  uintptr_t findCancelByCondition(uintptr_t cancel, int targetReq, int targetParam = -1, int start = 0)
+  uintptr_t findCancelByCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
   {
     if (!cancel)
       return 0;
-    start = start < 0 ? 0 : start;
-    cancel = iterateCancel(cancel, start);
     for (; true; cancel += Sizes::Moveset::Cancel)
     {
       if (cancelHasCondition(cancel, targetReq, targetParam))
-      {
         return cancel;
-      }
+      if (getCancelValue(cancel, "command") == 0x8000)
+        return 0;
     }
     return 0;
   }
@@ -362,6 +370,8 @@ public:
 
   bool reqListHas(uintptr_t addr, int tReq, int tParam = -1)
   {
+    if (!addr)
+      return 0;
     while (true)
     {
       int req = getRequirementValue(addr, "req");
