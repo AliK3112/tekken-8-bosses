@@ -640,7 +640,7 @@ private:
         int param = moveset.getExtrapropValue(addr, "value");
         if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
         {
-          moveset.editRequirement(addr, 0, 0);
+          moveset.editExtraprop(addr, 0, 0);
         }
       }
 

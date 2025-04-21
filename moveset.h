@@ -15,6 +15,12 @@ std::vector<int> STORY_REQS = {
     Requirements::DLC_STORY1_FLAGS,
 };
 
+uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
+{
+  return start ? start + size * index : 0;
+}
+
+
 struct EncryptedValue
 {
   uintptr_t value;
@@ -639,8 +645,3 @@ public:
     return 0;
   }
 };
-
-uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
-{
-  return start ? start + size * index : 0;
-}
