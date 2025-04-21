@@ -361,10 +361,10 @@ private:
     std::string costumePath;
     switch (bossCode)
     {
-    case BossCodes::RegularJin:
-    case BossCodes::NerfedJin:
-    case BossCodes::DevilKazuya:
-    case BossCodes::FinalHeihachi:
+    // case BossCodes::RegularJin:
+    // case BossCodes::NerfedJin:
+    // case BossCodes::DevilKazuya:
+    // case BossCodes::FinalHeihachi:
     case BossCodes::Azazel:
     case BossCodes::AngelJin:
     case BossCodes::TrueDevilKazuya:
