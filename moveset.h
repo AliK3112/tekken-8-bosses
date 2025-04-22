@@ -360,8 +360,8 @@ public:
   {
     if (!cancel)
       return 0;
-    uintptr_t start = getMovesetHeader("cancels");
-    uintptr_t count = getMovesetCount("cancels");
+    uintptr_t start = getMovesetHeader(isGroupCancel ? "group_cancels" : "cancels");
+    uintptr_t count = getMovesetCount(isGroupCancel ? "group_cancels" : "cancels");
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
     uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     while (cancel >= start && cancel < end)
