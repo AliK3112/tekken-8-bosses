@@ -4,6 +4,8 @@
 
 using namespace Tekken;
 
+const int ALIASES = 60;
+
 std::vector<int> STORY_REQS = {
     Requirements::STORY_BATTLE,
     Requirements::STORY_BATTLE_NUM,
@@ -12,6 +14,12 @@ std::vector<int> STORY_REQS = {
     Requirements::DLC_STORY1_BATTLE_NUM,
     Requirements::DLC_STORY1_FLAGS,
 };
+
+uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
+{
+  return start ? start + size * index : 0;
+}
+
 
 struct EncryptedValue
 {
@@ -62,11 +70,35 @@ public:
   }
 
   // Utility methods
+
+  // Disable a single requirement given a requirement list address
+  void disableRequirement(uintptr_t requirements, int targetReq)
+  {
+    if (!requirements)
+      return;
+    uintptr_t addr = requirements;
+    uintptr_t start = getMovesetHeader("requirements");
+    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    while (addr >= start && addr < end)
+    {
+      int req = getRequirementValue(addr, "req");
+      if (req == targetReq)
+      {
+        editRequirement(addr, 0, 0);
+        break;
+      }
+      if (req == Requirements::EOL)
+        break;
+      addr = iterateRequirements(addr, 1);
+    }
+  }
+
   bool disableRequirements(int targetReq, int targetParam)
   {
-    uintptr_t requirements = game.ReadUnsignedLong(moveset + Offsets::Moveset::RequirementsHeader);
-    int requirementsCount = game.ReadSignedInt(moveset + Offsets::Moveset::RequirementsCount);
-    for (int i = 0; i < requirementsCount; i++)
+    uintptr_t requirements = getMovesetHeader("requirements");
+    size_t requirementsCount = getMovesetCount("requirements");
+    for (size_t i = 0; i < requirementsCount; i++)
     {
       uintptr_t addr = requirements + i * Sizes::Requirement;
       int req = game.ReadSignedInt(addr);
@@ -163,7 +195,10 @@ public:
   {
     if (!requirements)
       return;
-    for (uintptr_t addr = requirements; true; addr += Sizes::Requirement)
+    uintptr_t start = getMovesetHeader("requirements");
+    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    for (uintptr_t addr = requirements; addr >= start && addr < end; addr += Sizes::Requirement)
     {
       int req = game.readUInt32(addr);
       if (req == Requirements::EOL)
@@ -193,14 +228,16 @@ public:
   // Returns the address of cancel extradata given index
   uintptr_t getCancelExtradataAddr(int index)
   {
-    return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader) + Sizes::Moveset::CancelExtradata * index;
+    uintptr_t start = getMovesetHeader("cancel_extra_datas");
+    size_t count = getMovesetCount("cancel_extra_datas");
+    return getItemAddress(start, index, Sizes::Moveset::CancelExtradata);
   }
 
   uintptr_t findCancelExtradata(int target)
   {
     uintptr_t start = getMovesetHeader("cancel_extra_datas");
-    uintptr_t count = getMovesetCount("cancel_extra_datas");
-    for (uintptr_t i = 0; i < count; i++)
+    size_t count = getMovesetCount("cancel_extra_datas");
+    for (size_t i = 0; i < count; i++)
     {
       uintptr_t addr = start + i * Sizes::Moveset::CancelExtradata;
       if (game.readInt32(addr) == target)
@@ -213,8 +250,13 @@ public:
   {
     if (idx < 0)
       return 0;
-    uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-    return head ? head + (idx * Sizes::Moveset::Move) : 0;
+    uintptr_t start = getMovesetHeader("moves");
+    if (!start)
+      return 0;
+    size_t count = getMovesetCount("moves");
+    uintptr_t addr = getItemAddress(start, idx, Sizes::Moveset::Move);
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Move);
+    return addr >= start && addr < end ? addr : 0; // Not letting overflow happen
   }
 
   uintptr_t getMoveExtrapropAddr(uintptr_t move)
@@ -273,9 +315,10 @@ public:
 
   int getAliasMoveId(int idx)
   {
-    if (idx < 0x8000 || idx > (0x8000 + 60))
+    idx = idx & 0x0FFF;
+    if (idx < 0 || idx >= ALIASES)
       return -1;
-    return game.readUInt16(moveset + 0x30 + (idx - 0x8000) * 2);
+    return moveset ? game.readUInt16(moveset + 0x30 + idx * 2) : 0;
   }
 
   bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
@@ -283,18 +326,7 @@ public:
     if (!cancel)
       return false;
     uintptr_t requirements = getCancelReqAddr(cancel);
-    for (uintptr_t addr = requirements; true; addr += Sizes::Moveset::Requirement)
-    {
-      int req = game.readInt32(addr);
-      int param = game.readInt32(addr + 4);
-      if (req == Requirements::EOL)
-        return false;
-      if (req == targetReq && (targetParam == -1 || param == targetParam))
-      {
-        return true;
-      }
-    }
-    return false;
+    return reqListHas(requirements, targetReq, targetParam);
   }
 
   uintptr_t findMoveCancelByCondition(uintptr_t move, int targetReq, int targetParam = -1, int start = 0)
@@ -303,12 +335,23 @@ public:
       return 0;
     start = start < 0 ? 0 : start;
     uintptr_t cancel = getMoveNthCancel(move, start);
-    for (; true; cancel += Sizes::Moveset::Cancel)
+    return findCancelByCondition(cancel, targetReq, targetParam);
+  }
+
+  uintptr_t findCancelByCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
+  {
+    if (!cancel)
+      return 0;
+    uintptr_t start = getMovesetHeader("cancels");
+    uintptr_t count = getMovesetCount("cancels");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
+    while (cancel >= start && cancel < end)
     {
       if (cancelHasCondition(cancel, targetReq, targetParam))
-      {
         return cancel;
-      }
+      if (getCancelValue(cancel, "command") == 0x8000)
+        return 0;
+      cancel += Sizes::Moveset::Cancel;
     }
     return 0;
   }
@@ -317,13 +360,17 @@ public:
   {
     if (!cancel)
       return 0;
+    uintptr_t start = getMovesetHeader("cancels");
+    uintptr_t count = getMovesetCount("cancels");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
     uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
-    for (; true; cancel += Sizes::Moveset::Cancel)
+    while (cancel >= start && cancel < end)
     {
       if (getCancelValue(cancel, "command") == endValue)
         return 0;
       if (getCancelValue(cancel, column) == value)
         return cancel;
+      cancel += Sizes::Moveset::Cancel;
     }
     return 0;
   }
@@ -346,7 +393,10 @@ public:
   {
     if (!addr)
       return 0;
-    while (true)
+    uintptr_t start = getMovesetHeader("extra_move_properties");
+    uintptr_t count = getMovesetCount("extra_move_properties");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::ExtraMoveProperty);
+    while (addr >= start && addr < end)
     {
       int frame = game.readInt32(addr + Offsets::ExtraProp::Type);
       int prop = game.readInt32(addr + Offsets::ExtraProp::Prop);
@@ -372,7 +422,12 @@ public:
 
   bool reqListHas(uintptr_t addr, int tReq, int tParam = -1)
   {
-    while (true)
+    if (!addr)
+      return 0;
+    uintptr_t start = getMovesetHeader("requirements");
+    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    while (addr >= start && addr < end)
     {
       int req = getRequirementValue(addr, "req");
       int param = getRequirementValue(addr, "param");

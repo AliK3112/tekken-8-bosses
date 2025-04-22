@@ -133,6 +133,7 @@ namespace Tekken
     HEAT_AVAILABLE = 442,
     HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
     IS_PERMA_DEVIL = 473,
+    ARCADE_BATTLE = 664,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
     INTRO_RELATED = 755,
