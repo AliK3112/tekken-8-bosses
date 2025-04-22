@@ -31,6 +31,7 @@ bool isMovesetEdited(uintptr_t moveset);
 bool markMovesetEdited(uintptr_t moveset, int value);
 int removeCameras(int side);
 void disableCameraReqs(uintptr_t requirements);
+void disableCertainProps(uintptr_t moveset);
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
@@ -362,6 +363,9 @@ int removeCameras(int side)
     returnValue |= 2;
   }
 
+  // disableCertainProps(movesetAddr);
+  // return markMovesetEdited(movesetAddr, 2);
+
   return (CHECK_TORNADO || CHECK_HEAT_BURST) ? markMovesetEdited(movesetAddr, returnValue) : false;
 }
 
@@ -375,6 +379,49 @@ void disableCameraReqs(uintptr_t requirements)
     if (req == ExtraMoveProperties::CAMERA_TRANSITION || req == ExtraMoveProperties::CAMERA_ORBIT)
     {
       game.write<uintptr_t>(addr, 0);
+    }
+  }
+}
+
+bool isTargetProp(int prop)
+{
+  return prop == ExtraMoveProperties::BLACK_SCREEN_VFX ||
+         prop == ExtraMoveProperties::CAMERA_ORBIT ||
+         prop == (ExtraMoveProperties::CAMERA_ORBIT - 1) ||
+         prop == ExtraMoveProperties::CAMERA_TRANSITION ||
+         (prop > 0x8000 && prop < 0x800b);
+}
+
+void disableCertainProps(uintptr_t movesetAddr)
+{
+  TkMoveset moveset(game, movesetAddr, DECRYPT_FUNC_ADDR);
+
+  // requirements
+  uintptr_t start = moveset.getMovesetHeader("requirements");
+  uintptr_t count = moveset.getMovesetCount("requirements");
+  for (uintptr_t i = 0; i < count; i++)
+  {
+    uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
+    int req = moveset.getRequirementValue(addr, "req");
+    int param = moveset.getRequirementValue(addr, "param");
+    if (isTargetProp(req))
+    {
+      moveset.editRequirement(addr, 0, 0);
+    }
+  }
+
+  // extraprops
+  start = moveset.getMovesetHeader("extra_move_properties");
+  count = moveset.getMovesetCount("extra_move_properties");
+
+  for (uintptr_t i = 0; i < count; i++)
+  {
+    uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
+    int prop = moveset.getExtrapropValue(addr, "prop");
+    int param = moveset.getExtrapropValue(addr, "value");
+    if (isTargetProp(prop))
+    {
+      moveset.editExtraprop(addr, 0, 0);
     }
   }
 }
