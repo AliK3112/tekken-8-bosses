@@ -36,13 +36,14 @@ void disableCertainProps(uintptr_t moveset);
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
   WNDCLASSA wc = {};
+  wc.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_MYICON));
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInst;
   wc.lpszClassName = CLASS_NAME;
   wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1); // <- light gray background
   RegisterClassA(&wc);
 
-  HWND hwnd = CreateWindowA(CLASS_NAME, "Moveset Camera Tweaker",
+  HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Moveset Camera Tweaker",
                             WS_OVERLAPPEDWINDOW ^ WS_THICKFRAME,
                             CW_USEDEFAULT, CW_USEDEFAULT, 400, 250,
                             NULL, NULL, hInst, NULL);
@@ -172,7 +173,7 @@ void scanAddresses()
   {
     addr = addr + 7 + game.readUInt32(addr + 3) - base;
     PLAYER_STRUCT_BASE = addr;
-    AppendLog("Player Struct Base Address: 0x%llx", addr);
+    // AppendLog("Player Struct Base Address: 0x%llx", addr);
   }
   else
   {
@@ -185,7 +186,7 @@ void scanAddresses()
   {
     addr = game.readUInt32(addr + 3);
     MOVESET_OFFSET = addr;
-    AppendLog("Moveset Offset: 0x%llx", addr);
+    // AppendLog("Moveset Offset: 0x%llx", addr);
   }
   else
   {
@@ -204,6 +205,7 @@ void scanAddresses()
   //   AppendLog("Decryption Function Address not found!");
   // }
 
+  AppendLog("Addresses scanned successfully!");
   READY = true;
 }
 
