@@ -185,11 +185,11 @@ void HandleEncrypt()
     }
 
     // Test with in-code stuff
-    {
-      uint32_t encrypted = TK__encrypt28BitWith4BitChecksum(value);
-      printf("Encrypted (code): 0x%.8x\n", encrypted);
-      printf("Encrypted (game): 0x%.8x\n", encryptValue(value));
-    }
+    // {
+    //   uint32_t encrypted = TK__encrypt28BitWith4BitChecksum(value);
+    //   printf("Encrypted (code): 0x%.8x\n", encrypted);
+    //   printf("Encrypted (game): 0x%.8x\n", encryptValue(value));
+    // }
 
     SetWindowTextA(hwndOutput, buffer);
   }
@@ -229,7 +229,7 @@ void HandleDecrypt()
         {
           decryptedValue = std::to_string(decrypted);
         }
-        printf("Decrypted (game): 0x%.8x\n", decrypted);
+        // printf("Decrypted (game): 0x%.8x\n", decrypted);
 
         // Test with in-code method
         // {
