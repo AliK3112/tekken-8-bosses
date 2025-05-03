@@ -1,3 +1,12 @@
+#include <iostream>
+#include <stdint.h>
+
+struct EncryptedValue
+{
+  uint64_t value;
+  uint64_t key;
+};
+
 namespace Tekken
 {
   namespace Offsets
@@ -129,10 +138,10 @@ namespace Tekken
     DLC_STORY1_BATTLE_NUM = 802,
     DLC_STORY1_FLAGS = 806,
     PRE_ROUND_ANIM = 696,
-    _697 = 697,   // Intros related
-    OUTRO1 = 675, // Outro related 1
-    OUTRO2 = 679, // Outro related 2
-    EOL = 1100,   // End of the list
+    INTROS_RELATED = 697, // Intros related
+    OUTRO1 = 675,         // Outro related 1
+    OUTRO2 = 679,         // Outro related 2
+    EOL = 1100,           // End of the list
   };
 
   enum ExtraMoveProperties
@@ -148,49 +157,317 @@ namespace Tekken
   enum FighterId
   {
     Paul = 0,
-    Law = 1,
-    King = 2,
-    Yoshimitsu = 3,
-    Hwoarang = 4,
-    Xiayou = 5,
-    Jin = 6,
-    Bryan = 7,
-    Kazuya = 8,
-    Steve = 9,
-    Jack8 = 10,
-    Asuka = 11,
-    DevilJin = 12,
-    Feng = 13,
-    Lili = 14,
-    Dragunov = 15,
-    Leo = 16,
-    Lars = 17,
-    Alisa = 18,
-    Claudio = 19,
-    Shaheen = 20,
-    Nina = 21,
-    Lee = 22,
-    Kuma = 23,
-    Panda = 24,
-    Zafina = 25,
-    Leroy = 26,
-    Jun = 27,
-    Reina = 28,
-    Azucena = 29,
-    Victor = 30,
-    Raven = 31,
-    Azazel = 32,
-    Eddy = 33,
-    Lidia = 34,
-    Heihachi = 35,
-    Clive = 36,
+    Law,
+    King,
+    Yoshimitsu,
+    Hwoarang,
+    Xiayou,
+    Jin,
+    Bryan,
+    Kazuya,
+    Steve,
+    Jack8,
+    Asuka,
+    DevilJin,
+    Feng,
+    Lili,
+    Dragunov,
+    Leo,
+    Lars,
+    Alisa,
+    Claudio,
+    Shaheen,
+    Nina,
+    Lee,
+    Kuma,
+    Panda,
+    Zafina,
+    Leroy,
+    Jun,
+    Reina,
+    Azucena,
+    Victor,
+    Raven,
+    Azazel,
+    Eddy,
+    Lidia,
+    Heihachi,
+    Clive,
+    Anna,
     Dummy = 116,
-    AngelJin = 117,
-    TrueDevilKazuya = 118,
-    Jack7 = 119,
-    Soldier = 120,
-    DevilJin2 = 121,
-    TekkenMonk = 122,
-    Seiryu = 123
+    AngelJin,
+    TrueDevilKazuya,
+    Jack7,
+    Soldier,
+    DevilJin2,
+    TekkenMonk,
+    Seiryu
   };
+
+  std::string getCharCode(int charId)
+  {
+    switch (charId)
+    {
+    case FighterId::Paul:
+      return "grf";
+    case FighterId::Law:
+      return "pig";
+    case FighterId::King:
+      return "pgn";
+    case FighterId::Yoshimitsu:
+      return "cml";
+    case FighterId::Hwoarang:
+      return "snk";
+    case FighterId::Xiayou:
+      return "rat";
+    case FighterId::Jin:
+      return "ant";
+    case FighterId::Bryan:
+      return "cht";
+    case FighterId::Kazuya:
+      return "grl";
+    case FighterId::Steve:
+      return "bsn";
+    case FighterId::Jack8:
+      return "ccn";
+    case FighterId::Asuka:
+      return "der";
+    case FighterId::DevilJin:
+      return "swl";
+    case FighterId::Feng:
+      return "klw";
+    case FighterId::Lili:
+      return "hms";
+    case FighterId::Dragunov:
+      return "kmd";
+    case FighterId::Leo:
+      return "ghp";
+    case FighterId::Lars:
+      return "lzd";
+    case FighterId::Alisa:
+      return "mnt";
+    case FighterId::Claudio:
+      return "ctr";
+    case FighterId::Shaheen:
+      return "hrs";
+    case FighterId::Nina:
+      return "kal";
+    case FighterId::Lee:
+      return "wlf";
+    case FighterId::Kuma:
+      return "rbt";
+    case FighterId::Panda:
+      return "ttr";
+    case FighterId::Zafina:
+      return "crw";
+    case FighterId::Leroy:
+      return "jly";
+    case FighterId::Jun:
+      return "aml";
+    case FighterId::Reina:
+      return "zbn";
+    case FighterId::Azucena:
+      return "cat";
+    case FighterId::Victor:
+      return "lon";
+    case FighterId::Raven:
+      return "bbn";
+    case FighterId::Azazel:
+      return "got";
+    case FighterId::Eddy:
+      return "dog";
+    case FighterId::Lidia:
+      return "cbr";
+    case FighterId::Heihachi:
+      return "bee";
+    case FighterId::Clive:
+      return "okm";
+    case FighterId::Anna:
+      return "kgr";
+    case FighterId::Dummy:
+      return "dek";
+    case FighterId::AngelJin:
+      return "xxa";
+    case FighterId::TrueDevilKazuya:
+      return "xxb";
+    case FighterId::Jack7:
+      return "xxc";
+    case FighterId::Soldier:
+      return "xxd";
+    case FighterId::DevilJin2:
+      return "xxe";
+    case FighterId::TekkenMonk:
+      return "xxf";
+    case FighterId::Seiryu:
+      return "xxg";
+    default:
+      return "Unknown";
+    }
+  }
+
+  std::string getCharacterName(int id)
+  {
+    switch (id)
+    {
+    case FighterId::Paul:
+      return "PAUL";
+    case FighterId::Law:
+      return "LAW";
+    case FighterId::King:
+      return "KING";
+    case FighterId::Yoshimitsu:
+      return "YOSHIMITSU";
+    case FighterId::Hwoarang:
+      return "HWOARANG";
+    case FighterId::Xiayou:
+      return "XIAYOU";
+    case FighterId::Jin:
+      return "JIN";
+    case FighterId::Bryan:
+      return "BRYAN";
+    case FighterId::Kazuya:
+      return "KAZUYA";
+    case FighterId::Steve:
+      return "STEVE";
+    case FighterId::Jack8:
+      return "JACK8";
+    case FighterId::Asuka:
+      return "ASUKA";
+    case FighterId::DevilJin:
+      return "DEVIL_JIN";
+    case FighterId::Feng:
+      return "FENG";
+    case FighterId::Lili:
+      return "LILI";
+    case FighterId::Dragunov:
+      return "DRAGUNOV";
+    case FighterId::Leo:
+      return "LEO";
+    case FighterId::Lars:
+      return "LARS";
+    case FighterId::Alisa:
+      return "ALISA";
+    case FighterId::Claudio:
+      return "CLAUDIO";
+    case FighterId::Shaheen:
+      return "SHAHEEN";
+    case FighterId::Nina:
+      return "NINA";
+    case FighterId::Lee:
+      return "LEE";
+    case FighterId::Kuma:
+      return "KUMA";
+    case FighterId::Panda:
+      return "PANDA";
+    case FighterId::Zafina:
+      return "ZAFINA";
+    case FighterId::Leroy:
+      return "LEROY";
+    case FighterId::Jun:
+      return "JUN";
+    case FighterId::Reina:
+      return "REINA";
+    case FighterId::Azucena:
+      return "AZUCENA";
+    case FighterId::Victor:
+      return "VICTOR";
+    case FighterId::Raven:
+      return "RAVEN";
+    case FighterId::Azazel:
+      return "AZAZEL";
+    case FighterId::Eddy:
+      return "EDDY";
+    case FighterId::Lidia:
+      return "LIDIA";
+    case FighterId::Heihachi:
+      return "HEIHACHI";
+    case FighterId::Clive:
+      return "CLIVE";
+    case FighterId::Anna:
+      return "ANNA";
+    case FighterId::Dummy:
+      return "DUMMY";
+    case FighterId::AngelJin:
+      return "ANGEL_JIN";
+    case FighterId::TrueDevilKazuya:
+      return "TRUE_DEVIL_KAZUYA";
+    case FighterId::Jack7:
+      return "JACK7";
+    case FighterId::Soldier:
+      return "SOLDIER";
+    case FighterId::DevilJin2:
+      return "DEVIL_JIN_2";
+    case FighterId::TekkenMonk:
+      return "TEKKEN_MONK";
+    case FighterId::Seiryu:
+      return "SEIRYU";
+    default:
+      throw std::invalid_argument("Invalid character ID");
+    }
+  }
+
+  // Expands a 32-bit integer to 64-bit with checksum, using a 64-bit key.
+  int64_t expand32To64WithChecksum(uint32_t inputValue, uint64_t key)
+  {
+    uint32_t checksum = 0;
+    uint32_t byteShift = 0;
+    uint64_t shiftedInput = inputValue;
+
+    while (byteShift < 32)
+    {
+      uint64_t tempKey = key;
+      int shiftCount = static_cast<uint8_t>(byteShift + 8);
+
+      while (shiftCount--)
+      {
+        tempKey = (tempKey >> 63) + 2 * tempKey; // Equivalent to a left shift with carry
+      }
+
+      checksum ^= static_cast<uint32_t>(shiftedInput) ^ static_cast<uint32_t>(tempKey);
+      shiftedInput >>= 8;
+      byteShift += 8;
+    }
+
+    return inputValue + ((checksum ? checksum : 1ull) << 32);
+  }
+
+  // Validates a 64-bit encrypted value and transforms it using a custom key-based algorithm.
+  // This is the decryption method the game uses within movesets
+  uint64_t validateAndTransform64BitValue(EncryptedValue *encrypted)
+  {
+    uint64_t key = encrypted->key;
+    uint64_t encryptedValue = encrypted->value;
+
+    // Validate the 64-bit value using the checksum function
+    if (expand32To64WithChecksum(static_cast<uint32_t>(encryptedValue), key) != encryptedValue)
+      return 0;
+
+    // Scramble the value with a fixed XOR and calculate an offset
+    uint64_t scrambledValue = encryptedValue ^ 0x1D;
+    int bitOffset = scrambledValue & 0x1F;
+
+    // Rotate the key left by bitOffset
+    while (bitOffset--)
+    {
+      key = (key >> 63) + 2 * key;
+    }
+
+    // Normalize with float math
+    float normalizer = 4294967296.0f; // 2^32
+    uint64_t scaleOffset = 0;
+    if (normalizer >= 9223372036854775800.0f)
+    {
+      normalizer -= 9223372036854775800.0f;
+      if (normalizer < 9223372036854775800.0f)
+        scaleOffset = 0x8000000000000000;
+    }
+
+    key &= 0xFFFFFFFFFFFFFFE0; // Clear lower 5 bits
+    key ^= scrambledValue;
+    key <<= 32;
+
+    uint64_t divisor = scaleOffset + static_cast<uint64_t>(normalizer);
+    return key / divisor;
+  }
+
 }
