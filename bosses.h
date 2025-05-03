@@ -183,15 +183,16 @@ private:
       throw std::runtime_error("Match Struct Base Address not found!");
     }
 
-    addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
-    if (addr != 0)
-    {
-      decryptFuncAddr = addr;
-    }
-    else
-    {
-      throw std::runtime_error("Decryption Function Address not found!");
-    }
+    // We no longer use it since I've recreated the decryption method
+    // addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
+    // if (addr != 0)
+    // {
+    //   decryptFuncAddr = addr;
+    // }
+    // else
+    // {
+    //   throw std::runtime_error("Decryption Function Address not found!");
+    // }
 
     addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
     hudIconAddr = addr + 13;
@@ -202,7 +203,7 @@ private:
     // Setting the global flag
     handleIcons = hudIconAddr && hudNameAddr;
 
-    addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, decryptFuncAddr + 0x1000);
+    addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, base + 0x1700000);
     if (addr != 0)
     {
       movesetOffset = game.readUInt32(addr + 3);
@@ -226,7 +227,7 @@ private:
     {
       printf("playerStructOffset: 0x%llX\n", playerStructOffset);
       printf("matchStructOffset: 0x%llX\n", matchStructOffset);
-      printf("decryptFuncAddr: 0x%llX\n", decryptFuncAddr);
+      // printf("decryptFuncAddr: 0x%llX\n", decryptFuncAddr);
       printf("hudIconAddr: 0x%llX\n", hudIconAddr);
       printf("hudNameAddr: 0x%llX\n", hudNameAddr);
       printf("movesetOffset: 0x%llX\n", movesetOffset);

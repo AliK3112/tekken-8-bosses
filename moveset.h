@@ -21,12 +21,6 @@ uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
 }
 
 
-struct EncryptedValue
-{
-  uintptr_t value;
-  uintptr_t key;
-};
-
 class TkMoveset
 {
 private:
@@ -130,8 +124,10 @@ public:
       }
       else
       {
-        EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
+        // EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+        // uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
+        EncryptedValue encrypted = game.read<EncryptedValue>(addr);
+        uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
         if ((int)decryptedValue == moveNameKey)
           return i;
       }
@@ -162,8 +158,10 @@ public:
       }
       else
       {
-        EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
+        // EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
+        // uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
+        EncryptedValue encrypted = game.read<EncryptedValue>(addr);
+        uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
         if ((int)decryptedValue == moveNameKey)
           return addr;
       }

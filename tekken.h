@@ -1,3 +1,12 @@
+#include <iostream>
+#include <stdint.h>
+
+struct EncryptedValue
+{
+  uint64_t value;
+  uint64_t key;
+};
+
 namespace Tekken
 {
   namespace Offsets
@@ -142,10 +151,10 @@ namespace Tekken
     DLC_STORY1_BATTLE_NUM = 802,
     DLC_STORY1_FLAGS = 806,
     PRE_ROUND_ANIM = 696,
-    INTROS_RELATED = 697,   // Intros related
-    OUTRO1 = 675, // Outro related 1
-    OUTRO2 = 679, // Outro related 2
-    EOL = 1100,   // End of the list
+    INTROS_RELATED = 697, // Intros related
+    OUTRO1 = 675,         // Outro related 1
+    OUTRO2 = 679,         // Outro related 2
+    EOL = 1100,           // End of the list
   };
 
   enum ExtraMoveProperties
@@ -416,4 +425,69 @@ namespace Tekken
       throw std::invalid_argument("Invalid character ID");
     }
   }
+
+  // Expands a 32-bit integer to 64-bit with checksum, using a 64-bit key.
+  int64_t expand32To64WithChecksum(uint32_t inputValue, uint64_t key)
+  {
+    uint32_t checksum = 0;
+    uint32_t byteShift = 0;
+    uint64_t shiftedInput = inputValue;
+
+    while (byteShift < 32)
+    {
+      uint64_t tempKey = key;
+      int shiftCount = static_cast<uint8_t>(byteShift + 8);
+
+      while (shiftCount--)
+      {
+        tempKey = (tempKey >> 63) + 2 * tempKey; // Equivalent to a left shift with carry
+      }
+
+      checksum ^= static_cast<uint32_t>(shiftedInput) ^ static_cast<uint32_t>(tempKey);
+      shiftedInput >>= 8;
+      byteShift += 8;
+    }
+
+    return inputValue + ((checksum ? checksum : 1ull) << 32);
+  }
+
+  // Validates a 64-bit encrypted value and transforms it using a custom key-based algorithm.
+  // This is the decryption method the game uses within movesets
+  uint64_t validateAndTransform64BitValue(EncryptedValue *encrypted)
+  {
+    uint64_t key = encrypted->key;
+    uint64_t encryptedValue = encrypted->value;
+
+    // Validate the 64-bit value using the checksum function
+    if (expand32To64WithChecksum(static_cast<uint32_t>(encryptedValue), key) != encryptedValue)
+      return 0;
+
+    // Scramble the value with a fixed XOR and calculate an offset
+    uint64_t scrambledValue = encryptedValue ^ 0x1D;
+    int bitOffset = scrambledValue & 0x1F;
+
+    // Rotate the key left by bitOffset
+    while (bitOffset--)
+    {
+      key = (key >> 63) + 2 * key;
+    }
+
+    // Normalize with float math
+    float normalizer = 4294967296.0f; // 2^32
+    uint64_t scaleOffset = 0;
+    if (normalizer >= 9223372036854775800.0f)
+    {
+      normalizer -= 9223372036854775800.0f;
+      if (normalizer < 9223372036854775800.0f)
+        scaleOffset = 0x8000000000000000;
+    }
+
+    key &= 0xFFFFFFFFFFFFFFE0; // Clear lower 5 bits
+    key ^= scrambledValue;
+    key <<= 32;
+
+    uint64_t divisor = scaleOffset + static_cast<uint64_t>(normalizer);
+    return key / divisor;
+  }
+
 }
