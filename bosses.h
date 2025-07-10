@@ -277,28 +277,28 @@ private:
     }
     else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
     {
-      icon = buildString(c, "ant2");
+      icon = buildString(c, HudIcon::JinFinal);
       name = getNamePath(FighterId::Jin);
     }
     else if (bossCode == BossCodes::FinalKazuya && charId == FighterId::Kazuya)
     {
-      icon = buildString(c, "grl2");
+      icon = buildString(c, HudIcon::KazFinal);
       name = getNamePath(FighterId::Kazuya);
     }
     else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
     {
-      icon = buildString(c, "grl3");
-      name = getNamePath("grl2");
+      icon = buildString(c, HudIcon::KazDevil);
+      name = getNamePath(HudName::KazDevil);
     }
     else if (bossCode == BossCodes::AmnesiaHeihachi && charId == FighterId::Heihachi)
     {
-      icon = buildString(c, "bee2");
+      icon = buildString(c, HudIcon::HeiMonk);
       name = getNamePath(FighterId::Heihachi);
     }
     else if (bossCode == BossCodes::ShadowHeihachi && charId == FighterId::Heihachi)
     {
-      icon = buildString(c, "bee3");
-      name = getNamePath("bee3");
+      icon = buildString(c, HudIcon::HeiShadow);
+      name = getNamePath(HudName::HeiShadow);
     }
     if (!icon.empty())
       game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);

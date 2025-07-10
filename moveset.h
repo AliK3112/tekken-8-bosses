@@ -124,8 +124,6 @@ public:
       }
       else
       {
-        // EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        // uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
         EncryptedValue encrypted = game.read<EncryptedValue>(addr);
         uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
         if ((int)decryptedValue == moveNameKey)
@@ -158,8 +156,6 @@ public:
       }
       else
       {
-        // EncryptedValue *paramAddr = reinterpret_cast<EncryptedValue *>(addr);
-        // uintptr_t decryptedValue = game.callFunction<uintptr_t, EncryptedValue>(decryptFuncAddr, paramAddr);
         EncryptedValue encrypted = game.read<EncryptedValue>(addr);
         uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
         if ((int)decryptedValue == moveNameKey)

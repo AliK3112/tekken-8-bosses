@@ -24,6 +24,21 @@ enum BossCodes {
   FinalHeihachi = 353, // Heihachi (35), Variant # 3
 };
 
+namespace HudIcon
+{
+  const char *JinFinal = "ant2";
+  const char *KazFinal = "grl2";
+  const char *KazDevil = "grl3";
+  const char *HeiMonk = "bee2";
+  const char *HeiShadow = "bee3";
+};
+
+namespace HudName
+{
+  const char *KazDevil = "grl2";
+  const char *HeiShadow = "bee3";
+};
+
 // Function to convert a hexadecimal string to uintptr_t
 uintptr_t hexStringToUintptr(const std::string &hexStr)
 {
