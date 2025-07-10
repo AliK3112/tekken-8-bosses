@@ -212,8 +212,9 @@ namespace Tekken
     Lidia,
     Heihachi,
     Clive,
-    Anna = 37,
-
+    Anna,
+    Fahkumram,
+    ArmorKing,
     Dummy = 116,
     AngelJin,
     TrueDevilKazuya,
@@ -304,6 +305,10 @@ namespace Tekken
       return "okm";
     case FighterId::Anna:
       return "kgr";
+    case FighterId::Fahkumram:
+      return "tgr";
+    case FighterId::ArmorKing:
+      return "agt";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
