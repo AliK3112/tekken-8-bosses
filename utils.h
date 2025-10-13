@@ -138,3 +138,8 @@ std::string getBossName(int bossCode)
   default: return "__unknown__";
   }
 }
+
+void printAddr(const std::string &name, uintptr_t addr)
+{
+  printf("%s: 0x%llX\n", name.c_str(), (unsigned long long)addr);
+}

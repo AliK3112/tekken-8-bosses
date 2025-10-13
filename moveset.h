@@ -391,10 +391,26 @@ public:
 
   void editRequirement(uintptr_t addr, int req, int param = -1)
   {
+    if (addr == 0)
+      return;
     if (req != -1)
-      game.write<int>(addr, 0);
+      game.write<int>(addr, req);
     if (param != -1)
-      game.write<int>(addr + 4, 0);
+      game.write<int>(addr + 4, param);
+  }
+
+  void editRequirement(uintptr_t addr, const TkRequirement& req)
+  {
+    if (addr == 0)
+      return;
+    if (req.req != -1)
+      game.write<int>(addr, req.req);
+    for (int i = 0; i < 4; i++)
+    {
+      int value = static_cast<int>(req.param[i].param_unsigned);
+      if (value != -1)
+        game.write<int>(addr + 4 + i * 4, value);
+    }
   }
 
   bool reqListHas(uintptr_t addr, int tReq, int tParam = -1)

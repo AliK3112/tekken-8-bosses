@@ -7,6 +7,19 @@ struct EncryptedValue
   uint64_t key;
 };
 
+union TkParam;
+{
+  uint32_t param_unsigned;
+  int32_t param_signed;
+  float param_float;
+};
+
+struct TkRequirement
+{
+  int req;
+  TkParam param[4];
+};
+
 namespace Tekken
 {
   namespace Offsets
