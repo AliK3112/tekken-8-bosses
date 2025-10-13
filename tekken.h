@@ -7,7 +7,7 @@ struct EncryptedValue
   uint64_t key;
 };
 
-union TkParam;
+union TkParam
 {
   uint32_t param_unsigned;
   int32_t param_signed;
