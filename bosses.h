@@ -430,7 +430,7 @@ private:
         moveset.editExtraprop(addr, -1, -1, 0); // don't spend rage
       }
       // Cancels & Props both have requirements at offset 0x8
-      if (moveset.cancelHasCondition(addr, Requirements::DLC_STORY1_BATTLE_NUM, 2050))
+      if (moveset.cancelHasCondition(addr, Requirements::DLC_STORY1_BATTLE_NUM))
       {
         moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
         break;
@@ -776,8 +776,8 @@ private:
     uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
 
     // Idle stance, set/disable Warrior Instinct
-    addr = moveset.iterateExtraprops(moveset.getMoveExtrapropAddr(addr), 4); // 5th prop
-    moveset.editExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR, (int)(bossCode == BossCodes::FinalHeihachi));
+    // addr = moveset.iterateExtraprops(moveset.getMoveExtrapropAddr(addr), 4); // 5th prop
+    // moveset.editExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR, (int)(bossCode == BossCodes::FinalHeihachi));
 
     if (bossCode == BossCodes::ShadowHeihachi)
     {
@@ -794,6 +794,17 @@ private:
 
     if (bossCode == BossCodes::AmnesiaHeihachi)
     {
+      // Disabling WI completely
+      {
+        addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+        if (addr != 0)
+        {
+          moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
+          moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
+          moveset.editExtrapropValue(addr, "value", 0);
+        }
+      }
       // 2nd hit of regular 2,2
       addr = moveset.getMoveAddress(0xf69e2bef, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
@@ -811,6 +822,41 @@ private:
 
     if (bossCode == BossCodes::FinalHeihachi)
     {
+      // Enabling WI permanently
+      {
+        addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+        for (int i = 0; i < 2; i++)
+        {
+          uintptr_t reqAddr = moveset.getCancelReqAddr(addr);
+          moveset.editRequirement(moveset.iterateRequirements(reqAddr, 0), 0, 0); // 1st req
+          moveset.editRequirement(moveset.iterateRequirements(reqAddr, 1), 0, 0); // 2nd req
+          addr = moveset.iterateExtraprops(addr, 1);
+        }
+        moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
+        moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
+        moveset.editExtrapropValue(addr, "value", 1);
+      }
+      // Activating WI in intro against Lidia
+      {
+        addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
+        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR);
+        uintptr_t reqAddr = moveset.getExtrapropValue(addr, "requirements");
+        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+        // Iterating all extraprops to disable all props that have a requirement addr
+        while (true)
+        {
+          if (moveset.getExtrapropValue(addr, "requirements") == reqAddr)
+          {
+            moveset.editExtrapropValue(addr, "requirements", reqHeader);
+          }
+          int prop = moveset.getExtrapropValue(addr, "prop");
+          int frame = moveset.getExtrapropValue(addr, "frame");
+          if (prop == 0 && frame == 0)
+            break;
+          addr = moveset.iterateExtraprops(addr, 1);
+        }
+      }
       // Enable most of the moves by modifying 2,2
       addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
       addr = moveset.getMoveNthCancel(addr, 1);
@@ -839,7 +885,6 @@ private:
       {
         uintptr_t defaultAliasAddr = moveset.getMoveAddrByIdx(defaultAliasIdx);
         addr = moveset.findMoveCancelByCondition(defaultAliasAddr, Requirements::PRE_ROUND_ANIM, -1, 50);
-
         moveset.editCancelMoveId(addr, preRound1);
         moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), preRound2);
 

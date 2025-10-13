@@ -20,7 +20,6 @@ uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
   return start ? start + size * index : 0;
 }
 
-
 class TkMoveset
 {
 private:
@@ -263,6 +262,28 @@ public:
     return 0;
   }
 
+  void editExtrapropValue(uintptr_t addr, std::string column, uintptr_t value)
+  {
+    if (addr == 0)
+      return;
+    if (column == "frame")
+      game.write<int>(addr + Offsets::ExtraProp::Type, value);
+    else if (column == "requirements")
+      game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, value);
+    else if (column == "prop")
+      game.write<int>(addr + Offsets::ExtraProp::Prop, value);
+    else if (column == "value")
+      game.write<int>(addr + Offsets::ExtraProp::Value, value);
+    else if (column == "value2")
+      game.write<int>(addr + Offsets::ExtraProp::Value2, value);
+    else if (column == "value3")
+      game.write<int>(addr + Offsets::ExtraProp::Value3, value);
+    else if (column == "value4")
+      game.write<int>(addr + Offsets::ExtraProp::Value4, value);
+    else if (column == "value5")
+      game.write<int>(addr + Offsets::ExtraProp::Value5, value);
+  }
+
   // Moves `n` Extraprops forward given a prop's address
   uintptr_t iterateExtraprops(uintptr_t addr, int n)
   {
@@ -399,7 +420,7 @@ public:
       game.write<int>(addr + 4, param);
   }
 
-  void editRequirement(uintptr_t addr, const TkRequirement& req)
+  void editRequirement(uintptr_t addr, const TkRequirement &req)
   {
     if (addr == 0)
       return;
@@ -560,7 +581,7 @@ public:
   // Moves `n` requirements forward given a requirement's address
   uintptr_t iterateRequirements(uintptr_t requirement, int n)
   {
-    return requirement + (n * Sizes::Moveset::Requirement);
+    return requirement ? (requirement + (n * Sizes::Moveset::Requirement)) : 0;
   }
 
   uintptr_t getMovesetHeader(std::string column)

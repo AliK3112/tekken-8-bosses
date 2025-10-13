@@ -155,6 +155,7 @@ namespace Tekken
     HEAT_AVAILABLE = 442,
     HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
     IS_PERMA_DEVIL = 473,
+    HEI_WARRIOR_ACTIVE = 498,
     ARCADE_BATTLE = 664,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
@@ -180,6 +181,7 @@ namespace Tekken
     SPEND_RAGE = 0x82e2,
     HEI_WARRIOR = 0x83f9,
     BLACK_SCREEN_VFX = 0x83C0,
+    _0x8555 = 0x8555,
     WING_ANIM = 0x8683,
     HEAT_CAMERA = 0x86b0,
     CAMERA_TRANSITION = 0x8695,
