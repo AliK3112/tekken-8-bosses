@@ -323,7 +323,7 @@ namespace Tekken
     case FighterId::Fahkumram:
       return "tgr";
     case FighterId::ArmorKing:
-      return "agt";
+      return "knk";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
