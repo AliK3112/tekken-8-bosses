@@ -414,7 +414,7 @@ private:
     loadCostume(matchStructAddr, side, 51, costumePath);
   }
 
-  void adjustIntroOutroReq(TkMoveset& moveset, int bossCode, int start = 0)
+  void adjustIntroOutroReq(TkMoveset &moveset, int bossCode, int start = 0)
   {
     uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
     uintptr_t reqCount = moveset.getMovesetCount("requirements");
@@ -498,9 +498,12 @@ private:
       if (moveId != -1)
       {
         // f,f+1+2
-        try {
+        try
+        {
           addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
-        } catch (...) {
+        }
+        catch (...)
+        {
           addr = 0; // If somebody is using the mod on pre-S2, this shouldn't crash
         }
         addr = moveset.getMoveNthCancel(addr, 0);
@@ -530,7 +533,7 @@ private:
     }
     break;
     case BossCodes::NerfedJin:
-    break;
+      break;
     case BossCodes::MishimaJin:
     case BossCodes::KazamaJin:
     {
@@ -783,7 +786,7 @@ private:
 
     // Fix Rage Art dialogue (2 cancels)
     uintptr_t addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
-  
+
     uintptr_t cancelAddr = moveset.findMoveCancelByCondition(addr, Requirements::ARCADE_BATTLE);
     addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
     moveset.editRequirement(addr, 0);
@@ -791,7 +794,7 @@ private:
     cancelAddr = moveset.iterateCancel(cancelAddr, 1);
     addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
     moveset.editRequirement(addr, 0);
-  
+
     return markMovesetEdited(movesetAddr);
   }
 
@@ -863,7 +866,7 @@ private:
       //     addr = moveset.iterateExtraprops(addr, 1);
       //   }
       // }
-      
+
       // Activating WI in intro against Lidia
       {
         addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
@@ -884,7 +887,7 @@ private:
           addr = moveset.iterateExtraprops(addr, 1);
         }
       }
-      
+
       // Enable most of the moves by modifying 2,2
       addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
       addr = moveset.getMoveNthCancel(addr, 1);
@@ -996,7 +999,7 @@ public:
     this->attached = false;
   }
 
-  TkBossLoader(GameClass& game)
+  TkBossLoader(GameClass &game)
   {
     this->game = game;
     this->bossCode_L = BossCodes::None;
