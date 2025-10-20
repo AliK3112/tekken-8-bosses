@@ -2,8 +2,6 @@
 #include "moveset.h"
 #include "utils.h"
 
-bool DEV_MODE = false;
-
 using namespace Tekken;
 
 std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
@@ -36,6 +34,7 @@ private:
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
   // CONFIGURATIONS
+  bool devMode = false;
   bool handleIcons = false;
   HWND hwndLogBox;
 
@@ -241,7 +240,7 @@ private:
       throw std::runtime_error("\"Heihachi Warrior Instinct\" offset not found!");
     }
 
-    if (DEV_MODE)
+    if (devMode)
     {
       printf("playerStructOffset: 0x%llX\n", playerStructOffset);
       printf("matchStructOffset: 0x%llX\n", matchStructOffset);
@@ -782,6 +781,17 @@ private:
     TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
     adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
+    // Fix Rage Art dialogue (2 cancels)
+    uintptr_t addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
+  
+    uintptr_t cancelAddr = moveset.findMoveCancelByCondition(addr, Requirements::ARCADE_BATTLE);
+    addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
+    moveset.editRequirement(addr, 0);
+
+    cancelAddr = moveset.iterateCancel(cancelAddr, 1);
+    addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
+    moveset.editRequirement(addr, 0);
+  
     return markMovesetEdited(movesetAddr);
   }
 
@@ -997,6 +1007,11 @@ public:
   ~TkBossLoader()
   {
     restoreHudAddr(0);
+  }
+
+  void setDevModeFlag(bool flag)
+  {
+    this->devMode = flag;
   }
 
   void attachToLogBox(HWND hwndLogBox)
