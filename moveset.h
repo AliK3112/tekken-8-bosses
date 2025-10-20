@@ -327,6 +327,26 @@ public:
     return reqListHas(requirements, targetReq, targetParam);
   }
 
+  uintptr_t findRequirement(uintptr_t requirement, int targetReq, int targetParam = -1)
+  {
+    if (!requirement)
+      return 0;
+    uintptr_t start = getMovesetHeader("requirements");
+    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    while (requirement >= start && requirement < end)
+    {
+      int req = getRequirementValue(requirement, "req");
+      int param = getRequirementValue(requirement, "param");
+      if (req == targetReq && (param == targetParam || targetParam == -1))
+        return requirement;
+      if (req == Requirements::EOL)
+        break;
+      requirement = iterateRequirements(requirement, 1);
+    }
+    return 0;
+  }
+
   uintptr_t findMoveCancelByCondition(uintptr_t move, int targetReq, int targetParam = -1, int start = 0)
   {
     if (!move)
