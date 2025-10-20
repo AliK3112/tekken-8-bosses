@@ -302,7 +302,7 @@ namespace Tekken
     case FighterId::Jun:
       return "aml";
     case FighterId::Reina:
-      return "zbn";
+      return "zbr";
     case FighterId::Azucena:
       return "cat";
     case FighterId::Victor:
