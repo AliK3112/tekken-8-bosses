@@ -8,7 +8,7 @@
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox;
+HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox, hwndCheckbox;
 TkBossLoader boss;
 char buffer[255];
 
@@ -69,7 +69,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 300,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 360,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -122,8 +122,15 @@ void InitializeUI(HWND hwnd)
                              combo2X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
 
   // Instruction Group Box with extra padding
-  int groupBoxY = padding + 60;
-  int groupBoxHeight = 70; // Increased height
+  // Checkbox below combo boxes
+  int checkboxY = padding + 60;
+  hwndCheckbox = CreateWindowA("BUTTON", "Load HUD and Costume for certain bosses",
+                               WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                               padding, checkboxY, 440, 20, hwnd, (HMENU)3, NULL, NULL);
+
+  // Instruction Group Box below the checkbox
+  int groupBoxY = checkboxY + 30;
+  int groupBoxHeight = 70;
   HWND hwndGroupBox = CreateWindowA("BUTTON", "Instructions",
                                     WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
                                     padding - 5, groupBoxY, logWidth + 10, groupBoxHeight, hwnd, NULL, NULL, NULL);
@@ -146,6 +153,9 @@ void InitializeUI(HWND hwnd)
 
   SendMessageA(hwndCombo1, CB_SETCURSEL, 0, 0);
   SendMessageA(hwndCombo2, CB_SETCURSEL, 0, 0);
+
+  SendMessageA(hwndCheckbox, BM_SETCHECK, BST_CHECKED, 0);
+  boss.setHudAndCostumesFlag(true);
 }
 
 void PopulateComboBox(HWND comboBox)
@@ -221,6 +231,12 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     if (notificationCode == CBN_SELCHANGE && (controlId == 1 || controlId == 2))
     {
       HandleBossSelection();
+    }
+    // Handle checkbox toggle
+    if (controlId == 3 && notificationCode == BN_CLICKED)
+    {
+      BOOL checked = (SendMessageA(hwndCheckbox, BM_GETCHECK, 0, 0) == BST_CHECKED);
+      boss.setHudAndCostumesFlag(checked);
     }
   }
   break;

@@ -36,6 +36,7 @@ private:
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
+  bool handleHudAndCostumes = false;
   HWND hwndLogBox;
 
   // METHODS
@@ -288,11 +289,13 @@ private:
     std::string icon;
     std::string name;
     const char c = side == 0 ? 'L' : 'R';
-    if (bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2)
+    bool isStoryDvj = bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2;
+    bool isDevilKazuya = bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya;
+    if (isStoryDvj)
     {
       icon = buildString(c, getCharCode(FighterId::Jin));
       name = getNamePath(FighterId::Jin);
-    }
+    } 
     else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
     {
       icon = buildString(c, HudIcon::JinFinal);
@@ -303,7 +306,7 @@ private:
       icon = buildString(c, HudIcon::KazFinal);
       name = getNamePath(FighterId::Kazuya);
     }
-    else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
+    else if (isDevilKazuya)
     {
       icon = buildString(c, HudIcon::KazDevil);
       name = getNamePath(HudName::KazDevil);
@@ -318,9 +321,9 @@ private:
       icon = buildString(c, HudIcon::HeiShadow);
       name = getNamePath(HudName::HeiShadow);
     }
-    if (!icon.empty())
+    if (!icon.empty() && (this->handleHudAndCostumes || isStoryDvj || isDevilKazuya))
       game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
-    if (!name.empty())
+    if (!name.empty() && (this->handleHudAndCostumes || isStoryDvj || isDevilKazuya))
       game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
   }
 
@@ -411,6 +414,10 @@ private:
     default:
       return;
     }
+
+    if (!this->handleHudAndCostumes && bossCode != BossCodes::DevilJin)
+      return;
+
     loadCostume(matchStructAddr, side, 51, costumePath);
   }
 
@@ -1017,6 +1024,11 @@ public:
     this->devMode = flag;
   }
 
+  void setHudAndCostumesFlag(bool flag)
+  {
+    this->handleHudAndCostumes = flag;
+  }
+
   void attachToLogBox(HWND hwndLogBox)
   {
     this->hwndLogBox = hwndLogBox;
@@ -1065,6 +1077,7 @@ public:
   {
     scanAddresses();
   }
+
   // Utility methods
   void bossLoadMainLoop(int selectedSide = -1)
   {
