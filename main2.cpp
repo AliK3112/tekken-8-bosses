@@ -8,8 +8,10 @@ int takeInput();
 
 int main()
 {
-  int bossCode = _DEV_MODE ? BossCodes::DevilJin : -1;
+  int bossCode = _DEV_MODE ? BossCodes::AngelJin : -1;
   TkBossLoader bossLoader;
+
+  bossLoader.setDevModeFlag(_DEV_MODE);
 
   printf("Waiting for Tekken 8 to run...\n");
   while (true)
