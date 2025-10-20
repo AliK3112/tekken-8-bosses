@@ -36,7 +36,7 @@ private:
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
-  bool handleHudAndCostumes = false;
+  bool handleHudAndCostumes = true;
   HWND hwndLogBox;
 
   // METHODS
