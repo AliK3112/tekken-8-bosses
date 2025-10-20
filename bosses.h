@@ -31,6 +31,7 @@ private:
   uintptr_t matchStructOffset = 0;
   uintptr_t movesetOffset = 0;
   uintptr_t permaDevilOffset = 0;
+  uintptr_t heihachiWIOffset = 0;
   uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
@@ -78,6 +79,13 @@ private:
     if (!playerAddr || !permaDevilOffset)
       return;
     game.write<int>(playerAddr + permaDevilOffset, value);
+  }
+
+  void setHeihachiPermaWI(uintptr_t playerAddr, int value)
+  {
+    if (!playerAddr || !heihachiWIOffset)
+      return;
+    game.write<int>(playerAddr + heihachiWIOffset, value);
   }
 
   // Checks if it's eligible to load the boss character
@@ -223,6 +231,16 @@ private:
       throw std::runtime_error("\"Permanent Devil Mode\" offset not found!");
     }
 
+    addr = game.FastAoBScan(Tekken::HEI_WI_SIG_BYTES, base + 0x5C00000);
+    if (addr != 0)
+    {
+      heihachiWIOffset = game.readUInt32(addr + 3);
+    }
+    else
+    {
+      throw std::runtime_error("\"Heihachi Warrior Instinct\" offset not found!");
+    }
+
     if (DEV_MODE)
     {
       printf("playerStructOffset: 0x%llX\n", playerStructOffset);
@@ -232,6 +250,7 @@ private:
       printf("hudNameAddr: 0x%llX\n", hudNameAddr);
       printf("movesetOffset: 0x%llX\n", movesetOffset);
       printf("permaDevilOffset: 0x%llX\n", permaDevilOffset);
+      printf("heihachiWIOffset: 0x%llX\n", heihachiWIOffset);
     }
     this->ready = true; // Ready to load bosses
   }
@@ -795,16 +814,16 @@ private:
     if (bossCode == BossCodes::AmnesiaHeihachi)
     {
       // Disabling WI completely
-      {
-        addr = moveset.getMoveAddrByIdx(idleStanceIdx);
-        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
-        if (addr != 0)
-        {
-          moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
-          moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
-          moveset.editExtrapropValue(addr, "value", 0);
-        }
-      }
+      // {
+      //   addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+      //   if (addr != 0)
+      //   {
+      //     moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
+      //     moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
+      //     moveset.editExtrapropValue(addr, "value", 0);
+      //   }
+      // }
       // 2nd hit of regular 2,2
       addr = moveset.getMoveAddress(0xf69e2bef, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
@@ -822,21 +841,19 @@ private:
 
     if (bossCode == BossCodes::FinalHeihachi)
     {
-      // Enabling WI permanently
-      {
-        addr = moveset.getMoveAddrByIdx(idleStanceIdx);
-        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
-        for (int i = 0; i < 2; i++)
-        {
-          uintptr_t reqAddr = moveset.getCancelReqAddr(addr);
-          moveset.editRequirement(moveset.iterateRequirements(reqAddr, 0), 0, 0); // 1st req
-          moveset.editRequirement(moveset.iterateRequirements(reqAddr, 1), 0, 0); // 2nd req
-          addr = moveset.iterateExtraprops(addr, 1);
-        }
-        moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
-        moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
-        moveset.editExtrapropValue(addr, "value", 1);
-      }
+      // Health regenration prop
+      // {
+      //   addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+      //   for (int i = 0; i < 2; i++)
+      //   {
+      //     uintptr_t reqAddr = moveset.getCancelReqAddr(addr);
+      //     moveset.editRequirement(moveset.iterateRequirements(reqAddr, 0), 0, 0); // 1st req
+      //     moveset.editRequirement(moveset.iterateRequirements(reqAddr, 1), 0, 0); // 2nd req
+      //     addr = moveset.iterateExtraprops(addr, 1);
+      //   }
+      // }
+      
       // Activating WI in intro against Lidia
       {
         addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
@@ -857,6 +874,7 @@ private:
           addr = moveset.iterateExtraprops(addr, 1);
         }
       }
+      
       // Enable most of the moves by modifying 2,2
       addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
       addr = moveset.getMoveNthCancel(addr, 1);
@@ -1145,6 +1163,13 @@ public:
       return false;
     uintptr_t playerAddr = getPlayerAddress(side);
     uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+
+    // Special-case: Enable/Disable Heihachi WI flag from P1 struct
+    if (bossCode == BossCodes::AmnesiaHeihachi || bossCode == BossCodes::FinalHeihachi)
+    {
+      int value = bossCode == BossCodes::AmnesiaHeihachi ? 2 : 1;
+      setHeihachiPermaWI(playerAddr, value);
+    }
 
     if (isMovesetEdited(movesetAddr))
       return false;
