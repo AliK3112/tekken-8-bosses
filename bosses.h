@@ -4,7 +4,7 @@
 
 using namespace Tekken;
 
-std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked.CS_ant_1p_naked";
+std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked_belt_off.CS_ant_1p_naked_belt_off";
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
@@ -540,11 +540,12 @@ private:
     }
     break;
     case BossCodes::NerfedJin:
+    case BossCodes::FinalJin:
       break;
     case BossCodes::MishimaJin:
     case BossCodes::KazamaJin:
     {
-      uintptr_t moveId = moveset.getMoveId(bossCode == 2 ? 0xA33CD19D : 0x7614EF15, 2000);
+      uintptr_t moveId = moveset.getMoveId(bossCode == BossCodes::MishimaJin ? 0xA33CD19D : 0x7614EF15, 2000);
       if (moveId != 0)
       {
         game.write<short>(movesetAddr + 0xAA, moveId);

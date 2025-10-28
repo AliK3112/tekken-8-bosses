@@ -480,6 +480,12 @@ public:
       return game.readInt32(addr);
     else if (column == "param")
       return game.readInt32(addr + 4);
+    else if (column == "param2")
+      return game.readInt32(addr + 8);
+    else if (column == "param3")
+      return game.readInt32(addr + 12);
+    else if (column == "param4")
+      return game.readInt32(addr + 16);
     return 0;
   }
 
