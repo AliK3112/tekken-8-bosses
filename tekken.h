@@ -20,6 +20,53 @@ struct TkRequirement
   TkParam param[4];
 };
 
+class TkCancel
+{
+public:
+  uint64_t command;
+  TkRequirement *requirements;
+  uint32_t *extradata;
+  int windowStart;
+  int windowEnd;
+  int transitionFrame;
+  int16_t moveId;
+  int16_t option;
+
+  // ---- Static constructor: read the raw TkCancel struct from remote process ----
+  static TkCancel readFrom(GameClass &game, uintptr_t remoteAddress)
+  {
+    // Read the POD struct (the 40 bytes) from the remote process.
+    // This returns a local copy of the struct fields (remote pointers remain as values).
+    return game.read<TkCancel>(remoteAddress);
+  }
+
+  // ---- Helpers to interpret the pointer fields by using the GameClass read ----
+
+  // Read the TkRequirement object pointed to by `requirements`.
+  // Throws if requirements == nullptr (remote null) or if read fails (depends on GameClass::read behavior).
+  TkRequirement readRequirements(GameClass &game) const
+  {
+    if (requirements == nullptr)
+    {
+      throw std::runtime_error("remote requirements pointer is null");
+    }
+    // reinterpret_cast pointer to an integer address in remote process
+    uintptr_t remotePtr = reinterpret_cast<uintptr_t>(requirements);
+    return game.read<TkRequirement>(remotePtr);
+  }
+
+  // Read a single extradata entry at index 'i' (safe, generic).
+  uint32_t readExtraEntry(GameClass &game, size_t i) const
+  {
+    if (extradata == nullptr)
+    {
+      throw std::runtime_error("remote extradata pointer is null");
+    }
+    uintptr_t remotePtr = reinterpret_cast<uintptr_t>(extradata) + i * sizeof(uint32_t);
+    return game.read<uint32_t>(remotePtr);
+  }
+};
+
 namespace Tekken
 {
   namespace Offsets
