@@ -71,6 +71,11 @@ private:
     // vprintf(format, args);
     va_end(args);
 
+    if (this->devMode)
+    {
+      printf("%s\n", buffer);
+    }
+
     AppendLog(std::string(buffer));
   }
 
