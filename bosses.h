@@ -459,11 +459,18 @@ private:
       {
         moveset.editExtraprop(addr, -1, -1, 0); // don't spend rage
       }
+      if (prop == ExtraMoveProperties::HEAT_RELATED)
+      {
+        moveset.editExtraprop(addr, -1, -1, 300);
+      }
+      if (prop == ExtraMoveProperties::SHORT_FLAG)
+      {
+        moveset.editExtraprop(addr, -1, -1, 0x220001);
+      }
       // Cancels & Props both have requirements at offset 0x8
       if (moveset.cancelHasCondition(addr, Requirements::DLC_STORY1_BATTLE_NUM))
       {
         moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
-        break;
       }
       addr += Sizes::Moveset::ExtraMoveProperty;
     }

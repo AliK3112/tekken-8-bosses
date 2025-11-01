@@ -223,7 +223,9 @@ namespace Tekken
   {
     CHARA_TRAIL_VFX = 0x8039,
     DEVIL_STATE = 0x80dc,
+    HEAT_RELATED = 0x814d,
     PERMA_DEVIL = 0x8151,
+    SHORT_FLAG = 0x8128,
     FORCE_MOVE = 0x8244,
     OPP_VISIBILTY = 0x82c2,
     SPEND_RAGE = 0x82e2,
