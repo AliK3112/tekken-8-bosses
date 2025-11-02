@@ -8,7 +8,7 @@ int takeInput();
 
 int main()
 {
-  int bossCode = _DEV_MODE ? BossCodes::AngelJin : -1;
+  int bossCode = _DEV_MODE ? BossCodes::NerfedJin : -1;
   TkBossLoader bossLoader;
 
   bossLoader.setDevModeFlag(_DEV_MODE);
@@ -37,8 +37,8 @@ int main()
     bossLoader.bossLoadMainLoop(selectedSide);
   }
 
-  printf("Press any key to close the script\n");
-  _getch();
+  // printf("Press any key to close the script\n");
+  // _getch();
   return 0;
 }
 
