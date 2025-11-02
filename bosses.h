@@ -495,8 +495,17 @@ private:
     // Disabling glowing eyes for new season 2 ZEN > CD cancels
     if (bossCode != BossCodes::RegularJin)
     {
+      // CD
+      uintptr_t addr = moveset.getMoveAddress(0x94D92799, 1750);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.iterateExtraprops(addr, 1);
+      // Disabling next 3 props
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
+      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
+
       // FC df4 ~ f ~ df
-      uintptr_t addr = moveset.getMoveAddress(0xDA8608B7, 1750);
+      addr = moveset.getMoveAddress(0xDA8608B7, 1750);
       addr = moveset.getMoveExtrapropAddr(addr);
       // Disabling first 3 props
       moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
