@@ -280,6 +280,7 @@ namespace Tekken
     Anna,
     Fahkumram,
     ArmorKing,
+    MiaryZo,
     Dummy = 116,
     AngelJin,
     TrueDevilKazuya,
@@ -374,6 +375,8 @@ namespace Tekken
       return "tgr";
     case FighterId::ArmorKing:
       return "knk";
+    case FighterId::MiaryZo:
+      return "wkz";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
@@ -475,6 +478,12 @@ namespace Tekken
       return "CLIVE";
     case FighterId::Anna:
       return "ANNA";
+    case FighterId::Fahkumram:
+      return "FAHKUMRAM";
+    case FighterId::ArmorKing:
+      return "ARMOR_KING";
+    case FighterId::MiaryZo:
+      return "MIARY_ZO";
     case FighterId::Dummy:
       return "DUMMY";
     case FighterId::AngelJin:
