@@ -235,6 +235,16 @@ public:
     return addr >= start && addr < end ? addr : 0; // Not letting overflow happen
   }
 
+  uintptr_t getMoveIdxByAddress(uintptr_t addr)
+  {
+    uintptr_t start = getMovesetHeader("moves");
+    uintptr_t end = getMovesetHeader("voiceclips");
+    if (addr >= start && addr < end) {
+      return (addr - start) / Sizes::Moveset::Move;
+    }
+    return 0;
+  }
+
   uintptr_t getMoveExtrapropAddr(uintptr_t move)
   {
     return move ? game.readUInt64(move + Offsets::Move::ExtraPropList) : 0;

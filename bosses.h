@@ -695,6 +695,43 @@ private:
         }
       }
 
+      // f, f+2
+      {
+        uintptr_t addr = moveset.getMoveAddress(0xC00BB85A, idleStanceIdx);
+        int idx = moveset.getMoveIdxByAddress(addr);
+        int moveId = moveset.getMoveId(0xbe4863c0, idx + 1); // Kz_66rp_DVL
+        addr = moveset.getMoveNthCancel(addr, 0);
+        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+        moveset.editMoveCancel(
+            addr,
+            0,
+            moveset.getMovesetHeader("requirements"),
+            moveset.findCancelExtradata(1025),
+            1,
+            1,
+            1,
+            (short)moveId,
+            65);
+      }
+
+      // Replacing Rage Art with Tekken-Ball counterpart
+      // {
+      //   // Kz_RageArts00
+      //   uintptr_t addr = moveset.getMoveAddress(0xfaf65ab0, defaultAliasIdx - 100);
+      //   int moveId = moveset.getMoveId(0xffd3c168, idleStanceIdx - 100); // Tekken Ball blast
+      //   addr = moveset.getMoveNthCancel(addr, 0);
+      //   moveset.editMoveCancel(
+      //       addr,
+      //       0,
+      //       moveset.getMovesetHeader("requirements"),
+      //       moveset.findCancelExtradata(1025),
+      //       1,
+      //       1,
+      //       1,
+      //       (short)moveId,
+      //       65);
+      // }
+
       // Single-spin uppercut
       uintptr_t addr = moveset.getMoveAddress(0xD172C176, idleStanceIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
