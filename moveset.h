@@ -595,15 +595,15 @@ public:
     else if (column == "extradata")
       return game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
     else if (column == "start")
-      return game.readInt32(addr + Offsets::Cancel::WindowStart);
+      return game.readUInt32(addr + Offsets::Cancel::WindowStart);
     else if (column == "end")
-      return game.readInt32(addr + Offsets::Cancel::WindowEnd);
+      return game.readUInt32(addr + Offsets::Cancel::WindowEnd);
     else if (column == "transition")
-      return game.readInt32(addr + Offsets::Cancel::TransitionFrame);
+      return game.readUInt32(addr + Offsets::Cancel::TransitionFrame);
     else if (column == "move")
-      return game.readInt16(addr + Offsets::Cancel::Move);
+      return game.readUInt16(addr + Offsets::Cancel::Move);
     else if (column == "option")
-      return game.readInt16(addr + Offsets::Cancel::Option);
+      return game.readUInt16(addr + Offsets::Cancel::Option);
 
     return 0;
   }
