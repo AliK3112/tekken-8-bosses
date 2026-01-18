@@ -215,6 +215,7 @@ private:
 
     // Setting the global flag
     handleIcons = hudIconAddr && hudNameAddr;
+    // handleIcons = false; // For Debugging
 
     addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, base + 0x1700000);
     if (addr != 0)
@@ -485,11 +486,31 @@ private:
     moveset.disableRequirements(Requirements::STORY_FLAGS, _777param);
 
     // Adjusting Rage Art
-    uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
+    // uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
+    // if (rageArt && bossCode != BossCodes::RegularJin)
+    // {
+    //   uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
+    //   moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
+    // }
+    auto fixRageArtCamera = [&](uintptr_t startAddr) {
+      for (uintptr_t addr = startAddr;;
+           addr = moveset.iterateExtraprops(addr, 1)) {
+        int prop = moveset.getExtrapropValue(addr, "prop");
+
+        if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
+          moveset.editExtrapropValue(addr, "value", 5);
+
+        if (!prop && !moveset.getExtrapropValue(addr, "frame"))
+          break;
+      }
+    };
+
+    uintptr_t rageArt = moveset.getMoveAddress(0x9bae061e, 2300);
     if (rageArt && bossCode != BossCodes::RegularJin)
     {
-      uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
-      moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
+      fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
+      rageArt = moveset.getMoveAddress(0x22e4beeb, 2100);
+      fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
     }
 
     // Disabling glowing eyes for new season 2 ZEN > CD cancels
