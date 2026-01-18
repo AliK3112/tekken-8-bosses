@@ -550,6 +550,60 @@ private:
             (short)moveId,
             65);
       }
+
+      // Adjusting FC df4 ~ ZEN cancels
+      addr = moveset.getMoveAddress(0x8c0f6a17, 1600); // Jz_zan_srk00EX_zan
+      if (addr) {
+        uintptr_t firstCancel = moveset.getMoveNthCancel(addr, 0);
+
+        // Since story Jin isn't supposed to do HB or HS outta ZEN, i'll simply replace one of
+        // those cancels with ZEN u+1+2, while disabling the others
+        uintptr_t cancel = moveset.iterateCancel(firstCancel, 1);
+        if (cancel) {
+          moveset.editMoveCancel(cancel,
+            0x4000000300000300,
+            moveset.getMovesetHeader("requirements"),
+            0,
+            -1,
+            -1,
+            -1,
+            (short)moveset.getMoveId(0x91130746, 2300),
+            -1);
+
+          // I'm adjusting 2+3 cancels while letting free cancels with Heat button
+          cancel = moveset.iterateCancel(cancel, 2);
+          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(16383));
+        }
+
+        // Adjusting ZEN 3+4
+        moveId = moveset.getMoveId(0x362078c4, 1820); // ZEN 3+4
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1a53432b, 2300));
+        }
+
+        // Adjusting ZEN 1
+        moveId = moveset.getMoveId(0xea6240d3, 1580); // ZEN 1
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x69655f3c, 2300));
+        }
+
+        // Adjusting ZEN 2
+        moveId = moveset.getMoveId(0xc48dd080, 1580); // ZEN 2
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(389));
+          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0xa34e66df, 2300));
+        }
+
+        // Adjusting ZEN 4
+        moveId = moveset.getMoveId(0xfd3fe1a6, 1800); // ZEN 2
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0xc2c9eadc, 2300));
+        }
+      }
     }
 
     switch (bossCode)
@@ -1241,6 +1295,8 @@ public:
           AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
         }
       }
+
+      if (devMode) break;
     }
   }
 

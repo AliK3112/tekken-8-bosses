@@ -525,7 +525,7 @@ public:
     if (targetCancelAddr == 0)
       return;
     if (command != 0)
-      game.write<int>(targetCancelAddr + Offsets::Cancel::Command, command);
+      game.write<uintptr_t>(targetCancelAddr + Offsets::Cancel::Command, command);
     if (requirements != 0)
       game.write<int>(targetCancelAddr + Offsets::Cancel::RequirementsList, requirements);
     if (extradata != 0)
@@ -544,17 +544,23 @@ public:
 
   void editCancelCommand(uintptr_t cancel, uintptr_t value)
   {
+    if (!cancel)
+      return;
     game.write<uintptr_t>(cancel + Offsets::Cancel::Command, value);
   }
 
   void editCancelCommand(uintptr_t cancel, int value)
   {
+    if (!cancel)
+      return;
     game.write<int>(cancel + Offsets::Cancel::Command, value);
   }
 
-  void editCancelExtradata(uintptr_t cancel, uintptr_t value)
+  void editCancelExtradata(uintptr_t cancel, uintptr_t extradataAddr)
   {
-    game.write<int>(cancel + Offsets::Cancel::CancelExtradata, value);
+    if (!cancel || !extradataAddr)
+      return;
+    game.write<int>(cancel + Offsets::Cancel::CancelExtradata, extradataAddr);
   }
 
   void editCancelFrames(uintptr_t cancel, int windowStart, int windowEnd, int startingFrame)
