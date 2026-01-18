@@ -11,6 +11,7 @@ std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
+bool isCorrectCharacter(int bossCode, int charId);
 bool isValidJinBoss(int bossCode);
 bool isValidKazuyaBoss(int bossCode);
 bool isValidHeihachiBoss(int bossCode);
@@ -385,6 +386,8 @@ private:
   void costumeHandler(uintptr_t matchStructAddr, int side, int bossCode)
   {
     if (!matchStructAddr)
+      return;
+    if (!isCorrectCharacter(bossCode, getCharId(matchStructAddr, side)))
       return;
     std::string costumePath;
     switch (bossCode)
@@ -1375,6 +1378,29 @@ public:
     }
   }
 };
+
+bool isCorrectCharacter(int bossCode, int charId)
+{
+  switch (bossCode)
+  {
+  case BossCodes::RegularJin:
+  case BossCodes::NerfedJin:
+  case BossCodes::MishimaJin:
+  case BossCodes::KazamaJin:
+  case BossCodes::FinalJin:
+  case BossCodes::ChainedJin:
+    return charId == FighterId::Jin;
+  case BossCodes::DevilKazuya:
+  case BossCodes::FinalKazuya:
+    return charId == FighterId::Kazuya;
+  case BossCodes::FinalHeihachi:
+  case BossCodes::ShadowHeihachi:
+  case BossCodes::AmnesiaHeihachi:
+    return charId == FighterId::Heihachi;
+  default:
+    return true;
+  }
+}
 
 bool isValidJinBoss(int bossCode)
 {
