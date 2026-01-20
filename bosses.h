@@ -606,6 +606,13 @@ private:
           moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1a53432b, 2300));
         }
 
+        // Disabling ZEN u+1
+        moveId = moveset.getMoveId(0xc69959b0, 1580); // ZEN u+1
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(16383));
+        }
+
         // Adjusting ZEN 1
         moveId = moveset.getMoveId(0xea6240d3, 1580); // ZEN 1
         cancel = moveset.findCancel(firstCancel, "move", moveId);
