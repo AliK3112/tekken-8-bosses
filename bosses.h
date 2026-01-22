@@ -98,7 +98,7 @@ private:
   bool isEligible(uintptr_t matchStructAddr)
   {
     int value = game.readInt32(matchStructAddr);
-    return value == 1 || value == 2 || value == 5 || value == 6 || value == 12;
+    return value == 1 || value == 2 || value == 4 || value == 5 || value == 6 || value == 12;
   }
 
   // Side: 0 = P1, 1 = P2
