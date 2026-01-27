@@ -227,6 +227,7 @@ public:
     if (idx < 0)
       return 0;
     uintptr_t start = getMovesetHeader("moves");
+    idx = idx >= 0x8000 ? getAliasMoveId(idx) : idx;
     if (!start)
       return 0;
     size_t count = getMovesetCount("moves");

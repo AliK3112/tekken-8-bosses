@@ -665,6 +665,21 @@ private:
     break;
     case BossCodes::NerfedJin:
     case BossCodes::FinalJin:
+    {
+      // Disabling auto-parries
+      if (BossCodes::FinalJin == bossCode && shouldDisableAutoParries()) {
+        uintptr_t addr = moveset.getMoveAddrByIdx(0x8001);
+        int targetMoveId = moveset.getMoveId(0xc2da6f70, 2500);
+        uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
+        if (cancel) {
+          for (int i = 0; i < 4; i++) {
+            uintptr_t reqAddr = moveset.getCancelReqAddr(cancel);
+            moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
+            cancel = moveset.iterateCancel(cancel, 1);
+          }
+        }
+      }
+    }
       break;
     case BossCodes::MishimaJin:
     case BossCodes::KazamaJin:
@@ -933,9 +948,8 @@ private:
     if (bossCode != BossCodes::Azazel)
       return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
-    int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
 
-    uintptr_t addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
+    uintptr_t addr = moveset.getMoveAddrByIdx(0x8000);
     addr = moveset.getMoveNthCancel1stReqAddr(addr, 0); // 1st req
     moveset.editRequirement(addr, -1, 8);
     addr = moveset.iterateRequirements(addr, 1); // 2nd req
