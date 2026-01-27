@@ -17,6 +17,12 @@ bool isValidKazuyaBoss(int bossCode);
 bool isValidHeihachiBoss(int bossCode);
 bool isCorrectHeihachiFlag(int storyFlag, int param);
 
+struct ConfigFlags {
+  bool disableAutoParries = false;
+  bool handleHudAndCostumes = true;
+  bool toneDownDamage = false;
+};
+
 class TkBossLoader
 {
 private:
@@ -37,8 +43,20 @@ private:
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
-  bool handleHudAndCostumes = true;
   HWND hwndLogBox;
+  ConfigFlags* config = nullptr;
+
+  bool shouldHandleHudAndCostumes() {
+    return config ? config->handleHudAndCostumes : true;
+  }
+
+  bool shouldDisableAutoParries() {
+      return config ? config->disableAutoParries : false;
+  }
+
+  bool shouldToneDownDamage() {
+      return config ? config->toneDownDamage : false;
+  }
 
   // METHODS
   // Append message to log box
@@ -328,9 +346,9 @@ private:
       icon = buildString(c, HudIcon::HeiShadow);
       name = getNamePath(HudName::HeiShadow);
     }
-    if (!icon.empty() && (this->handleHudAndCostumes || isStoryDvj || isDevilKazuya))
+    if (!icon.empty() && (shouldHandleHudAndCostumes() || isStoryDvj || isDevilKazuya))
       game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
-    if (!name.empty() && (this->handleHudAndCostumes || isStoryDvj || isDevilKazuya))
+    if (!name.empty() && (shouldHandleHudAndCostumes() || isStoryDvj || isDevilKazuya))
       game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
   }
 
@@ -424,7 +442,7 @@ private:
       return;
     }
 
-    if (!this->handleHudAndCostumes && bossCode != BossCodes::DevilJin)
+    if (!shouldHandleHudAndCostumes() && bossCode != BossCodes::DevilJin)
       return;
 
     loadCostume(matchStructAddr, side, 51, costumePath);
@@ -1057,9 +1075,12 @@ private:
       addr = moveset.getMoveAddrByIdx(idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 3);
       // 4-cancels for parries
-      for (int i = 0; i < 4; i++)
+      if (!shouldDisableAutoParries())
       {
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(moveset.iterateCancel(addr, i)));
+        for (int i = 0; i < 4; i++)
+        {
+          moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(moveset.iterateCancel(addr, i)));
+        }
       }
 
       int preRound1 = defaultAliasIdx - 3;
@@ -1148,6 +1169,7 @@ public:
     this->bossCode_L = bossCode_L;
     this->bossCode_R = bossCode_R;
     this->attached = false;
+    this->config = nullptr;
   }
 
   TkBossLoader(GameClass &game)
@@ -1156,6 +1178,7 @@ public:
     this->bossCode_L = BossCodes::None;
     this->bossCode_R = BossCodes::None;
     this->attached = false;
+    this->config = nullptr;
   }
 
   ~TkBossLoader()
@@ -1168,9 +1191,15 @@ public:
     this->devMode = flag;
   }
 
+  void setConfig(ConfigFlags *config)
+  {
+    this->config = config;
+  }
+
   void setHudAndCostumesFlag(bool flag)
   {
-    this->handleHudAndCostumes = flag;
+    if (this->config)
+      this->config->handleHudAndCostumes = flag;
   }
 
   void attachToLogBox(HWND hwndLogBox)

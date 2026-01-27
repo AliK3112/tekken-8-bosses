@@ -8,8 +8,9 @@
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox, hwndCheckbox;
+HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox, hwndCheckbox, hwndCheckParry, hwndCheckDamage;
 TkBossLoader boss;
+ConfigFlags config;
 char buffer[255];
 
 // Boss mapping
@@ -58,6 +59,20 @@ void HandleBossSelection()
   }
 }
 
+void SaveConfig()
+{
+  WritePrivateProfileStringA("Settings", "LoadHudAndCostumes", config.handleHudAndCostumes ? "1" : "0", ".\\boss_config.ini");
+  WritePrivateProfileStringA("Settings", "DisableAutoParries", config.disableAutoParries ? "1" : "0", ".\\boss_config.ini");
+  WritePrivateProfileStringA("Settings", "ToneDownDamage", config.toneDownDamage ? "1" : "0", ".\\boss_config.ini");
+}
+
+void LoadConfig()
+{
+  config.handleHudAndCostumes = GetPrivateProfileIntA("Settings", "LoadHudAndCostumes", 1, ".\\boss_config.ini");
+  config.disableAutoParries = GetPrivateProfileIntA("Settings", "DisableAutoParries", 0, ".\\boss_config.ini");
+  config.toneDownDamage = GetPrivateProfileIntA("Settings", "ToneDownDamage", 0, ".\\boss_config.ini");
+}
+
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 {
   WNDCLASSA wc = {};
@@ -69,7 +84,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 360,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 420,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -128,8 +143,16 @@ void InitializeUI(HWND hwnd)
                                WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                padding, checkboxY, 440, 20, hwnd, (HMENU)3, NULL, NULL);
 
+  hwndCheckParry = CreateWindowA("BUTTON", "Disable Auto-Parries",
+                                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                 padding, checkboxY + 25, 440, 20, hwnd, (HMENU)4, NULL, NULL);
+
+  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Damage (WIP)",
+                                  WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+                                  padding, checkboxY + 50, 440, 20, hwnd, (HMENU)5, NULL, NULL);
+
   // Instruction Group Box below the checkbox
-  int groupBoxY = checkboxY + 30;
+  int groupBoxY = checkboxY + 80;
   int groupBoxHeight = 70;
   HWND hwndGroupBox = CreateWindowA("BUTTON", "Instructions",
                                     WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
@@ -154,8 +177,12 @@ void InitializeUI(HWND hwnd)
   SendMessageA(hwndCombo1, CB_SETCURSEL, 0, 0);
   SendMessageA(hwndCombo2, CB_SETCURSEL, 0, 0);
 
-  SendMessageA(hwndCheckbox, BM_SETCHECK, BST_CHECKED, 0);
-  boss.setHudAndCostumesFlag(true);
+  LoadConfig();
+  boss.setConfig(&config);
+
+  SendMessageA(hwndCheckbox, BM_SETCHECK, config.handleHudAndCostumes ? BST_CHECKED : BST_UNCHECKED, 0);
+  SendMessageA(hwndCheckParry, BM_SETCHECK, config.disableAutoParries ? BST_CHECKED : BST_UNCHECKED, 0);
+  SendMessageA(hwndCheckDamage, BM_SETCHECK, config.toneDownDamage ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void PopulateComboBox(HWND comboBox)
@@ -233,10 +260,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       HandleBossSelection();
     }
     // Handle checkbox toggle
-    if (controlId == 3 && notificationCode == BN_CLICKED)
+    if (notificationCode == BN_CLICKED)
     {
-      BOOL checked = (SendMessageA(hwndCheckbox, BM_GETCHECK, 0, 0) == BST_CHECKED);
-      boss.setHudAndCostumesFlag(checked);
+      if (controlId == 3)
+      {
+        config.handleHudAndCostumes = (SendMessageA(hwndCheckbox, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        SaveConfig();
+      }
+      else if (controlId == 4)
+      {
+        config.disableAutoParries = (SendMessageA(hwndCheckParry, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        SaveConfig();
+      }
+      else if (controlId == 5)
+      {
+        config.toneDownDamage = (SendMessageA(hwndCheckDamage, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        SaveConfig();
+      }
     }
   }
   break;
