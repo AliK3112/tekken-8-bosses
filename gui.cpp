@@ -84,7 +84,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 420,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 450,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -109,68 +109,111 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
 void InitializeUI(HWND hwnd)
 {
-  const int padding = 20;
-  const int spacing = 10;
-  const int comboWidth = 180;
-  const int comboHeight = 200;
-  const int logWidth = 440;
-  const int logHeight = 100;
-  const int windowWidth = 500;
+  // Layout Constants
+  const int MARGIN_X = 20;
+  const int MARGIN_Y = 20;
+  const int SPACING_Y = 10;       // Vertical spacing between related controls
+  const int GROUP_SPACING = 25;   // Spacing between major sections
+  const int LABEL_HEIGHT = 18;
+  const int COMBO_HEIGHT = 300;   // Includes dropdown list height
+  const int CHECKBOX_HEIGHT = 20;
+  const int SUBTEXT_HEIGHT = 16;
+  
+  // Get Client Area Dimensions
+  RECT clientRect;
+  GetClientRect(hwnd, &clientRect);
+  int clientWidth = clientRect.right - clientRect.left;
+  int clientHeight = clientRect.bottom - clientRect.top;
 
-  int combo1X = (windowWidth / 2) - comboWidth - spacing;
-  int combo2X = (windowWidth / 2) + spacing;
+  // If client rect is not yet initialized (edge case), fallback to expected size
+  if (clientWidth == 0) clientWidth = 484; // Approx client width for 500px window
+  
+  int contentWidth = clientWidth - (2 * MARGIN_X);
+  int halfWidth = (contentWidth - SPACING_Y) / 2;
+  int currentY = MARGIN_Y;
 
-  hwndLabel1 = CreateWindowA("STATIC", "Player 1 Boss Character",
-                             WS_CHILD | WS_VISIBLE | SS_CENTER,
-                             combo1X, padding, comboWidth, 20, hwnd, NULL, NULL, NULL);
+  // --- 1. Boss Selection Section ---
+  
+  // Player 1 Header
+  hwndLabel1 = CreateWindowA("STATIC", "Player 1 Character", WS_CHILD | WS_VISIBLE | SS_LEFT, 
+      MARGIN_X, currentY, halfWidth, LABEL_HEIGHT, hwnd, NULL, NULL, NULL);
+      
+  // Player 2 Header
+  hwndLabel2 = CreateWindowA("STATIC", "Player 2 Character", WS_CHILD | WS_VISIBLE | SS_LEFT, 
+      MARGIN_X + halfWidth + SPACING_Y, currentY, halfWidth, LABEL_HEIGHT, hwnd, NULL, NULL, NULL);
+      
+  currentY += LABEL_HEIGHT + 5; // Gap between label and combo
 
-  hwndLabel2 = CreateWindowA("STATIC", "Player 2 Boss Character",
-                             WS_CHILD | WS_VISIBLE | SS_CENTER,
-                             combo2X, padding, comboWidth, 20, hwnd, NULL, NULL, NULL);
+  // Player 1 Combo
+  hwndCombo1 = CreateWindowA("COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+      MARGIN_X, currentY, halfWidth, COMBO_HEIGHT, hwnd, (HMENU)1, NULL, NULL);
 
-  hwndCombo1 = CreateWindowA("COMBOBOX", NULL,
-                             WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             combo1X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)1, NULL, NULL);
+  // Player 2 Combo
+  hwndCombo2 = CreateWindowA("COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
+      MARGIN_X + halfWidth + SPACING_Y, currentY, halfWidth, COMBO_HEIGHT, hwnd, (HMENU)2, NULL, NULL);
 
-  hwndCombo2 = CreateWindowA("COMBOBOX", NULL,
-                             WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL,
-                             combo2X, padding + 25, comboWidth, comboHeight, hwnd, (HMENU)2, NULL, NULL);
+  currentY += 25 + GROUP_SPACING; // Height of closed combo (approx 25) + spacing
 
-  // Instruction Group Box with extra padding
-  // Checkbox below combo boxes
-  int checkboxY = padding + 60;
-  hwndCheckbox = CreateWindowA("BUTTON", "Load HUD and Costume for certain bosses",
-                               WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                               padding, checkboxY, 440, 20, hwnd, (HMENU)3, NULL, NULL);
+  // --- 2. Configuration Section (Group Box) ---
 
-  hwndCheckParry = CreateWindowA("BUTTON", "Disable Auto-Parries",
-                                 WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                                 padding, checkboxY + 25, 440, 20, hwnd, (HMENU)4, NULL, NULL);
+  // Calculate Group Box Height based on contents
+  // 3 checkboxes (20px) + 3 subtexts (16px) + spacings
+  int groupContentHeight = (3 * (CHECKBOX_HEIGHT + SUBTEXT_HEIGHT + 2)) + 20; 
+  int groupTotalHeight = groupContentHeight + 20; 
 
-  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Damage",
-                                  WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-                                  padding, checkboxY + 50, 440, 20, hwnd, (HMENU)5, NULL, NULL);
+  HWND hwndGroupObj = CreateWindowA("BUTTON", "Configuration", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+      MARGIN_X, currentY, contentWidth, groupTotalHeight, hwnd, NULL, NULL, NULL);
 
-  // Instruction Group Box below the checkbox
-  int groupBoxY = checkboxY + 80;
-  int groupBoxHeight = 70;
-  HWND hwndGroupBox = CreateWindowA("BUTTON", "Instructions",
-                                    WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-                                    padding - 5, groupBoxY, logWidth + 10, groupBoxHeight, hwnd, NULL, NULL, NULL);
+  // Group Content Coordinates
+  int groupInnerX = MARGIN_X + 15;
+  int groupInnerW = contentWidth - 30;
+  int groupCursorY = currentY + 20; // Start below group title
 
-  // Instruction Label inside Group Box (More padding from edges)
-  HWND hwndInstruction = CreateWindowA("STATIC",
-                                       " 1. If the boss or costume doesn't load on first try, reload.\r\n"
-                                       " 2. You need to reload after changing a dropdown value.",
-                                       WS_CHILD | WS_VISIBLE | SS_LEFT,
-                                       padding + 5, groupBoxY + 20, logWidth - 10, 40, hwnd, NULL, NULL, NULL);
+  // Item 1
+  hwndCheckbox = CreateWindowA("BUTTON", "Load HUD and Costume for unique bosses", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)3, NULL, NULL);
+  groupCursorY += CHECKBOX_HEIGHT;
+  
+  CreateWindowA("STATIC", "  (Excludes: Angel Jin, True Devil Kazuya, Story Devil Jin)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
+  groupCursorY += SUBTEXT_HEIGHT + 5;
 
-  // Log Box with extra spacing
-  int logBoxY = groupBoxY + groupBoxHeight + spacing;
-  hwndLogBox = CreateWindowA("EDIT", "",
-                             WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-                             padding, logBoxY, logWidth, logHeight, hwnd, NULL, NULL, NULL);
+  // Item 2
+  hwndCheckParry = CreateWindowA("BUTTON", "Disable Auto-Parries", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)4, NULL, NULL);
+  groupCursorY += CHECKBOX_HEIGHT;
 
+  CreateWindowA("STATIC", "  (Applies to: Jin and Heihachi Final variants)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
+  groupCursorY += SUBTEXT_HEIGHT + 5;
+
+  // Item 3
+  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down One-Shot Damage", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)5, NULL, NULL);
+  groupCursorY += CHECKBOX_HEIGHT;
+
+  CreateWindowA("STATIC", "  (Applies to: Final Kazuya ws+2, Angel Jin CD+1)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
+
+  currentY += groupTotalHeight + GROUP_SPACING;
+
+  // --- 3. Log Section ---
+
+  // Instructions Label
+  CreateWindowA("STATIC", "Note: Reload match after changing settings to apply.", WS_CHILD | WS_VISIBLE | SS_LEFT, 
+      MARGIN_X, currentY, contentWidth, LABEL_HEIGHT, hwnd, NULL, NULL, NULL);
+  
+  currentY += LABEL_HEIGHT + 5;
+
+  // Log Box fills remaining space (with margin at bottom)
+  // Check if we have vertical space left, otherwise give it a fixed minimum
+  int remainingHeight = clientHeight - currentY - MARGIN_Y;
+  if (remainingHeight < 60) remainingHeight = 80; // Minimum usable height
+
+  hwndLogBox = CreateWindowA("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+      MARGIN_X, currentY, contentWidth, remainingHeight, hwnd, NULL, NULL, NULL);
+
+  // --- Initialization ---
   PopulateComboBox(hwndCombo1);
   PopulateComboBox(hwndCombo2);
 
