@@ -147,7 +147,7 @@ void InitializeUI(HWND hwnd)
                                  WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                  padding, checkboxY + 25, 440, 20, hwnd, (HMENU)4, NULL, NULL);
 
-  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Damage (WIP)",
+  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Damage",
                                   WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
                                   padding, checkboxY + 50, 440, 20, hwnd, (HMENU)5, NULL, NULL);
 

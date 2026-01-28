@@ -315,7 +315,6 @@ private:
     std::string name;
     const char c = side == 0 ? 'L' : 'R';
     bool isStoryDvj = bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2;
-    bool isDevilKazuya = bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya;
     if (isStoryDvj)
     {
       icon = buildString(c, getCharCode(FighterId::Jin));
@@ -331,7 +330,7 @@ private:
       icon = buildString(c, HudIcon::KazFinal);
       name = getNamePath(FighterId::Kazuya);
     }
-    else if (isDevilKazuya)
+    else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
     {
       icon = buildString(c, HudIcon::KazDevil);
       name = getNamePath(HudName::KazDevil);
@@ -346,9 +345,9 @@ private:
       icon = buildString(c, HudIcon::HeiShadow);
       name = getNamePath(HudName::HeiShadow);
     }
-    if (!icon.empty() && (shouldHandleHudAndCostumes() || isStoryDvj || isDevilKazuya))
+    if (!icon.empty() && (shouldHandleHudAndCostumes() || isStoryDvj))
       game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
-    if (!name.empty() && (shouldHandleHudAndCostumes() || isStoryDvj || isDevilKazuya))
+    if (!name.empty() && (shouldHandleHudAndCostumes() || isStoryDvj))
       game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
   }
 
@@ -937,6 +936,18 @@ private:
           moveset.getMoveId(0x0AB42E52, defaultAliasIdx),
           65);
 
+      // Tone down ws+2 damage
+      if (config->toneDownDamage) {
+        addr = moveset.getMoveAddress(0xe9f45330, defaultAliasIdx);
+        addr = moveset.getMoveHitCondition(addr);
+        while (true) {
+          moveset.editHitConditionValue(addr, "damage", 23);
+          if (moveset.isLastHitCondition(addr))
+            break;
+          addr = moveset.iterateHitConditions(addr, 1);
+        }
+      }
+
       return markMovesetEdited(movesetAddr);
     }
 
@@ -977,6 +988,13 @@ private:
     cancelAddr = moveset.iterateCancel(cancelAddr, 1);
     addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
     moveset.editRequirement(addr, 0);
+
+    // Adjust damage for the new CD+1
+    if (config->toneDownDamage) {
+      addr = moveset.getMoveAddress(0x3cbbe67a, moveset.getAliasMoveId(0x8001));
+      addr = moveset.getMoveExtrapropAddr(addr);
+      moveset.editExtrapropValue(addr, "value", 0);
+    }
 
     return markMovesetEdited(movesetAddr);
   }

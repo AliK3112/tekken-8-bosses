@@ -627,6 +627,43 @@ public:
     return requirement ? (requirement + (n * Sizes::Moveset::Requirement)) : 0;
   }
 
+  // Hit Conditions
+  uintptr_t getMoveHitCondition(uintptr_t move)
+  {
+    return move ? game.readUInt64(move + Offsets::Move::HitConditionList) : 0;
+  }
+
+  uintptr_t getMoveNthHitCondition(uintptr_t move, int n = 0)
+  {
+    return move ? getMoveHitCondition(move) + Sizes::Moveset::HitCondition * n : 0;
+  }
+
+  bool isLastHitCondition(uintptr_t addr)
+  {
+    if (!addr) return true;
+    return getRequirementValue(game.readUInt64(addr), "req") == Requirements::EOL;
+  }
+
+  // Moves `n` hit-conditions forward given a hit-conditions's address
+  uintptr_t iterateHitConditions(uintptr_t hitCondition, int n)
+  {
+    return hitCondition ? (hitCondition + (n * Sizes::Moveset::HitCondition)) : 0;
+  }
+
+  void editHitConditionValue(uintptr_t addr, std::string column, uintptr_t value)
+  {
+    if (!addr)
+      return;
+    if (column == "requirement")
+      game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC,
+                            value);
+    else if (column == "damage")
+      game.write<int>(addr + Offsets::HitCondition::Damage, value);
+    else if (column == "reaction")
+      game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr,
+                            value);
+  }
+
   uintptr_t getMovesetHeader(std::string column)
   {
     if (column == "reactions")

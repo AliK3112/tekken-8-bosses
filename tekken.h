@@ -78,6 +78,7 @@ namespace Tekken
       AnimAddr1 = 0x50,
       AnimAddr2 = 0x54,
       CancelList = 0x98,
+      HitConditionList = 0x110,
       ExtraPropList = 0x138,
       StartPropList = 0x140,
       EndPropList = 0x148
@@ -150,6 +151,13 @@ namespace Tekken
       Value3 = 0x1C,
       Value4 = 0x20,
       Value5 = 0x24
+    };
+
+    enum HitCondition
+    {
+      RequirementAddrHC = 0x0,
+      Damage = 0x8,
+      ReactionListAddr = 0x10,      
     };
   };
 
