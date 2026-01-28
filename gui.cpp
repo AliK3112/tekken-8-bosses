@@ -80,6 +80,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
   wc.lpfnWndProc = WindowProc;
   wc.hInstance = hInst;
   wc.lpszClassName = CLASS_NAME;
+  wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
   RegisterClassA(&wc);
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
@@ -174,7 +175,7 @@ void InitializeUI(HWND hwnd)
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)3, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
   
-  CreateWindowA("STATIC", "  (Excludes: Angel Jin, True Devil Kazuya, Story Devil Jin)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+  CreateWindowA("STATIC", "  (Excludes: Angel Jin, True Devil Kazuya and Story Devil Jin)", WS_CHILD | WS_VISIBLE | SS_LEFT,
       groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
   groupCursorY += SUBTEXT_HEIGHT + 5;
 
@@ -302,7 +303,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     {
       HandleBossSelection();
     }
-    // Handle checkbox toggle
     if (notificationCode == BN_CLICKED)
     {
       if (controlId == 3)
@@ -320,6 +320,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         config.toneDownDamage = (SendMessageA(hwndCheckDamage, BM_GETCHECK, 0, 0) == BST_CHECKED);
         SaveConfig();
       }
+    }
+  }
+  break;
+  case WM_CTLCOLORSTATIC:
+  {
+    if ((HWND)lp == hwndLogBox)
+    {
+      HDC hdc = (HDC)wp;
+      SetBkColor(hdc, RGB(255, 255, 255));
+      SetTextColor(hdc, RGB(0, 0, 0));
+      return (LRESULT)GetStockObject(WHITE_BRUSH);
     }
   }
   break;
