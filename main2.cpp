@@ -8,8 +8,10 @@ int takeInput();
 
 int main()
 {
-  int bossCode = _DEV_MODE ? BossCodes::NerfedJin : -1;
+  int bossCode = _DEV_MODE ? BossCodes::FinalHeihachi : -1;
+  ConfigFlags config = {.disableAutoParries = true, .handleHudAndCostumes = false, .toneDownDamage = true};
   TkBossLoader bossLoader;
+  bossLoader.setConfig(&config);
 
   bossLoader.setDevModeFlag(_DEV_MODE);
 

@@ -210,6 +210,7 @@ namespace Tekken
     CHARA_CONTROLLER = 228,
     HEAT_AVAILABLE = 442,
     HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
+    HEAT_ACTIVE_RELATED2 = 466, // Used in Heat Activatation
     IS_PERMA_DEVIL = 473,
     HEI_WARRIOR_ACTIVE = 498,
     ARCADE_BATTLE = 664,
@@ -224,6 +225,7 @@ namespace Tekken
     INTROS_RELATED = 697, // Intros related
     OUTRO1 = 675,         // Outro related 1
     OUTRO2 = 679,         // Outro related 2
+    PLAYER_IN_HEAT = 1028,
     EOL = 1100,           // End of the list
   };
 
@@ -237,7 +239,10 @@ namespace Tekken
     FORCE_MOVE = 0x8244,
     OPP_VISIBILTY = 0x82c2,
     SPEND_RAGE = 0x82e2,
+    ADD_HEAT_VALUE = 0x8383,
     RAGE_ART_CAMERA = 0x838e,
+    HEAT_AURA_VFX = 0x8394,
+    MULTILEVEL_INSTALLS = 0x83ee,
     HEI_WARRIOR = 0x83f9,
     BLACK_SCREEN_VFX = 0x83C0,
     _0x8555 = 0x8555,
