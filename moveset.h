@@ -441,7 +441,7 @@ public:
     return 0;
   }
 
-  void editRequirement(uintptr_t addr, int req, int param = -1)
+  void editRequirement(uintptr_t addr, int req, int param = -1, int param2 = -1, int param3 = -1, int param4 = -1)
   {
     if (addr == 0)
       return;
@@ -449,6 +449,12 @@ public:
       game.write<int>(addr, req);
     if (param != -1)
       game.write<int>(addr + 4, param);
+    if (param2 != -1)
+      game.write<int>(addr + 8, param2);
+    if (param3 != -1)
+      game.write<int>(addr + 12, param3);
+    if (param4 != -1)
+      game.write<int>(addr + 16, param4);
   }
 
   void editRequirement(uintptr_t addr, const TkRequirement &req)
