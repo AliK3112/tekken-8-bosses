@@ -1075,23 +1075,23 @@ private:
         };
         // He_sKAM00_shadow
         uintptr_t addr = moveset.getMoveAddress(0xb36a0b80, moveset.getAliasMoveId(0x8000));
-        addr = moveset.getMoveNthCancel1stReqAddr(addr);
+        uintptr_t reqList = moveset.getMoveNthCancel1stReqAddr(addr);
         // Preparing req-list
-        moveset.editRequirement(addr, Requirements::HEAT_AVAILABLE, 1, 0);
-        moveset.editRequirement(iterReq(addr, 1), Requirements::PLAYER_IN_HEAT, 0, 0);
-        moveset.editRequirement(iterReq(addr, 2), Requirements::HEAT_ACTIVE_RELATED2, 0, 0);
-        moveset.editRequirement(iterReq(addr, 3), 0x8382, 1, 0);
-        moveset.editRequirement(iterReq(addr, 4), ExtraMoveProperties::HEI_WARRIOR, 1, 0);
-        moveset.editRequirement(iterReq(addr, 5), 0x83f4, 1, 0);
-        moveset.editRequirement(iterReq(addr, 6), ExtraMoveProperties::MULTILEVEL_INSTALLS, 3, 0);
-        moveset.editRequirement(iterReq(addr, 7), 0x8139, 1, 1);
-        moveset.editRequirement(iterReq(addr, 8), ExtraMoveProperties::ADD_HEAT_VALUE, 900, 0);
-        moveset.editRequirement(iterReq(addr, 9), ExtraMoveProperties::HEAT_RELATED, 300, 0);
-        moveset.editRequirement(iterReq(addr, 10), ExtraMoveProperties::HEAT_AURA_VFX, 0, 0);
-        moveset.editRequirement(iterReq(addr, 11), Requirements::EOL, 0, 0);
+        addr = moveset.editRequirement(reqList, Requirements::HEAT_AVAILABLE, 1, 0);
+        addr = moveset.editRequirement(addr, Requirements::PLAYER_IN_HEAT, 0, 0);
+        addr = moveset.editRequirement(addr, Requirements::HEAT_ACTIVE_RELATED2, 0, 0);
+        addr = moveset.editRequirement(addr, 0x8382, 1, 0);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::HEI_WARRIOR, 1, 0);
+        addr = moveset.editRequirement(addr, 0x83f4, 1, 0);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::MULTILEVEL_INSTALLS, 3, 0);
+        addr = moveset.editRequirement(addr, 0x8139, 1, 1);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::ADD_HEAT_VALUE, 900, 0);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_RELATED, 300, 0);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_AURA_VFX, 0, 0);
+        addr = moveset.editRequirement(addr, Requirements::EOL, 0, 0);
         // Assigning this reqList to idle stance
         uintptr_t cancel = moveset.getMoveNthCancel(moveset.getMoveAddrByIdx(0x8001));
-        moveset.editMoveCancel(cancel, 0, addr, moveset.findCancelExtradata(10240), 1, 32767, 1, 0x8001, 257);
+        moveset.editMoveCancel(cancel, 0, reqList, moveset.findCancelExtradata(10240), 1, 32767, 1, 0x8001, 257);
       }
 
       // Activating WI in intro against Lidia

@@ -441,10 +441,11 @@ public:
     return 0;
   }
 
-  void editRequirement(uintptr_t addr, int req, int param = -1, int param2 = -1, int param3 = -1, int param4 = -1)
+  // Returns address of the next requirement
+  uintptr_t editRequirement(uintptr_t addr, int req, int param = -1, int param2 = -1, int param3 = -1, int param4 = -1)
   {
     if (addr == 0)
-      return;
+      return 0;
     if (req != -1)
       game.write<int>(addr, req);
     if (param != -1)
@@ -455,12 +456,13 @@ public:
       game.write<int>(addr + 12, param3);
     if (param4 != -1)
       game.write<int>(addr + 16, param4);
+    return iterateRequirements(addr, 1);
   }
 
-  void editRequirement(uintptr_t addr, const TkRequirement &req)
+  uintptr_t editRequirement(uintptr_t addr, const TkRequirement &req)
   {
     if (addr == 0)
-      return;
+      return 0;
     if (req.req != -1)
       game.write<int>(addr, req.req);
     for (int i = 0; i < 4; i++)
@@ -469,6 +471,7 @@ public:
       if (value != -1)
         game.write<int>(addr + 4 + i * 4, value);
     }
+    return iterateRequirements(addr, 1);
   }
 
   bool reqListHas(uintptr_t addr, int tReq, int tParam = -1)
