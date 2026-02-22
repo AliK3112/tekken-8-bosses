@@ -8,11 +8,14 @@ std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked_belt
 std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
 std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
 std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+std::string DEVIL_JIN_COSTUME_PATH_2 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn.CS_swl_ant_1p_horn";
+std::string DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn_bw.CS_swl_ant_1p_horn_bw";
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 
 bool isCorrectCharacter(int bossCode, int charId);
 bool isValidJinBoss(int bossCode);
+bool isValidDevilJinBoss(int bossCode);
 bool isValidKazuyaBoss(int bossCode);
 bool isValidHeihachiBoss(int bossCode);
 bool isCorrectHeihachiFlag(int storyFlag, int param);
@@ -314,11 +317,21 @@ private:
     std::string icon;
     std::string name;
     const char c = side == 0 ? 'L' : 'R';
-    bool isStoryDvj = bossCode == BossCodes::DevilJin && charId == FighterId::DevilJin2;
+    bool isStoryDvj = isValidDevilJinBoss(bossCode) && charId == FighterId::DevilJin2;
     if (isStoryDvj)
     {
-      icon = buildString(c, getCharCode(FighterId::Jin));
-      name = getNamePath(FighterId::Jin);
+      if (bossCode == BossCodes::DevilJin || bossCode == BossCodes::DevilJin_1) {
+        icon = buildString(c, getCharCode(FighterId::Jin));
+        name = getNamePath(FighterId::Jin);
+      }
+      else if (bossCode == BossCodes::DevilJin_2) {
+        icon = buildString(c, HudIcon::DvjCh12);
+        name = getNamePath(FighterId::DevilJin);
+      }
+      else if (bossCode == BossCodes::DevilJin_3) {
+        icon = buildString(c, HudIcon::DvjCh13);
+        name = getNamePath(FighterId::DevilJin);
+      }
     } 
     else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
     {
@@ -381,16 +394,21 @@ private:
     case BossCodes::DevilJin:
       charId = bossCode;
       break;
+    case BossCodes::DevilJin_1:
+    case BossCodes::DevilJin_2:
+    case BossCodes::DevilJin_3:
+      charId = FighterId::DevilJin2;
+      break;
     default:
       return;
     }
     if (charId != -1 && isEligible(matchStructAddr))
     {
       setCharId(matchStructAddr, side, charId);
-      if (charId == BossCodes::DevilJin)
-      {
-        loadCostume(matchStructAddr, side, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
-      }
+      // if (charId == FighterId::DevilJin2)
+      // {
+      //   loadCostume(matchStructAddr, side, 51, DEVIL_JIN_COSTUME_PATH); // Just a safety precaution
+      // }
     }
   }
 
@@ -429,7 +447,14 @@ private:
       costumePath = FINAL_KAZ_COSTUME_PATH;
       break;
     case BossCodes::DevilJin:
+    case BossCodes::DevilJin_1:
       costumePath = DEVIL_JIN_COSTUME_PATH;
+      break;
+    case BossCodes::DevilJin_2:
+      costumePath = DEVIL_JIN_COSTUME_PATH_2;
+      break;
+    case BossCodes::DevilJin_3:
+      costumePath = DEVIL_JIN_COSTUME_PATH_3;
       break;
     case BossCodes::AmnesiaHeihachi:
       costumePath = HEIHACHI_MONK_COSTUME_PATH;
@@ -441,7 +466,7 @@ private:
       return;
     }
 
-    if (!shouldHandleHudAndCostumes() && bossCode != BossCodes::DevilJin)
+    if (!shouldHandleHudAndCostumes() && !isValidDevilJinBoss(bossCode))
       return;
 
     loadCostume(matchStructAddr, side, 51, costumePath);
@@ -1177,7 +1202,7 @@ private:
 
   bool loadStoryDevilJin(uintptr_t movesetAddr, int bossCode)
   {
-    if (bossCode != BossCodes::DevilJin)
+    if (!isValidDevilJinBoss(bossCode))
       return false;
     TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
@@ -1504,6 +1529,14 @@ bool isValidJinBoss(int bossCode)
          bossCode == BossCodes::KazamaJin ||
          bossCode == BossCodes::FinalJin ||
          bossCode == BossCodes::ChainedJin;
+}
+
+bool isValidDevilJinBoss(int bossCode)
+{
+  return bossCode == BossCodes::DevilJin ||
+         bossCode == BossCodes::DevilJin_1 ||
+         bossCode == BossCodes::DevilJin_2 ||
+         bossCode == BossCodes::DevilJin_3;
 }
 
 bool isValidKazuyaBoss(int bossCode)

@@ -21,22 +21,25 @@ struct Boss
 };
 
 std::vector<Boss> bossList = {
-    {-1, "None"},
-    {0, "Jin (Boosted)"},
-    {1, "Jin (Nerfed)"},
-    {2, "Jin (Mishima)"},
-    {3, "Jin (Kazama)"},
-    {4, "Jin (Final)"},
-    {11, "Jin (Chained)"},
-    {117, "Jin (Angel)"},
-    {121, "Jin (Devil)"},
-    {97, "Kazuya (Devil)"},
-    {244, "Kazuya (Final)"},
-    {118, "Kazuya (True Devil)"},
-    {351, "Heihachi (Monk)"},
-    {352, "Heihachi (Shadow)"},
-    {353, "Heihachi (Final)"},
-    {32, "Azazel"},
+    {BossCodes::None, "None"},
+    {BossCodes::RegularJin, "Jin (Boosted)"},
+    {BossCodes::NerfedJin, "Jin (Nerfed)"},
+    {BossCodes::MishimaJin, "Jin (Mishima)"},
+    {BossCodes::KazamaJin, "Jin (Kazama)"},
+    {BossCodes::FinalJin, "Jin (Final)"},
+    {BossCodes::ChainedJin, "Jin (Chained)"},
+    {BossCodes::AngelJin, "Jin (Angel)"},
+    // {BossCodes::DevilJin, "Jin (Devil)"},
+    {BossCodes::DevilJin_1, "Story Devil Jin (Chapter 1)"},
+    {BossCodes::DevilJin_2, "Story Devil Jin (Chapter 12)"},
+    {BossCodes::DevilJin_3, "Story Devil Jin (Chapter 13)"},
+    {BossCodes::DevilKazuya, "Kazuya (Devil)"},
+    {BossCodes::FinalKazuya, "Kazuya (Final)"},
+    {BossCodes::TrueDevilKazuya, "Kazuya (True Devil)"},
+    {BossCodes::AmnesiaHeihachi, "Heihachi (Monk)"},
+    {BossCodes::ShadowHeihachi, "Heihachi (Shadow)"},
+    {BossCodes::FinalHeihachi, "Heihachi (Final)"},
+    {BossCodes::Azazel, "Azazel"},
 };
 
 // Function declarations
@@ -189,7 +192,7 @@ void InitializeUI(HWND hwnd)
   groupCursorY += SUBTEXT_HEIGHT + 5;
 
   // Item 3
-  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down One-Shot Damage", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+  hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Excessive Damage", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)5, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
 

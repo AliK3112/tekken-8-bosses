@@ -18,6 +18,9 @@ enum BossCodes {
   AngelJin = 117,
   TrueDevilKazuya = 118,
   DevilJin = 121,
+  DevilJin_1 = 1211, // Chapter 1
+  DevilJin_2 = 1212, // Chapter 12
+  DevilJin_3 = 1213, // Chapter 13
   FinalKazuya = 244,
   AmnesiaHeihachi = 351, // Heihachi (35), Variant # 1
   ShadowHeihachi = 352, // Heihachi (35), Variant # 2
@@ -27,6 +30,8 @@ enum BossCodes {
 namespace HudIcon
 {
   const char *JinFinal = "ant2";
+  const char *DvjCh12 = "swl3";
+  const char *DvjCh13 = "swl4";
   const char *KazFinal = "grl2";
   const char *KazDevil = "grl3";
   const char *HeiMonk = "bee2";
@@ -134,6 +139,9 @@ std::string getBossName(int bossCode)
   case BossCodes::AngelJin: return "Jin (Angel)";
   case BossCodes::TrueDevilKazuya: return "Kazuya (True Devil)";
   case BossCodes::DevilJin: return "Jin (Devil)";
+  case BossCodes::DevilJin_1: return "Devil Jin (Chapter 1)";
+  case BossCodes::DevilJin_2: return "Devil Jin (Chapter 12)";
+  case BossCodes::DevilJin_3: return "Devil Jin (Chapter 13)";
   case BossCodes::Azazel: return "Azazel";
   default: return "__unknown__";
   }
