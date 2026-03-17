@@ -249,10 +249,10 @@ private:
       throw std::runtime_error("\"Moveset\" Offset not found!");
     }
 
-    addr = game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, base + 0x2C00000);
+    addr = game.FastAoBScan(Tekken::DEVIL_FLAG_SIG_BYTES, base + 0x1900000);
     if (addr != 0)
     {
-      permaDevilOffset = game.readUInt32(addr + 3);
+      permaDevilOffset = game.readUInt32(addr + 2);
     }
     else
     {
