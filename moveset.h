@@ -87,7 +87,7 @@ public:
     }
   }
 
-  bool disableRequirements(int targetReq, int targetParam)
+  bool replaceRequirements(int targetReq, int targetParam = -1, int overrideReq = 0, int overrideParam = 0)
   {
     uintptr_t requirements = getMovesetHeader("requirements");
     size_t requirementsCount = getMovesetCount("requirements");
@@ -96,9 +96,10 @@ public:
       uintptr_t addr = requirements + i * Sizes::Requirement;
       int req = game.ReadSignedInt(addr);
       int param = game.ReadSignedInt(addr + 4);
-      if (req == targetReq && param == targetParam)
+      if (req == targetReq && (param == targetParam || targetParam == -1))
       {
-        game.write<uint64_t>(addr, 0);
+        game.write<int>(addr, overrideReq);
+        game.write<int>(addr + 4, overrideParam);
       }
     }
     return true;

@@ -528,7 +528,8 @@ private:
       return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
     int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
-    moveset.disableRequirements(Requirements::STORY_FLAGS, _777param);
+    moveset.replaceRequirements(Requirements::STORY_FLAGS, _777param);
+    moveset.replaceRequirements(Requirements::NOT_STORY_MODE, 0, Requirements::STORY_FLAGS);
 
     // Adjusting Rage Art
     // uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
@@ -558,73 +559,35 @@ private:
       fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
     }
 
-    // Disabling glowing eyes for new season 2 ZEN > CD cancels
+    // Handling season 2 bugs and moves
+    // FF+1+2 and FC df4 ~ ZEN cancel
     if (bossCode != BossCodes::RegularJin)
     {
-      // CD
-      uintptr_t addr = moveset.getMoveAddress(0x94D92799, 1750);
-      addr = moveset.getMoveExtrapropAddr(addr);
-      addr = moveset.iterateExtraprops(addr, 1);
-      // Disabling next 3 props
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
-
-      // FC df4 ~ f ~ df
-      addr = moveset.getMoveAddress(0xDA8608B7, 1750);
-      addr = moveset.getMoveExtrapropAddr(addr);
-      // Disabling first 3 props
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
-
-      // ZEN 1+2 ~ df
-      addr = moveset.getMoveAddress(0x459C84C1, 1750);
-      addr = moveset.getMoveExtrapropAddr(addr);
-      addr = moveset.iterateExtraprops(addr, 2);
-      // Disabling the next 3 props
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 0), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 1), 0);
-      moveset.editExtraprop(moveset.iterateExtraprops(addr, 2), 0);
-
-      // Replace the new f,f+1+2 with f,f+2
-      int moveId = moveset.getMoveId(0xE383D012, 2200); // f,f+2
-      if (moveId != -1)
+      uintptr_t addr = 0;
+      int moveId = -1;
+      // Replace the new f,f+1+2 with f,f+2. Taking the long approach to remove weird animation snap
       {
-        // f,f+1+2
-        try
-        {
-          addr = moveset.getMoveAddress(0xEB242623, 1750); // f,f+1+2
+        int ff2 = moveset.getMoveId(0xE383D012, 2200); // f,f+2
+        int ff12 = moveset.getMoveId(0xEB242623, 1750); // f,f+1+2
+        uintptr_t cancel = moveset.getMovesetHeader("cancels");
+        uintptr_t count = moveset.getMovesetCount("cancels");
+        for (int i = 3500; i < (count - 2000); i++) { // First cancel appears around index 3700 and last around 11000
+          uintptr_t addr = cancel + i * Sizes::Moveset::Cancel;
+          if (moveset.getCancelMoveId(addr) == ff12)
+          {
+            moveset.editCancelMoveId(addr, (short)ff2);
+          }
         }
-        catch (...)
-        {
-          addr = 0; // If somebody is using the mod on pre-S2, this shouldn't crash
-        }
-        addr = moveset.getMoveNthCancel(addr, 0);
-        uintptr_t extradata = moveset.findCancelExtradata(389);
-        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
-
-        // Modifying 1st cancel
-        moveset.editMoveCancel(
-            addr,
-            0,
-            reqHeader,
-            extradata,
-            1,
-            1,
-            1,
-            (short)moveId,
-            65);
       }
 
       // Adjusting FC df4 ~ ZEN cancels
       addr = moveset.getMoveAddress(0x8c0f6a17, 1600); // Jz_zan_srk00EX_zan
       if (addr) {
         uintptr_t firstCancel = moveset.getMoveNthCancel(addr, 0);
+        uintptr_t cancel = 0;
 
-        // Since story Jin isn't supposed to do HB or HS outta ZEN, i'll simply replace one of
-        // those cancels with ZEN u+1+2, while disabling the others
-        uintptr_t cancel = moveset.iterateCancel(firstCancel, 1);
+        // ZEN 1+2 becomes ZEN u+1+2 because of command priority
+        cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
         if (cancel) {
           moveset.editMoveCancel(cancel,
             0x4000000300000300,
@@ -633,12 +596,8 @@ private:
             -1,
             -1,
             -1,
-            (short)moveset.getMoveId(0x91130746, 2300),
+            (short)moveset.getMoveId(0x91130746, 2300), // ZEN u+1+2
             -1);
-
-          // I'm adjusting 2+3 cancels while letting free cancels with Heat button
-          cancel = moveset.iterateCancel(cancel, 2);
-          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(16383));
         }
 
         // Adjusting ZEN 3+4
@@ -652,7 +611,16 @@ private:
         moveId = moveset.getMoveId(0xc69959b0, 1580); // ZEN u+1
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(16383));
+          moveset.editMoveCancel(
+            cancel, 
+            0x4000000300000000,
+            0,
+            0,
+            -1,
+            -1,
+            -1,
+            (short)moveset.getMoveId(0xb235481b, 1600), // ZEN 1+2
+            -1);
         }
 
         // Adjusting ZEN 1
