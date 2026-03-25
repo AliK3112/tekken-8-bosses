@@ -591,6 +591,13 @@ private:
         uintptr_t firstCancel = moveset.getMoveNthCancel(addr, 0);
         uintptr_t cancel = 0;
 
+        // Replacing df from that ZEN with the story version
+        moveId = moveset.getMoveId(0xda8608b7, 1790); // Jz_shoryu_P
+        cancel = moveset.findCancel(firstCancel, "move", moveId);
+        if (cancel) {
+          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x39b5f537, 2200));
+        }
+
         // ZEN 1+2 becomes ZEN u+1+2 because of command priority
         cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
         if (cancel) {
@@ -830,22 +837,22 @@ private:
       }
 
       // Replacing Rage Art with Tekken-Ball counterpart
-      // {
-      //   // Kz_RageArts00
-      //   uintptr_t addr = moveset.getMoveAddress(0xfaf65ab0, defaultAliasIdx - 100);
-      //   int moveId = moveset.getMoveId(0xffd3c168, idleStanceIdx - 100); // Tekken Ball blast
-      //   addr = moveset.getMoveNthCancel(addr, 0);
-      //   moveset.editMoveCancel(
-      //       addr,
-      //       0,
-      //       moveset.getMovesetHeader("requirements"),
-      //       moveset.findCancelExtradata(1025),
-      //       1,
-      //       1,
-      //       1,
-      //       (short)moveId,
-      //       65);
-      // }
+      if (config->finalKazuyaRageBlast) {
+        // Kz_RageArts00
+        uintptr_t addr = moveset.getMoveAddress(0xfaf65ab0, defaultAliasIdx - 100);
+        int moveId = moveset.getMoveId(0xffd3c168, idleStanceIdx - 100); // Tekken Ball blast
+        addr = moveset.getMoveNthCancel(addr, 0);
+        moveset.editMoveCancel(
+            addr,
+            0,
+            moveset.getMovesetHeader("requirements"),
+            moveset.findCancelExtradata(1025),
+            1,
+            1,
+            1,
+            (short)moveId,
+            65);
+      }
 
       // Single-spin uppercut
       uintptr_t addr = moveset.getMoveAddress(0xD172C176, idleStanceIdx);
