@@ -24,6 +24,7 @@ struct ConfigFlags {
   bool disableAutoParries = false;
   bool handleHudAndCostumes = true;
   bool toneDownDamage = false;
+  bool finalKazuyaRageBlast = true;
 };
 
 class TkBossLoader
@@ -59,6 +60,10 @@ private:
 
   bool shouldToneDownDamage() {
       return config ? config->toneDownDamage : false;
+  }
+
+  bool shouldGiveFinalKazuyaRageBlast() {
+      return config ? config->finalKazuyaRageBlast : true;
   }
 
   // METHODS

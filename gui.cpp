@@ -8,7 +8,7 @@
 const char CLASS_NAME[] = "BossSelectorWindow";
 
 // Global UI elements
-HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox, hwndCheckbox, hwndCheckParry, hwndCheckDamage;
+HWND hwndLabel1, hwndLabel2, hwndCombo1, hwndCombo2, hwndLogBox, hwndCheckbox, hwndCheckParry, hwndCheckDamage, hwndCheckRage;
 TkBossLoader boss;
 ConfigFlags config;
 char buffer[255];
@@ -67,6 +67,7 @@ void SaveConfig()
   WritePrivateProfileStringA("Settings", "LoadHudAndCostumes", config.handleHudAndCostumes ? "1" : "0", ".\\boss_config.ini");
   WritePrivateProfileStringA("Settings", "DisableAutoParries", config.disableAutoParries ? "1" : "0", ".\\boss_config.ini");
   WritePrivateProfileStringA("Settings", "ToneDownDamage", config.toneDownDamage ? "1" : "0", ".\\boss_config.ini");
+  WritePrivateProfileStringA("Settings", "FinalKazuyaRageBlast", config.finalKazuyaRageBlast ? "1" : "0", ".\\boss_config.ini");
 }
 
 void LoadConfig()
@@ -74,6 +75,7 @@ void LoadConfig()
   config.handleHudAndCostumes = GetPrivateProfileIntA("Settings", "LoadHudAndCostumes", 1, ".\\boss_config.ini");
   config.disableAutoParries = GetPrivateProfileIntA("Settings", "DisableAutoParries", 0, ".\\boss_config.ini");
   config.toneDownDamage = GetPrivateProfileIntA("Settings", "ToneDownDamage", 0, ".\\boss_config.ini");
+  config.finalKazuyaRageBlast = GetPrivateProfileIntA("Settings", "FinalKazuyaRageBlast", 1, ".\\boss_config.ini");
 }
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
@@ -88,7 +90,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 450,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -161,8 +163,8 @@ void InitializeUI(HWND hwnd)
   // --- 2. Configuration Section (Group Box) ---
 
   // Calculate Group Box Height based on contents
-  // 3 checkboxes (20px) + 3 subtexts (16px) + spacings
-  int groupContentHeight = (3 * (CHECKBOX_HEIGHT + SUBTEXT_HEIGHT + 2)) + 20; 
+  // 4 checkboxes (20px) + 4 subtexts (16px) + spacings
+  int groupContentHeight = (4 * (CHECKBOX_HEIGHT + SUBTEXT_HEIGHT + 2)) + 20; 
   int groupTotalHeight = groupContentHeight + 20; 
 
   HWND hwndGroupObj = CreateWindowA("BUTTON", "Configuration", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
@@ -198,6 +200,15 @@ void InitializeUI(HWND hwnd)
 
   CreateWindowA("STATIC", "  (Applies to: Final Kazuya ws+2, Angel Jin CD+1)", WS_CHILD | WS_VISIBLE | SS_LEFT,
       groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
+  groupCursorY += SUBTEXT_HEIGHT + 5;
+
+  // Item 4
+  hwndCheckRage = CreateWindowA("BUTTON", "Final Battle Kazuya Rage: Blast as R.A.", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)6, NULL, NULL);
+  groupCursorY += CHECKBOX_HEIGHT;
+
+  CreateWindowA("STATIC", "  (Enable Blast as Rage Art for Final Kazuya)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
 
   currentY += groupTotalHeight + GROUP_SPACING;
 
@@ -230,6 +241,7 @@ void InitializeUI(HWND hwnd)
   SendMessageA(hwndCheckbox, BM_SETCHECK, config.handleHudAndCostumes ? BST_CHECKED : BST_UNCHECKED, 0);
   SendMessageA(hwndCheckParry, BM_SETCHECK, config.disableAutoParries ? BST_CHECKED : BST_UNCHECKED, 0);
   SendMessageA(hwndCheckDamage, BM_SETCHECK, config.toneDownDamage ? BST_CHECKED : BST_UNCHECKED, 0);
+  SendMessageA(hwndCheckRage, BM_SETCHECK, config.finalKazuyaRageBlast ? BST_CHECKED : BST_UNCHECKED, 0);
 }
 
 void PopulateComboBox(HWND comboBox)
@@ -321,6 +333,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
       else if (controlId == 5)
       {
         config.toneDownDamage = (SendMessageA(hwndCheckDamage, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        SaveConfig();
+      }
+      else if (controlId == 6)
+      {
+        config.finalKazuyaRageBlast = (SendMessageA(hwndCheckRage, BM_GETCHECK, 0, 0) == BST_CHECKED);
         SaveConfig();
       }
     }
