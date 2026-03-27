@@ -166,3 +166,16 @@ player_struct_base=0x9B79950
 match_struct_base=0x9B74568
 moveset_offset=0x38C8
 permanent_devil_offset=0x155C
+
+v3.00.01
+decryption_function_offset=0x1807610
+moveset_offset_addr_offset=0x18E875E
+permanent_devil_offset_addr_offset=0x190640D
+player_struct_base_addr_offset=0x5E69275
+hud_icon_addr_offset=0x5E6D651
+hud_name_addr_offset=0x5E6DCA7
+match_struct_base_addr_offset=0x5F221F1
+player_struct_base=0x9B7A950
+match_struct_base=0x9B75568
+moveset_offset=0x38C8
+permanent_devil_offset=0x155C
