@@ -659,6 +659,14 @@ private:
       }
     }
 
+    // Solving the "ws+1, [3,3] ~ df" bug
+    if (bossCode != BossCodes::MishimaJin)
+    {
+      uintptr_t addr = moveset.getMoveAddress(0x530890fb, moveset.getAliasMoveId(0x8000));
+      addr = moveset.getMoveNthCancel(addr, 2);
+      moveset.editCancelMoveId(addr, moveset.getMoveId(0x459c84c1, 1800)); // Jz_shoryu_shift
+    }
+
     switch (bossCode)
     {
     case BossCodes::RegularJin:
