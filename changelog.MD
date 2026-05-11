@@ -1,5 +1,6 @@
 ## Changelog (May 12, 2026)
  - Fixed the bug with non-Mishima Jin variants where his `ws+1, [3, 3] ~ df` CD would **incorrectly** cancel into the Mishima-style CD, allowing him to do EWGF, TGF and Spinning Demon
+ - Edited some UI text labels
 
 ## Changelog (March 25, 2026)
  - Added the option to set the `Rage Blast` as Final Battle Kazuya's Rage Art
