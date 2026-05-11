@@ -667,6 +667,16 @@ private:
       moveset.editCancelMoveId(addr, moveset.getMoveId(0x459c84c1, 1800)); // Jz_shoryu_shift
     }
 
+    // EWGF > OTGF bug fix. Only Final Jin should be able to do it, other variants shouldn't
+    if (bossCode != BossCodes::FinalJin)
+    {
+      uintptr_t addr = moveset.getMoveAddress(0x39b5f537, moveset.getAliasMoveId(0x8000));
+      addr = moveset.getMoveNthCancel(addr, 0);
+      addr = moveset.findCancel(addr, "command", 0x4000000300000000);
+      int moveId = moveset.getCancelMoveId(moveset.iterateCancel(addr, 1)); // Get CD+1 ID from next cancel
+      moveset.editCancelMoveId(addr, moveId); // Jz_Story_623_LP_fast
+    }
+
     switch (bossCode)
     {
     case BossCodes::RegularJin:
@@ -1412,18 +1422,18 @@ public:
         int code = getCode(selectedSide);
         if (loadBoss(code, selectedSide))
         {
-          AppendLog("Loaded Boss %s for Player %d", getBossName(code).c_str(), selectedSide + 1);
+          AppendLog("Loaded Boss \"%s\" for Player %d", getBossName(code).c_str(), selectedSide + 1);
         }
       }
       else
       {
         if (loadBoss(this->bossCode_L, 0))
         {
-          AppendLog("Loaded Boss %s for Player 1", getBossName(this->bossCode_L).c_str());
+          AppendLog("Loaded Boss \"%s\" for Player 1", getBossName(this->bossCode_L).c_str());
         }
         if (loadBoss(this->bossCode_R, 1))
         {
-          AppendLog("Loaded Boss %s for Player 2", getBossName(this->bossCode_R).c_str());
+          AppendLog("Loaded Boss \"%s\" for Player 2", getBossName(this->bossCode_R).c_str());
         }
       }
 

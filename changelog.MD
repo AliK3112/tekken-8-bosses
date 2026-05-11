@@ -1,5 +1,6 @@
 ## Changelog (May 12, 2026)
  - Fixed the bug with non-Mishima Jin variants where his `ws+1, [3, 3] ~ df` CD would **incorrectly** cancel into the Mishima-style CD, allowing him to do EWGF, TGF and Spinning Demon
+ - Fixed the bug where non-Final Jin variants could **incorrectly** do `EWGF > TGF` from `ZEN ~ df`
  - Edited some UI text labels
 
 ## Changelog (March 25, 2026)
