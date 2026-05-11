@@ -125,23 +125,23 @@ std::string getBossName(int bossCode)
 {
   switch (bossCode)
   {
-  case BossCodes::RegularJin: return "Jin (Boosted)";
-  case BossCodes::NerfedJin: return "Jin (Nerfed)";
-  case BossCodes::ChainedJin: return "Jin (Chained)";
-  case BossCodes::MishimaJin: return "Jin (Mishima)";
-  case BossCodes::KazamaJin: return "Jin (Kazama)";
-  case BossCodes::FinalJin: return "Jin (Final)";
-  case BossCodes::DevilKazuya: return "Kazuya (Devil)";
-  case BossCodes::FinalKazuya: return "Kazuya (Final)";
-  case BossCodes::AmnesiaHeihachi: return "Heihachi (Monk)";
-  case BossCodes::ShadowHeihachi: return "Heihachi (Shadow)";
-  case BossCodes::FinalHeihachi: return "Heihachi (Final)";
-  case BossCodes::AngelJin: return "Jin (Angel)";
-  case BossCodes::TrueDevilKazuya: return "Kazuya (True Devil)";
-  case BossCodes::DevilJin: return "Jin (Devil)";
-  case BossCodes::DevilJin_1: return "Devil Jin (Chapter 1)";
-  case BossCodes::DevilJin_2: return "Devil Jin (Chapter 12)";
-  case BossCodes::DevilJin_3: return "Devil Jin (Chapter 13)";
+  case BossCodes::RegularJin: return "Jin - Boosted";
+  case BossCodes::NerfedJin: return "Jin - Karate";
+  case BossCodes::ChainedJin: return "Jin - Chained";
+  case BossCodes::MishimaJin: return "Jin - Mishima";
+  case BossCodes::KazamaJin: return "Jin - Kazama";
+  case BossCodes::FinalJin: return "Jin - Final";
+  case BossCodes::DevilKazuya: return "Devil Kazuya";
+  case BossCodes::FinalKazuya: return "Kazuya - Final";
+  case BossCodes::AmnesiaHeihachi: return "Heihachi - Monk";
+  case BossCodes::ShadowHeihachi: return "Heihachi - Shadow";
+  case BossCodes::FinalHeihachi: return "Heihachi - Final";
+  case BossCodes::AngelJin: return "Angel Jin";
+  case BossCodes::TrueDevilKazuya: return "True Devil Kazuya";
+  case BossCodes::DevilJin: return "Devil Jin";
+  case BossCodes::DevilJin_1: return "Devil Jin - Chapter 1";
+  case BossCodes::DevilJin_2: return "Devil Jin - Chapter 12";
+  case BossCodes::DevilJin_3: return "Devil Jin - Chapter 13";
   case BossCodes::Azazel: return "Azazel";
   default: return "__unknown__";
   }

@@ -22,23 +22,23 @@ struct Boss
 
 std::vector<Boss> bossList = {
     {BossCodes::None, "None"},
-    {BossCodes::RegularJin, "Jin (Boosted)"},
-    {BossCodes::NerfedJin, "Jin (Nerfed)"},
-    {BossCodes::MishimaJin, "Jin (Mishima)"},
-    {BossCodes::KazamaJin, "Jin (Kazama)"},
-    {BossCodes::FinalJin, "Jin (Final)"},
-    {BossCodes::ChainedJin, "Jin (Chained)"},
-    {BossCodes::AngelJin, "Jin (Angel)"},
-    // {BossCodes::DevilJin, "Jin (Devil)"},
-    {BossCodes::DevilJin_1, "Story Devil Jin (Chapter 1)"},
-    {BossCodes::DevilJin_2, "Story Devil Jin (Chapter 12)"},
-    {BossCodes::DevilJin_3, "Story Devil Jin (Chapter 13)"},
-    {BossCodes::DevilKazuya, "Kazuya (Devil)"},
-    {BossCodes::FinalKazuya, "Kazuya (Final)"},
-    {BossCodes::TrueDevilKazuya, "Kazuya (True Devil)"},
-    {BossCodes::AmnesiaHeihachi, "Heihachi (Monk)"},
-    {BossCodes::ShadowHeihachi, "Heihachi (Shadow)"},
-    {BossCodes::FinalHeihachi, "Heihachi (Final)"},
+    {BossCodes::RegularJin, "Jin - Boosted"},
+    {BossCodes::NerfedJin, "Jin - Karate"},
+    {BossCodes::MishimaJin, "Jin - Mishima"},
+    {BossCodes::KazamaJin, "Jin - Kazama"},
+    {BossCodes::FinalJin, "Jin - Final"},
+    {BossCodes::ChainedJin, "Jin - Chained"},
+    {BossCodes::AngelJin, "Angel Jin"},
+    // {BossCodes::DevilJin, "Jin - Devil"},
+    {BossCodes::DevilJin_1, "Devil Jin - Chapter 1"},
+    {BossCodes::DevilJin_2, "Devil Jin - Chapter 12"},
+    {BossCodes::DevilJin_3, "Devil Jin - Chapter 13"},
+    {BossCodes::FinalKazuya, "Kazuya - Final"},
+    {BossCodes::DevilKazuya, "Kazuya - Devil"},
+    {BossCodes::TrueDevilKazuya, "Kazuya - True Devil"},
+    {BossCodes::AmnesiaHeihachi, "Heihachi - Monk"},
+    {BossCodes::ShadowHeihachi, "Heihachi - Shadow"},
+    {BossCodes::FinalHeihachi, "Heihachi - Final"},
     {BossCodes::Azazel, "Azazel"},
 };
 
@@ -203,11 +203,11 @@ void InitializeUI(HWND hwnd)
   groupCursorY += SUBTEXT_HEIGHT + 5;
 
   // Item 4
-  hwndCheckRage = CreateWindowA("BUTTON", "Final Battle Kazuya Rage: Blast as R.A.", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+  hwndCheckRage = CreateWindowA("BUTTON", "Final Battle Kazuya Rage Art", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)6, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
 
-  CreateWindowA("STATIC", "  (Enable Blast as Rage Art for Final Kazuya)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+  CreateWindowA("STATIC", "  (Set \"Rage Blast\" as his \"Rage Art\")", WS_CHILD | WS_VISIBLE | SS_LEFT,
       groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
 
   currentY += groupTotalHeight + GROUP_SPACING;
