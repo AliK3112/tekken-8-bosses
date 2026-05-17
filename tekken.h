@@ -197,6 +197,7 @@ namespace Tekken
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
   std::string P_MOVE_ID_SIG_BYTES = "89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 E8 ?? ?? ?? ?? 85 C0";
   std::string HEI_WI_SIG_BYTES = "41 83 BE ?? ?? ?? ?? 02 41 0F 95 C0 41 8B D7 48 8B C8 E8 ?? ?? ?? ?? 41 8B 9E ?? ?? ?? ?? 33 FF 48 89 7D D0 C7 45 D8 01 00 00 00 45 33 C0 8D 57 01 48 8D 4D D0";
+  std::string RAW_MOVESET_FILE_PTR_SIG_BYTES = "48 C7 05 ?? ?? ?? ?? 00 00 00 00 48 8D 51 28 4C 8B 41 28 48 8B F9 48 83 C1 28 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 28 BA 30 00 00 00 E8 ?? ?? ?? ?? 4C 8B 47 18 48 8D 57 18 48 8D 4F 18 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 18";
 
   enum Cancels
   {
@@ -204,6 +205,7 @@ namespace Tekken
     GROUP_CANCEL_START = 0x8012,
     GROUP_CANCEL_END = 0x8013,
   };
+
 
   enum Requirements
   {
@@ -297,6 +299,9 @@ namespace Tekken
     Fahkumram,
     ArmorKing,
     MiaryZo,
+    Kunimitsu,
+    Bob,
+    Roger,
     Dummy = 116,
     AngelJin,
     TrueDevilKazuya,

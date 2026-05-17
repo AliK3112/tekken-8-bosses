@@ -1,10 +1,10 @@
 // The addresses at which the values were spotted, saving so I can optimize AoB scanner in the future
 v1.12
 decryption_function_offset=0x17FA170
-moveset_offset=0x18D2C6E
-permanent_devil_offset=0x2CE5F0A
-hud_icon_addr=0x5DC04D1
-hud_name_addr=0x5DC0AE7
+moveset_offset_addr_offset=0x18D2C6E
+permanent_devil_offset_addr_offset=0x2CE5F0A
+hud_icon_addr_offset=0x5DC04D1
+hud_name_addr_offset=0x5DC0AE7
 
 v1.13
 decryption_function_offset=0x17FC480
@@ -55,9 +55,9 @@ decryption_function_offset=0x1800E20
 moveset_offset_addr_offset=0x18DD6EE
 permanent_devil_offset_addr_offset=0x2CFA0BA
 player_struct_base_addr_offset=0x5E155A5
-match_struct_base_addr_offset=0x5ED0E21
 hud_icon_addr_offset=0x5E18E71
 hud_name_addr_offset=0x5E19497
+match_struct_base_addr_offset=0x5ED0E21
 player_struct_base=0x9AE92F8
 match_struct_base=0x9AE40D8
 moveset_offset=0x3548
@@ -68,9 +68,9 @@ decryption_function_offset=0x18043A0
 moveset_offset_addr_offset=0x18E13AE
 permanent_devil_offset_addr_offset=0x2D058EA
 player_struct_base_addr_offset=0x5E35D35
-match_struct_base_addr_offset=0x5EEDD11
 hud_icon_addr_offset=0x5E3A0A1
 hud_name_addr_offset=0x5E3A6D7
+match_struct_base_addr_offset=0x5EEDD11
 player_struct_base=0x9B1DDE0
 match_struct_base=0x9B18A78
 moveset_offset=0x3608
@@ -114,6 +114,7 @@ player_struct_base=0x9B3E148
 match_struct_base=0x9B38DB8
 moveset_offset=0x3718
 permanent_devil_offset=0x13AC
+
 
 v2.06.02
 decryption_function_offset=0x1804C90
@@ -179,3 +180,4 @@ player_struct_base=0x9B7A950
 match_struct_base=0x9B75568
 moveset_offset=0x38C8
 permanent_devil_offset=0x155C
+
