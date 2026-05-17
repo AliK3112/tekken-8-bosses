@@ -18,13 +18,13 @@
   - ws+1, 3, 2, 1, 4 > 2 removed
   - Omen Stance followups removed
   - ZEN 1, 2 last hit reverted to T7
-  - ZEN 2 reverted to T7 (HE)
+  - ZEN 2 reverted to T7, Now a Heat Engager
   - ZEN 4 changed. Has same anim as T7 f,f+4
   - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2
   - ZEN u+1 removed
   - ZEN 3+4 reaction changed
   - 2nd Heat Smash becomes the default
-  - Rage Art changed (Unfortunately, could not be included in the mod)
+  - Rage Art changed (Camera broken)
 
 ### Chained Jin ([Movelist Showcase](https://youtu.be/sGyW_vB67AU?si=TNRfahpDfwABnccD))
   - All changes of nerfed Jin are carried over

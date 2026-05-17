@@ -6,3 +6,4 @@ Tekken 8 bosses
 *.ct
 build
 extracted_chars/*
+boss_config.ini

@@ -7,6 +7,66 @@ struct EncryptedValue
   uint64_t key;
 };
 
+union TkParam
+{
+  uint32_t param_unsigned;
+  int32_t param_signed;
+  float param_float;
+};
+
+struct TkRequirement
+{
+  int req;
+  TkParam param[4];
+};
+
+// class TkCancel
+// {
+// public:
+//   uint64_t command;
+//   TkRequirement *requirements;
+//   uint32_t *extradata;
+//   int windowStart;
+//   int windowEnd;
+//   int transitionFrame;
+//   int16_t moveId;
+//   int16_t option;
+
+//   // ---- Static constructor: read the raw TkCancel struct from remote process ----
+//   static TkCancel readFrom(GameClass &game, uintptr_t remoteAddress)
+//   {
+//     // Read the POD struct (the 40 bytes) from the remote process.
+//     // This returns a local copy of the struct fields (remote pointers remain as values).
+//     return game.read<TkCancel>(remoteAddress);
+//   }
+
+//   // ---- Helpers to interpret the pointer fields by using the GameClass read ----
+
+//   // Read the TkRequirement object pointed to by `requirements`.
+//   // Throws if requirements == nullptr (remote null) or if read fails (depends on GameClass::read behavior).
+//   TkRequirement readRequirements(GameClass &game) const
+//   {
+//     if (requirements == nullptr)
+//     {
+//       throw std::runtime_error("remote requirements pointer is null");
+//     }
+//     // reinterpret_cast pointer to an integer address in remote process
+//     uintptr_t remotePtr = reinterpret_cast<uintptr_t>(requirements);
+//     return game.read<TkRequirement>(remotePtr);
+//   }
+
+//   // Read a single extradata entry at index 'i' (safe, generic).
+//   uint32_t readExtraEntry(GameClass &game, size_t i) const
+//   {
+//     if (extradata == nullptr)
+//     {
+//       throw std::runtime_error("remote extradata pointer is null");
+//     }
+//     uintptr_t remotePtr = reinterpret_cast<uintptr_t>(extradata) + i * sizeof(uint32_t);
+//     return game.read<uint32_t>(remotePtr);
+//   }
+// };
+
 namespace Tekken
 {
   namespace Offsets
@@ -18,6 +78,7 @@ namespace Tekken
       AnimAddr1 = 0x50,
       AnimAddr2 = 0x54,
       CancelList = 0x98,
+      HitConditionList = 0x110,
       ExtraPropList = 0x138,
       StartPropList = 0x140,
       EndPropList = 0x148
@@ -91,6 +152,13 @@ namespace Tekken
       Value4 = 0x20,
       Value5 = 0x24
     };
+
+    enum HitCondition
+    {
+      RequirementAddrHC = 0x0,
+      Damage = 0x8,
+      ReactionListAddr = 0x10,      
+    };
   };
 
   namespace Sizes
@@ -123,18 +191,37 @@ namespace Tekken
   std::string HUD_NAME_SIG_BYTES = "48 8B C8 4C 8B F0 E8 ?? ?? ?? ?? 84 C0 74 31 40 0F B6 CE";
   std::string HUD_ICON_SIG_BYTES = "48 8B C8 4C 8B F8 E8 ?? ?? ?? ?? 84 C0 74 52 80 BD 8A 00";
   std::string MOVSET_OFFSET_SIG_BYTES = "48 89 91 ?? ?? ?? 00 4C 8B D9 48 89 91 ?? ?? ?? 00 48 8B DA 48 89 91 ?? ?? ?? 00 48 89 91 ?? ?? ?? 00 0F B7 02 89 81 ?? ?? ?? 00 B8 01 80 00 80";
-  std::string DEVIL_FLAG_SIG_BYTES = "41 83 BF ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
+  // std::string DEVIL_FLAG_SIG_BYTES = "00 83 B9 ?? ?? ?? 00 00 41 0F 95 C1 40 38 BB";
+  std::string DEVIL_FLAG_SIG_BYTES = "8B 87 ?? ?? ?? 00 89 87 ?? ?? ?? 00 8B 8F ?? ?? ?? 00 83 E9 22 74";
   std::string PLAYER_STRUCT_SIG_BYTES = "4C 89 35 ?? ?? ?? ?? 41 88 5E 28 66 41 89 9E 88 00 00 00 E8 ?? ?? ?? ?? 41 88 86 8A 00 00 00";
   std::string MATCH_STRUCT_SIG_BYTES = "48 8B 3D ?? ?? ?? ?? 48 89 7D 58 48 85 FF 0F 84";
+  std::string P_MOVE_ID_SIG_BYTES = "89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 E8 ?? ?? ?? ?? 85 C0";
+  std::string HEI_WI_SIG_BYTES = "41 83 BE ?? ?? ?? ?? 02 41 0F 95 C0 41 8B D7 48 8B C8 E8 ?? ?? ?? ?? 41 8B 9E ?? ?? ?? ?? 33 FF 48 89 7D D0 C7 45 D8 01 00 00 00 45 33 C0 8D 57 01 48 8D 4D D0";
   std::string RAW_MOVESET_FILE_PTR_SIG_BYTES = "48 C7 05 ?? ?? ?? ?? 00 00 00 00 48 8D 51 28 4C 8B 41 28 48 8B F9 48 83 C1 28 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 28 BA 30 00 00 00 E8 ?? ?? ?? ?? 4C 8B 47 18 48 8D 57 18 48 8D 4F 18 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 18";
+
+  enum Cancels
+  {
+    CANCEL_END = 0x8000,
+    GROUP_CANCEL_START = 0x8012,
+    GROUP_CANCEL_END = 0x8013,
+  };
+
 
   enum Requirements
   {
+    NOT_BACKTURNED = 73,
     CHARA_CONTROLLER = 228,
+    HEAT_AVAILABLE = 442,
+    HEAT_ACTIVE_RELATED = 452, // Used in Heat Activatation
+    HEAT_ACTIVE_RELATED2 = 466, // Used in Heat Activatation
+    IS_PERMA_DEVIL = 473,
+    HEI_WARRIOR_ACTIVE = 498,
+    ARCADE_BATTLE = 664,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
     INTRO_RELATED = 755,
     STORY_FLAGS = 777,
+    NOT_STORY_MODE = 778,
     DLC_STORY1_BATTLE = 801,
     DLC_STORY1_BATTLE_NUM = 802,
     DLC_STORY1_FLAGS = 806,
@@ -142,6 +229,7 @@ namespace Tekken
     INTROS_RELATED = 697, // Intros related
     OUTRO1 = 675,         // Outro related 1
     OUTRO2 = 679,         // Outro related 2
+    PLAYER_IN_HEAT = 1028,
     EOL = 1100,           // End of the list
   };
 
@@ -149,10 +237,23 @@ namespace Tekken
   {
     CHARA_TRAIL_VFX = 0x8039,
     DEVIL_STATE = 0x80dc,
+    HEAT_RELATED = 0x814d,
     PERMA_DEVIL = 0x8151,
+    SHORT_FLAG = 0x8128,
+    FORCE_MOVE = 0x8244,
+    OPP_VISIBILTY = 0x82c2,
     SPEND_RAGE = 0x82e2,
+    ADD_HEAT_VALUE = 0x8383,
+    RAGE_ART_CAMERA = 0x838e,
+    HEAT_AURA_VFX = 0x8394,
+    MULTILEVEL_INSTALLS = 0x83ee,
     HEI_WARRIOR = 0x83f9,
+    BLACK_SCREEN_VFX = 0x83C0,
+    _0x8555 = 0x8555,
     WING_ANIM = 0x8683,
+    HEAT_CAMERA = 0x86b0,
+    CAMERA_TRANSITION = 0x8695,
+    CAMERA_ORBIT = 0x8697,
   };
 
   enum FighterId
@@ -195,6 +296,12 @@ namespace Tekken
     Heihachi,
     Clive,
     Anna,
+    Fahkumram,
+    ArmorKing,
+    MiaryZo,
+    Kunimitsu,
+    Bob,
+    Roger,
     Dummy = 116,
     AngelJin,
     TrueDevilKazuya,
@@ -266,7 +373,7 @@ namespace Tekken
     case FighterId::Jun:
       return "aml";
     case FighterId::Reina:
-      return "zbn";
+      return "zbr";
     case FighterId::Azucena:
       return "cat";
     case FighterId::Victor:
@@ -285,6 +392,12 @@ namespace Tekken
       return "okm";
     case FighterId::Anna:
       return "kgr";
+    case FighterId::Fahkumram:
+      return "tgr";
+    case FighterId::ArmorKing:
+      return "knk";
+    case FighterId::MiaryZo:
+      return "wkz";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
@@ -386,6 +499,12 @@ namespace Tekken
       return "CLIVE";
     case FighterId::Anna:
       return "ANNA";
+    case FighterId::Fahkumram:
+      return "FAHKUMRAM";
+    case FighterId::ArmorKing:
+      return "ARMOR_KING";
+    case FighterId::MiaryZo:
+      return "MIARY_ZO";
     case FighterId::Dummy:
       return "DUMMY";
     case FighterId::AngelJin:
