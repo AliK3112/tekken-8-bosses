@@ -398,6 +398,8 @@ namespace Tekken
       return "knk";
     case FighterId::MiaryZo:
       return "wkz";
+    case FighterId::Kunimitsu:
+      return "ker";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
@@ -505,6 +507,8 @@ namespace Tekken
       return "ARMOR_KING";
     case FighterId::MiaryZo:
       return "MIARY_ZO";
+    case FighterId::Kunimitsu:
+      return "KUNIMITSU";
     case FighterId::Dummy:
       return "DUMMY";
     case FighterId::AngelJin:
