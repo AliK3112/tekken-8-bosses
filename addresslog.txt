@@ -181,7 +181,7 @@ match_struct_base=0x9B75568
 moveset_offset=0x38C8
 permanent_devil_offset=0x155C
 
-v3.01
+v3.01.01
 decryption_function_offset=0x1807BB0
 moveset_offset_addr_offset=0x18EAB0E
 permanent_devil_offset_addr_offset=0x1908A5D
