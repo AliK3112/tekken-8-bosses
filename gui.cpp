@@ -355,6 +355,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
   }
   break;
   case WM_DESTROY:
+    boss.uninstallStoryCameraHook();
     PostQuitMessage(0);
     break;
   default:

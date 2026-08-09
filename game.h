@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdint>
+#include <climits>
 #include <Windows.h>
 #include <string>
 #include <sstream>
@@ -100,6 +101,72 @@ public:
     return reinterpret_cast<T *>(VirtualAllocEx(processHandle, nullptr, sizeof(T) * count, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
   }
 
+  // Allocate near a reference address so E9/rel32 jumps remain valid (±2GB).
+  void *allocateNearInTarget(uintptr_t nearAddr, size_t size, DWORD protect = PAGE_EXECUTE_READWRITE)
+  {
+    constexpr int64_t kMaxDist = 0x7FFF0000LL;
+    SYSTEM_INFO si{};
+    GetSystemInfo(&si);
+
+    uintptr_t minAddr = (nearAddr > static_cast<uintptr_t>(kMaxDist))
+                            ? (nearAddr - static_cast<uintptr_t>(kMaxDist))
+                            : reinterpret_cast<uintptr_t>(si.lpMinimumApplicationAddress);
+    uintptr_t maxAddr = nearAddr + static_cast<uintptr_t>(kMaxDist);
+    if (maxAddr < nearAddr)
+      maxAddr = reinterpret_cast<uintptr_t>(si.lpMaximumApplicationAddress);
+
+    auto alignUp = [](uintptr_t value, uintptr_t gran) -> uintptr_t
+    {
+      return (value + gran - 1) & ~(gran - 1);
+    };
+
+    const uintptr_t gran = si.dwAllocationGranularity ? si.dwAllocationGranularity : 0x10000;
+    uintptr_t probe = alignUp(minAddr, gran);
+
+    while (probe < maxAddr)
+    {
+      MEMORY_BASIC_INFORMATION mbi{};
+      if (VirtualQueryEx(processHandle, reinterpret_cast<LPCVOID>(probe), &mbi, sizeof(mbi)) == 0)
+        break;
+
+      uintptr_t regionBase = reinterpret_cast<uintptr_t>(mbi.BaseAddress);
+      uintptr_t regionEnd = regionBase + mbi.RegionSize;
+      if (regionEnd <= probe)
+        break;
+
+      if (mbi.State == MEM_FREE && mbi.RegionSize >= size)
+      {
+        uintptr_t tryAddr = alignUp(regionBase, gran);
+        if (tryAddr >= regionBase && tryAddr + size <= regionEnd && tryAddr + size > tryAddr)
+        {
+          int64_t distStart = static_cast<int64_t>(tryAddr) - static_cast<int64_t>(nearAddr);
+          int64_t distEnd = static_cast<int64_t>(tryAddr + size) - static_cast<int64_t>(nearAddr);
+          if (distStart >= -kMaxDist && distStart <= kMaxDist &&
+              distEnd >= -kMaxDist && distEnd <= kMaxDist)
+          {
+            void *p = VirtualAllocEx(processHandle, reinterpret_cast<LPVOID>(tryAddr), size,
+                                     MEM_COMMIT | MEM_RESERVE, protect);
+            if (p)
+              return p;
+          }
+        }
+      }
+
+      uintptr_t next = alignUp(regionEnd, gran);
+      if (next <= probe)
+        break;
+      probe = next;
+    }
+
+    return nullptr;
+  }
+
+  static bool isRel32Reachable(uintptr_t fromNextInsn, uintptr_t target)
+  {
+    int64_t rel = static_cast<int64_t>(target) - static_cast<int64_t>(fromNextInsn);
+    return rel >= INT32_MIN && rel <= INT32_MAX;
+  }
+
   // Batch call to decrypt multiple values
   template <typename ReturnType, typename ParamType>
   std::vector<ReturnType> callFunctionBatch(uintptr_t functionAddress, const std::vector<ParamType> &encryptedArray)
@@ -138,6 +205,35 @@ public:
   void freeInTarget(void *address)
   {
     VirtualFreeEx(processHandle, address, 0, MEM_RELEASE);
+  }
+
+  bool writeBytes(uintptr_t address, const void *data, size_t size)
+  {
+    SIZE_T bytesWritten = 0;
+    if (!WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), data, size, &bytesWritten) ||
+        bytesWritten != size)
+    {
+      std::cerr << "Error: Failed to write bytes at address 0x" << std::hex << address << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  bool readBytes(uintptr_t address, void *buffer, size_t size)
+  {
+    SIZE_T bytesRead = 0;
+    if (!ReadProcessMemory(processHandle, reinterpret_cast<LPCVOID>(address), buffer, size, &bytesRead) ||
+        bytesRead != size)
+    {
+      std::cerr << "Error: Failed to read bytes at address 0x" << std::hex << address << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  bool protectMemory(uintptr_t address, size_t size, DWORD newProtect, DWORD *oldProtect)
+  {
+    return VirtualProtectEx(processHandle, reinterpret_cast<LPVOID>(address), size, newProtect, oldProtect) != 0;
   }
 
   // Function to call an internal game function

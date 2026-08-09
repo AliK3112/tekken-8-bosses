@@ -6,12 +6,27 @@ bool _DEV_MODE = 1;
 int getSideSelection();
 int takeInput();
 
+static TkBossLoader *g_bossLoader = nullptr;
+
+BOOL WINAPI ConsoleCtrlHandler(DWORD signal)
+{
+  if (signal == CTRL_C_EVENT || signal == CTRL_CLOSE_EVENT || signal == CTRL_BREAK_EVENT)
+  {
+    if (g_bossLoader)
+      g_bossLoader->uninstallStoryCameraHook();
+    return FALSE; // let the process terminate
+  }
+  return FALSE;
+}
+
 int main()
 {
-  int bossCode = _DEV_MODE ? BossCodes::FinalHeihachi : -1;
-  ConfigFlags config = {.disableAutoParries = true, .handleHudAndCostumes = false, .toneDownDamage = true};
+  int bossCode = _DEV_MODE ? BossCodes::AmnesiaHeihachi : -1;
+  ConfigFlags config = {.disableAutoParries = false, .handleHudAndCostumes = true, .toneDownDamage = false};
   TkBossLoader bossLoader;
   bossLoader.setConfig(&config);
+  g_bossLoader = &bossLoader;
+  SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
 
   bossLoader.setDevModeFlag(_DEV_MODE);
 

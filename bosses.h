@@ -1,6 +1,8 @@
 // This class will be responsible for loading boss characters
 #include "moveset.h"
 #include "utils.h"
+#include <cstring>
+#include <vector>
 
 using namespace Tekken;
 
@@ -12,6 +14,7 @@ std::string DEVIL_JIN_COSTUME_PATH_2 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn
 std::string DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn_bw.CS_swl_ant_1p_horn_bw";
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
+bool ADJUST_RA_CAMERA = true;
 
 bool isCorrectCharacter(int bossCode, int charId);
 bool isValidJinBoss(int bossCode);
@@ -19,12 +22,20 @@ bool isValidDevilJinBoss(int bossCode);
 bool isValidKazuyaBoss(int bossCode);
 bool isValidHeihachiBoss(int bossCode);
 bool isCorrectHeihachiFlag(int storyFlag, int param);
+bool isStoryCameraBoss(int bossCode);
 
 struct ConfigFlags {
   bool disableAutoParries = false;
   bool handleHudAndCostumes = true;
   bool toneDownDamage = false;
   bool finalKazuyaRageBlast = true;
+};
+
+struct CameraTrainerState
+{
+  uint32_t p1BossCode; // +0x00
+  uint32_t p2BossCode; // +0x04
+  uint32_t eligible;   // +0x08
 };
 
 class TkBossLoader
@@ -44,6 +55,15 @@ private:
   uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
+  // STORY CAMERA HOOK
+  CameraTrainerState *cameraRemoteState = nullptr;
+  uint8_t *cameraCodeCave = nullptr;
+  bool cameraHookInstalled = false;
+  static constexpr uintptr_t CAMERA_HOOK_RVA = 0x5C32742;
+  static constexpr size_t CAMERA_HOOK_PATCH_SIZE = 8;
+  static constexpr uint32_t CAMERA_ID_STORY_DELTA = 0xDB;
+  const uint8_t cameraHookOriginal[CAMERA_HOOK_PATCH_SIZE] = {
+      0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFE, 0xFF, 0xFF};
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
@@ -124,7 +144,15 @@ private:
   bool isEligible(uintptr_t matchStructAddr)
   {
     int value = game.readInt32(matchStructAddr);
-    return value == 1 || value == 2 || value == 4 || value == 5 || value == 6 || value == 12;
+    return value == 1 || value == 2 || value == 4 || value == 5 || value == 6 || value == 12 || value == 18;
+  }
+
+  // Checks if it's eligible to load the boss character
+  // This one will be used by the hook. Story mode already loads all the extra cameras, so no need to load them again.
+  bool isEligible__ExcludeStory(uintptr_t matchStructAddr)
+  {
+    int value = game.readInt32(matchStructAddr);
+    return value == 1 || value == 2 || value == 4 || value == 6 || value == 12;
   }
 
   // Side: 0 = P1, 1 = P2
@@ -543,25 +571,45 @@ private:
     //   uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
     //   moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
     // }
-    auto fixRageArtCamera = [&](uintptr_t startAddr) {
-      for (uintptr_t addr = startAddr;;
-           addr = moveset.iterateExtraprops(addr, 1)) {
-        int prop = moveset.getExtrapropValue(addr, "prop");
+    // auto fixRageArtCamera = [&](uintptr_t startAddr) {
+    //   for (uintptr_t addr = startAddr;;
+    //        addr = moveset.iterateExtraprops(addr, 1)) {
+    //     int prop = moveset.getExtrapropValue(addr, "prop");
 
-        if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
-          moveset.editExtrapropValue(addr, "value", 5);
+    //     if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
+    //       moveset.editExtrapropValue(addr, "value", 5);
 
-        if (!prop && !moveset.getExtrapropValue(addr, "frame"))
-          break;
+    //     if (!prop && !moveset.getExtrapropValue(addr, "frame"))
+    //       break;
+    //   }
+    // };
+
+    // uintptr_t rageArt = moveset.getMoveAddress(0x9bae061e, 2300);
+    // if (rageArt && bossCode != BossCodes::RegularJin)
+    // {
+    //   fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
+    //   rageArt = moveset.getMoveAddress(0x22e4beeb, 2100);
+    //   fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
+    // }
+
+    // Rage Art Camera (requires Assembly Injection)
+    auto setRageArtCamera = [&](uint32_t nameKey, int value)
+    {
+      if (!ADJUST_RA_CAMERA) return;
+      uintptr_t addr = moveset.getMoveAddress(nameKey, moveset.getAliasMoveId(0x8000) - 20);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
+
+      if (addr)
+      {
+        moveset.editExtrapropValue(addr, "value", value);
       }
     };
 
-    uintptr_t rageArt = moveset.getMoveAddress(0x9bae061e, 2300);
-    if (rageArt && bossCode != BossCodes::RegularJin)
-    {
-      fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
-      rageArt = moveset.getMoveAddress(0x22e4beeb, 2100);
-      fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
+    if (bossCode != BossCodes::RegularJin) {
+      setRageArtCamera(0x9bae061e, 5); // Jz_Story_RageArts00
+      setRageArtCamera(0x22e4beeb, 5); // Jz_RageArts01_St
+      setRageArtCamera(0x5898e42a, 6); // Jz_RageArts_n_St
     }
 
     // Handling season 2 bugs and moves
@@ -1061,6 +1109,60 @@ private:
       //     moveset.editExtrapropValue(addr, "value", 0);
       //   }
       // }
+
+      // Rage Art Camera (requires Assembly Injection)
+      auto setRageArtCamera = [&](uint32_t nameKey, int value)
+      {
+        if (!ADJUST_RA_CAMERA) return;
+        addr = moveset.getMoveAddress(nameKey, defaultAliasIdx - 20);
+        addr = moveset.getMoveExtrapropAddr(addr);
+        addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
+
+        if (addr)
+        {
+          moveset.editExtrapropValue(addr, "value", value);
+        }
+      };
+
+      setRageArtCamera(0xfb78fa92, 5); // He_RageArts01_St
+      setRageArtCamera(0x140be639, 5); // He_RageArts02_St
+      setRageArtCamera(0xa77873d3, 6); // He_RageArts_n_St
+
+      // Adjusting RageArt against Kazuya & Jin & "friends"
+      {
+        int targetMoveId = moveset.getMoveId(0x942c4d5c);                // He_RageArts00_St
+        addr = moveset.getMoveAddress(0xde97038f, defaultAliasIdx - 30); // He_RageArts00
+        addr = moveset.getMoveNthCancel(addr, 0);
+        moveset.editCancelMoveId(addr, (short)targetMoveId);
+        moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
+        // printf("targetMoveId: %d\n", targetMoveId);
+        // int i = 0;
+        // while (true)
+        // {
+        //   int moveId = moveset.getCancelMoveId(addr);
+        //   printf("[%d]: %d\n", i, moveId);
+        //   if (moveId == targetMoveId)
+        //   {
+        //     break;
+        //   }
+        //   else
+        //   {
+        //     moveset.editCancelExtradata(addr, moveset.findCancelExtradata(16383));
+        //   }
+        //   addr = moveset.iterateCancel(addr, 1);
+        //   i++;
+        // }
+      }
+
+      // Adjusting Heat Smash
+      {
+        addr = moveset.getMoveAddress(0xc9c8dd57, idleStanceIdx); // He_ZoneD
+        addr = moveset.getMoveNthCancel(addr, 1); // 2nd cancel
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        addr = moveset.iterateCancel(addr, 1); // 3rd cancel
+        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      }
+
       // 2nd hit of regular 2,2
       addr = moveset.getMoveAddress(0xf69e2bef, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
@@ -1242,6 +1344,313 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
+  void syncCameraRemoteState()
+  {
+    if (!cameraRemoteState)
+      return;
+    CameraTrainerState state = {
+        static_cast<uint32_t>(bossCode_L),
+        static_cast<uint32_t>(bossCode_R),
+        0};
+    // Preserve current eligible flag
+    state.eligible = game.readUInt32(reinterpret_cast<uintptr_t>(cameraRemoteState) + 8);
+    game.write(reinterpret_cast<uintptr_t>(cameraRemoteState), state);
+  }
+
+  void syncCameraEligible(bool eligible)
+  {
+    if (!cameraRemoteState)
+      return;
+    game.write<uint32_t>(reinterpret_cast<uintptr_t>(cameraRemoteState) + 8, eligible ? 1u : 0u);
+  }
+
+  std::vector<uint8_t> buildCameraShellcode(uintptr_t remoteStateAddr, uintptr_t returnAddr)
+  {
+    std::vector<uint8_t> code;
+    auto emit = [&](std::initializer_list<uint8_t> bytes)
+    {
+      code.insert(code.end(), bytes);
+    };
+    auto emitU32 = [&](uint32_t value)
+    {
+      for (int i = 0; i < 4; ++i)
+        code.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+    };
+    auto emitU64 = [&](uint64_t value)
+    {
+      for (int i = 0; i < 8; ++i)
+        code.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+    };
+    // Emit opcode then 4-byte rel32 placeholder; returns offset of the rel32 operand
+    auto emitRel32Hole = [&](std::initializer_list<uint8_t> opcode) -> size_t
+    {
+      emit(opcode);
+      size_t at = code.size();
+      emitU32(0);
+      return at;
+    };
+    auto patchRel32 = [&](size_t hole, size_t target)
+    {
+      int32_t rel = static_cast<int32_t>(target) - static_cast<int32_t>(hole + 4);
+      code[hole + 0] = static_cast<uint8_t>(rel & 0xFF);
+      code[hole + 1] = static_cast<uint8_t>((rel >> 8) & 0xFF);
+      code[hole + 2] = static_cast<uint8_t>((rel >> 16) & 0xFF);
+      code[hole + 3] = static_cast<uint8_t>((rel >> 24) & 0xFF);
+    };
+
+    // push rax
+    emit({0x50});
+    // mov rax, remoteStateAddr
+    emit({0x48, 0xB8});
+    emitU64(remoteStateAddr);
+
+    // cmp dword [rax+8], 0 / je skip
+    emit({0x83, 0x78, 0x08, 0x00});
+    size_t jeSkipEligible = emitRel32Hole({0x0F, 0x84});
+
+    // cmp r9d, 6 / je check_cam
+    emit({0x41, 0x83, 0xF9, 0x06});
+    size_t jeCheckCamJin = emitRel32Hole({0x0F, 0x84});
+    // cmp r9d, 35 / je check_cam
+    emit({0x41, 0x83, 0xF9, 0x23});
+    size_t jeCheckCamHei = emitRel32Hole({0x0F, 0x84});
+    // jmp skip
+    size_t jmpSkipChar = emitRel32Hole({0xE9});
+
+    size_t checkCam = code.size();
+    patchRel32(jeCheckCamJin, checkCam);
+    patchRel32(jeCheckCamHei, checkCam);
+
+    // cmp r8d, 0x24 / jb check_p2
+    emit({0x41, 0x83, 0xF8, 0x24});
+    size_t jbCheckP2 = emitRel32Hole({0x0F, 0x82});
+    // cmp r8d, 0x29 / ja check_p2
+    emit({0x41, 0x83, 0xF8, 0x29});
+    size_t jaCheckP2 = emitRel32Hole({0x0F, 0x87});
+
+    // --- P1 ---
+    // cmp r9d, 6 / jne p1_hei
+    emit({0x41, 0x83, 0xF9, 0x06});
+    size_t jneP1Hei = emitRel32Hole({0x0F, 0x85});
+
+    auto emitP1JinCompare = [&](uint32_t bossCode, size_t &jeRemapHole)
+    {
+      emit({0x81, 0x38});
+      emitU32(bossCode);
+      jeRemapHole = emitRel32Hole({0x0F, 0x84});
+    };
+
+    size_t jeRemapP1Jin[5];
+    emitP1JinCompare(BossCodes::NerfedJin, jeRemapP1Jin[0]);
+    emitP1JinCompare(BossCodes::MishimaJin, jeRemapP1Jin[1]);
+    emitP1JinCompare(BossCodes::KazamaJin, jeRemapP1Jin[2]);
+    emitP1JinCompare(BossCodes::FinalJin, jeRemapP1Jin[3]);
+    emitP1JinCompare(BossCodes::ChainedJin, jeRemapP1Jin[4]);
+    size_t jmpSkipP1Jin = emitRel32Hole({0xE9});
+
+    size_t p1Hei = code.size();
+    patchRel32(jneP1Hei, p1Hei);
+    emit({0x81, 0x38});
+    emitU32(BossCodes::AmnesiaHeihachi);
+    size_t jeRemapP1Hei0 = emitRel32Hole({0x0F, 0x84});
+    emit({0x81, 0x38});
+    emitU32(BossCodes::ShadowHeihachi);
+    size_t jeRemapP1Hei1 = emitRel32Hole({0x0F, 0x84});
+    size_t jmpSkipP1Hei = emitRel32Hole({0xE9});
+
+    size_t checkP2 = code.size();
+    patchRel32(jbCheckP2, checkP2);
+    patchRel32(jaCheckP2, checkP2);
+
+    // cmp r8d, 0x2A / jb skip
+    emit({0x41, 0x83, 0xF8, 0x2A});
+    size_t jbSkipP2Lo = emitRel32Hole({0x0F, 0x82});
+    // cmp r8d, 0x2F / ja skip
+    emit({0x41, 0x83, 0xF8, 0x2F});
+    size_t jaSkipP2Hi = emitRel32Hole({0x0F, 0x87});
+    // cmp r9d, 6 / jne p2_hei
+    emit({0x41, 0x83, 0xF9, 0x06});
+    size_t jneP2Hei = emitRel32Hole({0x0F, 0x85});
+
+    auto emitP2JinCompare = [&](uint32_t bossCode, size_t &jeRemapHole)
+    {
+      emit({0x81, 0x78, 0x04});
+      emitU32(bossCode);
+      jeRemapHole = emitRel32Hole({0x0F, 0x84});
+    };
+
+    size_t jeRemapP2Jin[5];
+    emitP2JinCompare(BossCodes::NerfedJin, jeRemapP2Jin[0]);
+    emitP2JinCompare(BossCodes::MishimaJin, jeRemapP2Jin[1]);
+    emitP2JinCompare(BossCodes::KazamaJin, jeRemapP2Jin[2]);
+    emitP2JinCompare(BossCodes::FinalJin, jeRemapP2Jin[3]);
+    emitP2JinCompare(BossCodes::ChainedJin, jeRemapP2Jin[4]);
+    size_t jmpSkipP2Jin = emitRel32Hole({0xE9});
+
+    size_t p2Hei = code.size();
+    patchRel32(jneP2Hei, p2Hei);
+    emit({0x81, 0x78, 0x04});
+    emitU32(BossCodes::AmnesiaHeihachi);
+    size_t jeRemapP2Hei0 = emitRel32Hole({0x0F, 0x84});
+    emit({0x81, 0x78, 0x04});
+    emitU32(BossCodes::ShadowHeihachi);
+    size_t jeRemapP2Hei1 = emitRel32Hole({0x0F, 0x84});
+    size_t jmpSkipP2Hei = emitRel32Hole({0xE9});
+
+    size_t remap = code.size();
+    emit({0x41, 0x81, 0xC0});
+    emitU32(CAMERA_ID_STORY_DELTA);
+
+    size_t skip = code.size();
+    patchRel32(jeSkipEligible, skip);
+    patchRel32(jmpSkipChar, skip);
+    patchRel32(jmpSkipP1Jin, skip);
+    patchRel32(jmpSkipP1Hei, skip);
+    patchRel32(jbSkipP2Lo, skip);
+    patchRel32(jaSkipP2Hi, skip);
+    patchRel32(jmpSkipP2Jin, skip);
+    patchRel32(jmpSkipP2Hei, skip);
+    for (size_t hole : jeRemapP1Jin)
+      patchRel32(hole, remap);
+    patchRel32(jeRemapP1Hei0, remap);
+    patchRel32(jeRemapP1Hei1, remap);
+    for (size_t hole : jeRemapP2Jin)
+      patchRel32(hole, remap);
+    patchRel32(jeRemapP2Hei0, remap);
+    patchRel32(jeRemapP2Hei1, remap);
+
+    // pop rax
+    emit({0x58});
+    // lea rbp, [rsp-0x1B0]
+    emit({0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFE, 0xFF, 0xFF});
+    // jmp returnAddr — rel32 patched after cave is allocated
+    emit({0xE9});
+    emitU32(0);
+    (void)returnAddr;
+
+    return code;
+  }
+
+  bool installStoryCameraHook()
+  {
+    if (cameraHookInstalled)
+      return true;
+
+    uintptr_t hookAddr = game.getBaseAddress() + CAMERA_HOOK_RVA;
+    uint8_t currentBytes[CAMERA_HOOK_PATCH_SIZE] = {};
+    if (!game.readBytes(hookAddr, currentBytes, CAMERA_HOOK_PATCH_SIZE))
+    {
+      AppendLog("Story camera hook: failed to read hook site");
+      return false;
+    }
+    if (memcmp(currentBytes, cameraHookOriginal, CAMERA_HOOK_PATCH_SIZE) != 0)
+    {
+      AppendLog("Story camera hook: unexpected bytes at hook site (skipped)");
+      return false;
+    }
+
+    cameraRemoteState = game.allocateInTarget<CameraTrainerState>(1);
+    if (!cameraRemoteState)
+    {
+      AppendLog("Story camera hook: failed to allocate remote state");
+      return false;
+    }
+
+    CameraTrainerState initialState = {
+        static_cast<uint32_t>(bossCode_L),
+        static_cast<uint32_t>(bossCode_R),
+        0};
+    if (!game.writeBytes(reinterpret_cast<uintptr_t>(cameraRemoteState), &initialState, sizeof(initialState)))
+    {
+      AppendLog("Story camera hook: failed to write remote state");
+      game.freeInTarget(cameraRemoteState);
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    uintptr_t returnAddr = hookAddr + CAMERA_HOOK_PATCH_SIZE;
+    std::vector<uint8_t> shellcode = buildCameraShellcode(
+        reinterpret_cast<uintptr_t>(cameraRemoteState), returnAddr);
+
+    // Cave must be within ±2GB of the hook — E9 rel32 cannot reach a far VirtualAllocEx.
+    cameraCodeCave = reinterpret_cast<uint8_t *>(
+        game.allocateNearInTarget(hookAddr, shellcode.size(), PAGE_EXECUTE_READWRITE));
+    if (!cameraCodeCave)
+    {
+      AppendLog("Story camera hook: failed to allocate near code cave");
+      game.freeInTarget(cameraRemoteState);
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    uintptr_t caveAddr = reinterpret_cast<uintptr_t>(cameraCodeCave);
+    if (!GameClass::isRel32Reachable(hookAddr + 5, caveAddr) ||
+        !GameClass::isRel32Reachable(caveAddr + shellcode.size(), returnAddr))
+    {
+      AppendLog("Story camera hook: allocated cave not reachable via rel32");
+      game.freeInTarget(cameraCodeCave);
+      game.freeInTarget(cameraRemoteState);
+      cameraCodeCave = nullptr;
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    // Final instruction is E9 rel32; patch rel32 = returnAddr - (end of jmp insn)
+    size_t jmpRelOffset = shellcode.size() - 4;
+    int32_t rel32 = static_cast<int32_t>(
+        static_cast<int64_t>(returnAddr) - static_cast<int64_t>(caveAddr + shellcode.size()));
+    shellcode[jmpRelOffset + 0] = static_cast<uint8_t>(rel32 & 0xFF);
+    shellcode[jmpRelOffset + 1] = static_cast<uint8_t>((rel32 >> 8) & 0xFF);
+    shellcode[jmpRelOffset + 2] = static_cast<uint8_t>((rel32 >> 16) & 0xFF);
+    shellcode[jmpRelOffset + 3] = static_cast<uint8_t>((rel32 >> 24) & 0xFF);
+
+    if (!game.writeBytes(caveAddr, shellcode.data(), shellcode.size()))
+    {
+      AppendLog("Story camera hook: failed to write code cave");
+      game.freeInTarget(cameraCodeCave);
+      game.freeInTarget(cameraRemoteState);
+      cameraCodeCave = nullptr;
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    // Patch: E9 rel32 + NOP NOP NOP
+    uint8_t patch[CAMERA_HOOK_PATCH_SIZE] = {0xE9, 0, 0, 0, 0, 0x90, 0x90, 0x90};
+    int32_t hookRel = static_cast<int32_t>(
+        static_cast<int64_t>(caveAddr) - static_cast<int64_t>(hookAddr + 5));
+    patch[1] = static_cast<uint8_t>(hookRel & 0xFF);
+    patch[2] = static_cast<uint8_t>((hookRel >> 8) & 0xFF);
+    patch[3] = static_cast<uint8_t>((hookRel >> 16) & 0xFF);
+    patch[4] = static_cast<uint8_t>((hookRel >> 24) & 0xFF);
+
+    DWORD hookOldProtect = 0;
+    if (!game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &hookOldProtect))
+    {
+      AppendLog("Story camera hook: failed to unprotect hook site");
+      game.freeInTarget(cameraCodeCave);
+      game.freeInTarget(cameraRemoteState);
+      cameraCodeCave = nullptr;
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    if (!game.writeBytes(hookAddr, patch, CAMERA_HOOK_PATCH_SIZE))
+    {
+      AppendLog("Story camera hook: failed to patch hook site");
+      game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, hookOldProtect, &hookOldProtect);
+      game.freeInTarget(cameraCodeCave);
+      game.freeInTarget(cameraRemoteState);
+      cameraCodeCave = nullptr;
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, hookOldProtect, &hookOldProtect);
+    cameraHookInstalled = true;
+    AppendLog("Story camera hook installed (cave=0x%llX)", (unsigned long long)caveAddr);
+    return true;
+  }
+
 public:
   GameClass game;
 
@@ -1264,7 +1673,35 @@ public:
 
   ~TkBossLoader()
   {
+    uninstallStoryCameraHook();
     restoreHudAddr(0);
+  }
+
+  // Explicit cleanup for Ctrl+C / GUI close (also invoked by destructor)
+  void uninstallStoryCameraHook()
+  {
+    if (!cameraHookInstalled)
+      return;
+
+    uintptr_t hookAddr = game.getBaseAddress() + CAMERA_HOOK_RVA;
+    DWORD oldProtect = 0;
+    if (game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &oldProtect))
+    {
+      game.writeBytes(hookAddr, cameraHookOriginal, CAMERA_HOOK_PATCH_SIZE);
+      game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, oldProtect, &oldProtect);
+    }
+
+    if (cameraCodeCave)
+    {
+      game.freeInTarget(cameraCodeCave);
+      cameraCodeCave = nullptr;
+    }
+    if (cameraRemoteState)
+    {
+      game.freeInTarget(cameraRemoteState);
+      cameraRemoteState = nullptr;
+    }
+    cameraHookInstalled = false;
   }
 
   void setDevModeFlag(bool flag)
@@ -1313,19 +1750,23 @@ public:
   void setBossCode_L(int code)
   {
     this->bossCode_L = code;
+    syncCameraRemoteState();
   }
   void setBossCode_R(int code)
   {
     this->bossCode_R = code;
+    syncCameraRemoteState();
   }
   void setBossCodes(int codeL, int codeR)
   {
     this->bossCode_L = codeL;
     this->bossCode_R = codeR;
+    syncCameraRemoteState();
   }
   void setBossCodeForSelectedSide(int selectedSide, int bossCode)
   {
     (selectedSide != 0) ? this->bossCode_R = bossCode : this->bossCode_L = bossCode;
+    syncCameraRemoteState();
   }
   void scanForAddresses()
   {
@@ -1337,6 +1778,11 @@ public:
   {
     if (!this->attached)
       return;
+
+    if (ADJUST_RA_CAMERA)
+    {
+      installStoryCameraHook(); // best-effort; failure must not block boss loading
+    }
 
     const std::vector<DWORD> offsets = {(DWORD)matchStructOffset, 0x50, 0x8, 0x18, 0x8};
     uintptr_t matchStructAddr = game.getAddress(offsets);
@@ -1358,6 +1804,7 @@ public:
       matchStructAddr = game.getAddress(offsets);
       if (matchStructAddr == 0)
       {
+        syncCameraEligible(false);
         continue;
       }
 
@@ -1368,8 +1815,11 @@ public:
 
       if (!isEligible(matchStructAddr))
       {
+        syncCameraEligible(false);
         continue;
       }
+
+      syncCameraEligible(isEligible__ExcludeStory(matchStructAddr));
 
       if (selectedSide != -1)
       {
@@ -1437,7 +1887,7 @@ public:
         }
       }
 
-      if (devMode) break;
+      // if (devMode) break;
     }
   }
 
@@ -1548,6 +1998,14 @@ bool isValidHeihachiBoss(int bossCode)
   return bossCode == BossCodes::FinalHeihachi ||
          bossCode == BossCodes::ShadowHeihachi ||
          bossCode == BossCodes::AmnesiaHeihachi;
+}
+
+bool isStoryCameraBoss(int bossCode)
+{
+  if (isValidJinBoss(bossCode) && bossCode != BossCodes::RegularJin)
+    return true;
+  return bossCode == BossCodes::AmnesiaHeihachi ||
+         bossCode == BossCodes::ShadowHeihachi;
 }
 
 bool isCorrectHeihachiFlag(int storyFlag, int param)
