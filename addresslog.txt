@@ -185,6 +185,7 @@ v3.01.01
 decryption_function_offset=0x1807BB0
 moveset_offset_addr_offset=0x18EAB0E
 permanent_devil_offset_addr_offset=0x1908A5D
+camera_hook_offset=0x5C32730
 player_struct_base_addr_offset=0x5E73335
 hud_icon_addr_offset=0x5E77731
 hud_name_addr_offset=0x5E77D97
