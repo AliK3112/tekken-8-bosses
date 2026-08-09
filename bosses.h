@@ -55,11 +55,11 @@ private:
   uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
+  uintptr_t cameraHookAddr = 0;
   // STORY CAMERA HOOK
   CameraTrainerState *cameraRemoteState = nullptr;
   uint8_t *cameraCodeCave = nullptr;
   bool cameraHookInstalled = false;
-  static constexpr uintptr_t CAMERA_HOOK_RVA = 0x5C32742;
   static constexpr size_t CAMERA_HOOK_PATCH_SIZE = 8;
   static constexpr uint32_t CAMERA_ID_STORY_DELTA = 0xDB;
   const uint8_t cameraHookOriginal[CAMERA_HOOK_PATCH_SIZE] = {
@@ -302,6 +302,18 @@ private:
       throw std::runtime_error("\"Heihachi Warrior Instinct\" offset not found!");
     }
 
+    // AoB starts at lea rbp,[rsp-1B0] — the Story RA camera hook injection point
+    addr = game.FastAoBScan(Tekken::CAMERA_HOOK_SIG_BYTES, base + 0x5C00000);
+    if (addr != 0)
+    {
+      cameraHookAddr = addr;
+    }
+    else
+    {
+      cameraHookAddr = 0;
+      printf("Story Camera Hook Address not found (camera remap disabled)\n");
+    }
+
     if (devMode)
     {
       printf("playerStructOffset: 0x%llX\n", playerStructOffset);
@@ -312,6 +324,7 @@ private:
       printf("movesetOffset: 0x%llX\n", movesetOffset);
       printf("permaDevilOffset: 0x%llX\n", permaDevilOffset);
       printf("heihachiWIOffset: 0x%llX\n", heihachiWIOffset);
+      printf("cameraHookAddr: 0x%llX\n", cameraHookAddr);
     }
     this->ready = true; // Ready to load bosses
   }
@@ -1535,8 +1548,13 @@ private:
   {
     if (cameraHookInstalled)
       return true;
+    if (!cameraHookAddr)
+    {
+      AppendLog("Story camera hook: address not scanned");
+      return false;
+    }
 
-    uintptr_t hookAddr = game.getBaseAddress() + CAMERA_HOOK_RVA;
+    uintptr_t hookAddr = cameraHookAddr;
     uint8_t currentBytes[CAMERA_HOOK_PATCH_SIZE] = {};
     if (!game.readBytes(hookAddr, currentBytes, CAMERA_HOOK_PATCH_SIZE))
     {
@@ -1683,12 +1701,15 @@ public:
     if (!cameraHookInstalled)
       return;
 
-    uintptr_t hookAddr = game.getBaseAddress() + CAMERA_HOOK_RVA;
-    DWORD oldProtect = 0;
-    if (game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &oldProtect))
+    uintptr_t hookAddr = cameraHookAddr;
+    if (hookAddr)
     {
-      game.writeBytes(hookAddr, cameraHookOriginal, CAMERA_HOOK_PATCH_SIZE);
-      game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, oldProtect, &oldProtect);
+      DWORD oldProtect = 0;
+      if (game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &oldProtect))
+      {
+        game.writeBytes(hookAddr, cameraHookOriginal, CAMERA_HOOK_PATCH_SIZE);
+        game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, oldProtect, &oldProtect);
+      }
     }
 
     if (cameraCodeCave)
