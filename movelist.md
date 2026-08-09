@@ -24,7 +24,7 @@
   - ZEN u+1 removed
   - ZEN 3+4 reaction changed
   - 2nd Heat Smash becomes the default
-  - Rage Art changed (Camera broken)
+  - Rage Art changed
 
 ### Chained Jin ([Movelist Showcase](https://youtu.be/sGyW_vB67AU?si=TNRfahpDfwABnccD))
   - All changes of nerfed Jin are carried over
@@ -140,7 +140,7 @@
   - df+2, 1 disabled
   - d+4 stomp disabled
   - On hit, 2nd Heat Smash comes out as default one
-  - Rage Art changed (Unfortunately, could not be included in the mod)
+  - Rage Art changed
 
 ### Final Heihachi ([Movelist Showcase](https://youtu.be/OnGgvl0mjRc?si=qylQPTVhdPC7ix3j))
   - u/f+4, 1 can be done without Heat
