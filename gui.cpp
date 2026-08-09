@@ -90,7 +90,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int nCmdShow)
 
   HWND hwnd = CreateWindowA(CLASS_NAME, "TEKKEN 8 - Boss Selector",
                             WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 500,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 500, 530,
                             NULL, NULL, hInst, NULL);
   if (!hwnd)
     return 0;
@@ -214,10 +214,13 @@ void InitializeUI(HWND hwnd)
 
   // --- 3. Log Section ---
 
-  // Instructions Label
-  CreateWindowA("STATIC", "Note: Reload match after changing settings to apply.", WS_CHILD | WS_VISIBLE | SS_LEFT, 
+  // Instructions Labels
+  CreateWindowA("STATIC", "Note 1: Reload match after changing settings to apply.", WS_CHILD | WS_VISIBLE | SS_LEFT, 
       MARGIN_X, currentY, contentWidth, LABEL_HEIGHT, hwnd, NULL, NULL, NULL);
-  
+  currentY += LABEL_HEIGHT + 2;
+
+  CreateWindowA("STATIC", "Note 2: Story Rage Art cameras require a match reload to work.", WS_CHILD | WS_VISIBLE | SS_LEFT,
+      MARGIN_X, currentY, contentWidth, LABEL_HEIGHT, hwnd, NULL, NULL, NULL);
   currentY += LABEL_HEIGHT + 5;
 
   // Log Box fills remaining space (with margin at bottom)
