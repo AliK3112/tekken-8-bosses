@@ -60,10 +60,15 @@ private:
   CameraTrainerState *cameraRemoteState = nullptr;
   uint8_t *cameraCodeCave = nullptr;
   bool cameraHookInstalled = false;
-  static constexpr size_t CAMERA_HOOK_PATCH_SIZE = 8;
+  // Absolute jmp qword ptr [rip+0] + imm64 = 14 bytes (through push r12)
+  static constexpr size_t CAMERA_HOOK_PATCH_SIZE = 14;
   static constexpr uint32_t CAMERA_ID_STORY_DELTA = 0xDB;
   const uint8_t cameraHookOriginal[CAMERA_HOOK_PATCH_SIZE] = {
-      0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFE, 0xFF, 0xFF};
+      0x48, 0x89, 0x5C, 0x24, 0x08, // mov [rsp+8], rbx
+      0x48, 0x89, 0x74, 0x24, 0x18, // mov [rsp+18], rsi
+      0x55,                         // push rbp
+      0x57,                         // push rdi
+      0x41, 0x54};                  // push r12
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
@@ -325,7 +330,7 @@ private:
       throw std::runtime_error("\"Heihachi Warrior Instinct\" offset not found!");
     }
 
-    // AoB starts at lea rbp,[rsp-1B0] — the Story RA camera hook injection point
+    // AoB starts at function prologue — Story RA camera hook injection point
     addr = game.FastAoBScan(Tekken::CAMERA_HOOK_SIG_BYTES, base + 0x5C00000);
     if (addr != 0)
     {
@@ -1557,12 +1562,15 @@ private:
 
     // pop rax
     emit({0x58});
-    // lea rbp, [rsp-0x1B0]
-    emit({0x48, 0x8D, 0xAC, 0x24, 0x50, 0xFE, 0xFF, 0xFF});
-    // jmp returnAddr — rel32 patched after cave is allocated
-    emit({0xE9});
-    emitU32(0);
-    (void)returnAddr;
+    // Stolen prologue bytes (executed after camera logic)
+    emit({0x48, 0x89, 0x5C, 0x24, 0x08});
+    emit({0x48, 0x89, 0x74, 0x24, 0x18});
+    emit({0x55});
+    emit({0x57});
+    emit({0x41, 0x54});
+    // Absolute jmp back to original+14 (push r14 ...)
+    emit({0xFF, 0x25, 0x00, 0x00, 0x00, 0x00});
+    emitU64(returnAddr);
 
     return code;
   }
@@ -1613,38 +1621,17 @@ private:
     std::vector<uint8_t> shellcode = buildCameraShellcode(
         reinterpret_cast<uintptr_t>(cameraRemoteState), returnAddr);
 
-    // Cave must be within ±2GB of the hook — E9 rel32 cannot reach a far VirtualAllocEx.
-    cameraCodeCave = reinterpret_cast<uint8_t *>(
-        game.allocateNearInTarget(hookAddr, shellcode.size(), PAGE_EXECUTE_READWRITE));
+    // Absolute jmp — cave may be allocated anywhere
+    cameraCodeCave = game.allocateInTarget<uint8_t>(shellcode.size());
     if (!cameraCodeCave)
     {
-      AppendLog("Story camera hook: failed to allocate near code cave");
+      AppendLog("Story camera hook: failed to allocate code cave");
       game.freeInTarget(cameraRemoteState);
       cameraRemoteState = nullptr;
       return false;
     }
 
     uintptr_t caveAddr = reinterpret_cast<uintptr_t>(cameraCodeCave);
-    if (!GameClass::isRel32Reachable(hookAddr + 5, caveAddr) ||
-        !GameClass::isRel32Reachable(caveAddr + shellcode.size(), returnAddr))
-    {
-      AppendLog("Story camera hook: allocated cave not reachable via rel32");
-      game.freeInTarget(cameraCodeCave);
-      game.freeInTarget(cameraRemoteState);
-      cameraCodeCave = nullptr;
-      cameraRemoteState = nullptr;
-      return false;
-    }
-
-    // Final instruction is E9 rel32; patch rel32 = returnAddr - (end of jmp insn)
-    size_t jmpRelOffset = shellcode.size() - 4;
-    int32_t rel32 = static_cast<int32_t>(
-        static_cast<int64_t>(returnAddr) - static_cast<int64_t>(caveAddr + shellcode.size()));
-    shellcode[jmpRelOffset + 0] = static_cast<uint8_t>(rel32 & 0xFF);
-    shellcode[jmpRelOffset + 1] = static_cast<uint8_t>((rel32 >> 8) & 0xFF);
-    shellcode[jmpRelOffset + 2] = static_cast<uint8_t>((rel32 >> 16) & 0xFF);
-    shellcode[jmpRelOffset + 3] = static_cast<uint8_t>((rel32 >> 24) & 0xFF);
-
     if (!game.writeBytes(caveAddr, shellcode.data(), shellcode.size()))
     {
       AppendLog("Story camera hook: failed to write code cave");
@@ -1655,14 +1642,23 @@ private:
       return false;
     }
 
-    // Patch: E9 rel32 + NOP NOP NOP
-    uint8_t patch[CAMERA_HOOK_PATCH_SIZE] = {0xE9, 0, 0, 0, 0, 0x90, 0x90, 0x90};
-    int32_t hookRel = static_cast<int32_t>(
-        static_cast<int64_t>(caveAddr) - static_cast<int64_t>(hookAddr + 5));
-    patch[1] = static_cast<uint8_t>(hookRel & 0xFF);
-    patch[2] = static_cast<uint8_t>((hookRel >> 8) & 0xFF);
-    patch[3] = static_cast<uint8_t>((hookRel >> 16) & 0xFF);
-    patch[4] = static_cast<uint8_t>((hookRel >> 24) & 0xFF);
+    DWORD caveOldProtect = 0;
+    if (!game.protectMemory(caveAddr, shellcode.size(), PAGE_EXECUTE_READWRITE, &caveOldProtect))
+    {
+      AppendLog("Story camera hook: failed to protect code cave");
+      game.freeInTarget(cameraCodeCave);
+      game.freeInTarget(cameraRemoteState);
+      cameraCodeCave = nullptr;
+      cameraRemoteState = nullptr;
+      return false;
+    }
+
+    // Patch: jmp qword ptr [rip+0]; dq caveAddr
+    uint8_t patch[CAMERA_HOOK_PATCH_SIZE] = {
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0, 0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < 8; ++i)
+      patch[6 + i] = static_cast<uint8_t>((caveAddr >> (8 * i)) & 0xFF);
 
     DWORD hookOldProtect = 0;
     if (!game.protectMemory(hookAddr, CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &hookOldProtect))
