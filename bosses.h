@@ -631,7 +631,7 @@ private:
     // Rage Art Camera (requires Assembly Injection)
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
     {
-      if (!ADJUST_RA_CAMERA) return;
+      if (!ADJUST_RA_CAMERA || !cameraHookInstalled) return;
       uintptr_t addr = moveset.getMoveAddress(nameKey, moveset.getAliasMoveId(0x8000) - 20);
       addr = moveset.getMoveExtrapropAddr(addr);
       addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
@@ -1149,7 +1149,7 @@ private:
       // Rage Art Camera (requires Assembly Injection)
       auto setRageArtCamera = [&](uint32_t nameKey, int value)
       {
-        if (!ADJUST_RA_CAMERA) return;
+        if (!ADJUST_RA_CAMERA || !cameraHookInstalled) return;
         addr = moveset.getMoveAddress(nameKey, defaultAliasIdx - 20);
         addr = moveset.getMoveExtrapropAddr(addr);
         addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
