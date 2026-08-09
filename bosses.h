@@ -67,7 +67,7 @@ private:
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
-  HWND hwndLogBox;
+  HWND hwndLogBox = nullptr;
   ConfigFlags* config = nullptr;
 
   bool shouldHandleHudAndCostumes() {
@@ -87,14 +87,11 @@ private:
   }
 
   // METHODS
-  // Append message to log box
+  // Append message to log box (GUI) and/or stdout (console / devMode)
   void AppendLog(const std::string &msg)
   {
     if (msg.empty())
       return; // Prevent appending empty messages
-
-    // Get current text length
-    int length = GetWindowTextLengthA(hwndLogBox);
 
     // Ensure no excessive newlines
     std::string trimmedMsg = msg;
@@ -103,9 +100,17 @@ private:
       trimmedMsg.pop_back();
     }
 
-    // Append text properly
-    SendMessageA(hwndLogBox, EM_SETSEL, length, length);
-    SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(trimmedMsg + "\r\n").c_str());
+    if (hwndLogBox)
+    {
+      int length = GetWindowTextLengthA(hwndLogBox);
+      SendMessageA(hwndLogBox, EM_SETSEL, length, length);
+      SendMessageA(hwndLogBox, EM_REPLACESEL, 0, (LPARAM)(trimmedMsg + "\r\n").c_str());
+    }
+
+    if (!hwndLogBox || this->devMode)
+    {
+      printf("%s\n", trimmedMsg.c_str());
+    }
   }
 
   // Append message to log box (overloaded for formatted strings)
@@ -115,13 +120,7 @@ private:
     va_list args;
     va_start(args, format);
     vsprintf_s(buffer, sizeof(buffer), format, args);
-    // vprintf(format, args);
     va_end(args);
-
-    if (this->devMode)
-    {
-      printf("%s\n", buffer);
-    }
 
     AppendLog(std::string(buffer));
   }
@@ -263,13 +262,37 @@ private:
     // }
 
     addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
-    hudIconAddr = addr + 13;
+    if (addr != 0)
+    {
+      hudIconAddr = addr + 13;
+    }
+    else
+    {
+      hudIconAddr = 0;
+    }
 
-    addr = game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
-    hudNameAddr = addr + 13;
+    if (hudIconAddr)
+    {
+      addr = game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
+      if (addr != 0)
+      {
+        hudNameAddr = addr + 13;
+      }
+      else
+      {
+        hudNameAddr = 0;
+      }
+    }
+    else
+    {
+      hudNameAddr = 0;
+    }
 
-    // Setting the global flag
     handleIcons = hudIconAddr && hudNameAddr;
+    if (!handleIcons)
+    {
+      AppendLog("HUD Icon/Name addresses not found (custom HUD icons disabled)");
+    }
     // handleIcons = false; // For Debugging
 
     addr = game.FastAoBScan(Tekken::MOVSET_OFFSET_SIG_BYTES, base + 0x1700000);
@@ -311,7 +334,7 @@ private:
     else
     {
       cameraHookAddr = 0;
-      printf("Story Camera Hook Address not found (camera remap disabled)\n");
+      AppendLog("Story Camera Hook Address not found (camera remap disabled)");
     }
 
     if (devMode)
