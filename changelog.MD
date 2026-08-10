@@ -1,6 +1,7 @@
 ## Changelog (August 10, 2026)
  - Added support for Story Rage Arts by implementing a code-cave/injection hook
  - Fixed an issue where Amnesia Heihachi will perform the regular Rage Art against characters he has special interactions with e.g, Kazuya, Jin.
+ - Fixed Shadow Heihachi's Rage Art. Now proper camera and dialogue plays
 
 ## Changelog (May 28, 2026)
  - Updated addresses for game version 3.01.01
