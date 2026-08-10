@@ -238,6 +238,7 @@ namespace Tekken
   enum ExtraMoveProperties
   {
     CHARA_TRAIL_VFX = 0x8039,
+    STORE_VALUE_80C5 = 0x80c5,
     DEVIL_STATE = 0x80dc,
     HEAT_RELATED = 0x814d,
     PERMA_DEVIL = 0x8151,

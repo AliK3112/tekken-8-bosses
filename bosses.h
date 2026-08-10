@@ -1124,6 +1124,36 @@ private:
     // addr = moveset.iterateExtraprops(moveset.getMoveExtrapropAddr(addr), 4); // 5th prop
     // moveset.editExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR, (int)(bossCode == BossCodes::FinalHeihachi));
 
+    // Rage Art Fix
+    // Rage Art Camera (requires Assembly Injection)
+    auto setRageArtCamera = [&](uint32_t nameKey, int value)
+    {
+      if (!ADJUST_RA_CAMERA || !cameraHookInstalled)
+        return;
+      addr = moveset.getMoveAddress(nameKey, defaultAliasIdx - 20);
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
+
+      if (addr)
+      {
+        moveset.editExtrapropValue(addr, "value", value);
+      }
+    };
+
+    if (bossCode == BossCodes::ShadowHeihachi || bossCode == BossCodes::AmnesiaHeihachi)
+    {
+      setRageArtCamera(0xfb78fa92, 5); // He_RageArts01_St
+      setRageArtCamera(0x140be639, 5); // He_RageArts02_St
+      setRageArtCamera(0xa77873d3, 6); // He_RageArts_n_St
+
+      // Adjusting RageArt against Kazuya & Jin & "friends"
+      int targetMoveId = moveset.getMoveId(0x942c4d5c);                // He_RageArts00_St
+      addr = moveset.getMoveAddress(0xde97038f, defaultAliasIdx - 30); // He_RageArts00
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.editCancelMoveId(addr, (short)targetMoveId);
+      moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
+    }
+
     if (bossCode == BossCodes::ShadowHeihachi)
     {
       addr = moveset.getMoveAddrByIdx(idleStanceIdx);
@@ -1132,8 +1162,36 @@ private:
       uintptr_t reqListCancel2 = moveset.getMoveNthCancel1stReqAddr(addr, 1);
       moveset.editCancelReqAddr(cancel1, reqListCancel2);
       moveset.disableStoryRelatedReqs(reqListCancel1);
+
+      // Dialogue for RA
+      // Disabling regular dialogues for "He_RageArts00_St"
+      {
+        addr = moveset.getMoveAddress(0x942c4d5c, defaultAliasIdx - 20); // He_RageArts01_St
+        addr = moveset.getMoveExtrapropAddr(addr);
+        uintptr_t header = moveset.getMovesetHeader("requirements");
+        while (true)
+        {
+          int frame = moveset.getExtrapropValue(addr, "frame");
+          int prop = moveset.getExtrapropValue(addr, "prop");
+          if (frame == 0 && prop == 0) break;
+          uintptr_t reqAddr = moveset.getExtrapropValue(addr, "requirements");
+          if (reqAddr != header)
+          {
+            moveset.editExtrapropValue(addr, "prop", 0);
+          }
+          addr = moveset.iterateExtraprops(addr, 1);
+        }
+      }
+
+      // Enabling Shadow Dialogues for "He_RageArts01_St"
+      addr = moveset.getMoveAddress(0xfb78fa92, defaultAliasIdx - 20); // He_RageArts01_St
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.findExtraProp(addr, ExtraMoveProperties::STORE_VALUE_80C5);
+      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+
       // TODO: b,f+2 functional
       // TODO: Broken Toy functional
+      // Nice to have: d/f+1, 1 using the old animation
       return markMovesetEdited(movesetAddr);
     }
 
@@ -1150,50 +1208,6 @@ private:
       //     moveset.editExtrapropValue(addr, "value", 0);
       //   }
       // }
-
-      // Rage Art Camera (requires Assembly Injection)
-      auto setRageArtCamera = [&](uint32_t nameKey, int value)
-      {
-        if (!ADJUST_RA_CAMERA || !cameraHookInstalled) return;
-        addr = moveset.getMoveAddress(nameKey, defaultAliasIdx - 20);
-        addr = moveset.getMoveExtrapropAddr(addr);
-        addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
-
-        if (addr)
-        {
-          moveset.editExtrapropValue(addr, "value", value);
-        }
-      };
-
-      setRageArtCamera(0xfb78fa92, 5); // He_RageArts01_St
-      setRageArtCamera(0x140be639, 5); // He_RageArts02_St
-      setRageArtCamera(0xa77873d3, 6); // He_RageArts_n_St
-
-      // Adjusting RageArt against Kazuya & Jin & "friends"
-      {
-        int targetMoveId = moveset.getMoveId(0x942c4d5c);                // He_RageArts00_St
-        addr = moveset.getMoveAddress(0xde97038f, defaultAliasIdx - 30); // He_RageArts00
-        addr = moveset.getMoveNthCancel(addr, 0);
-        moveset.editCancelMoveId(addr, (short)targetMoveId);
-        moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
-        // printf("targetMoveId: %d\n", targetMoveId);
-        // int i = 0;
-        // while (true)
-        // {
-        //   int moveId = moveset.getCancelMoveId(addr);
-        //   printf("[%d]: %d\n", i, moveId);
-        //   if (moveId == targetMoveId)
-        //   {
-        //     break;
-        //   }
-        //   else
-        //   {
-        //     moveset.editCancelExtradata(addr, moveset.findCancelExtradata(16383));
-        //   }
-        //   addr = moveset.iterateCancel(addr, 1);
-        //   i++;
-        // }
-      }
 
       // Adjusting Heat Smash
       {
