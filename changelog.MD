@@ -1,3 +1,6 @@
+## Changelog (August 15, 2026)
+ - Added support for Devil Jin's story rage for `Chapter 12` and `Chapter 13` variants
+
 ## Changelog (August 10, 2026)
  - Added support for Story Rage Arts by implementing a code-cave/injection hook
  - Fixed an issue where Amnesia Heihachi will perform the regular Rage Art against characters he has special interactions with e.g, Kazuya, Jin.
