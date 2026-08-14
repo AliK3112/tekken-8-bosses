@@ -143,7 +143,6 @@ namespace Tekken
     enum ExtraProp
     {
       Type = 0x0,
-      _0x4 = 0x4,
       RequirementAddr = 0x8,
       Prop = 0x10,
       Value = 0x14,
@@ -239,6 +238,7 @@ namespace Tekken
   {
     CHARA_TRAIL_VFX = 0x8039,
     STORE_VALUE_80C5 = 0x80c5,
+    STORE_VALUE_80C8 = 0x80c8,
     DEVIL_STATE = 0x80dc,
     HEAT_RELATED = 0x814d,
     PERMA_DEVIL = 0x8151,
@@ -248,6 +248,7 @@ namespace Tekken
     SPEND_RAGE = 0x82e2,
     ADD_HEAT_VALUE = 0x8383,
     RAGE_ART_CAMERA = 0x838e,
+    RAGE_ART_STAGE_VFX = 0x838f,
     HEAT_AURA_VFX = 0x8394,
     MULTILEVEL_INSTALLS = 0x83ee,
     HEI_WARRIOR = 0x83f9,
@@ -305,6 +306,7 @@ namespace Tekken
     Kunimitsu,
     Bob,
     Roger,
+    Yujiro,
     Dummy = 116,
     AngelJin,
     TrueDevilKazuya,

@@ -3,8 +3,8 @@
 ### Common Jin Changes
  - New String: d/b+4, 3 (except Kazama-style Jin)
  - All forms of CD+1 are +3 on block (except Kazama-style Jin's CD+1 done from neutral)
- - From ws+1, 3~3 df Crouch Dash, he can do EWGF, TGF and Hellsweep (except Devil-powered Jin)
- - New String: 1+2 from a CD done outta ZEN or ZAN (EWGF > TGF)
+ - [UNINTENDED BUG] From ws+1, 3~3 df Crouch Dash, he can do EWGF, TGF and Hellsweep (except Devil-powered Jin)
+ - [UNINTENDED BUG] New String: 1+2 from a CD done outta ZEN or ZAN (EWGF > TGF)
 
 ### Nerfed Jin ([Movelist Showcase](https://youtu.be/6HofnzDjPlM?si=50FrGFlMTeYukU4h))
   - 1, 2, 1 removed
@@ -19,10 +19,10 @@
   - Omen Stance followups removed
   - ZEN 1, 2 last hit reverted to T7
   - ZEN 2 reverted to T7, Now a Heat Engager
-  - ZEN 4 changed. Has same anim as T7 f,f+4
-  - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2
+  - ZEN 4 changed. Has same anim as T7 f,f+4. Chip damange on block.
+  - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2. Instant Tornado
   - ZEN u+1 removed
-  - ZEN 3+4 reaction changed
+  - ZEN 3+4 reaction changed, similar to T7 now.
   - 2nd Heat Smash becomes the default
   - Rage Art changed
 

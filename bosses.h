@@ -572,25 +572,24 @@ private:
     {
       int frame = moveset.getExtrapropValue(addr, "frame");
       int prop = moveset.getExtrapropValue(addr, "prop");
-      uintptr_t reqList = game.readInt32(addr + Offsets::ExtraProp::RequirementAddr);
       if (!prop && !frame)
         break;
       if (prop == ExtraMoveProperties::SPEND_RAGE)
       {
-        moveset.editExtraprop(addr, -1, -1, 0); // don't spend rage
+        moveset.editExtrapropValue(addr, "value", 0); // don't spend rage
       }
       if (prop == ExtraMoveProperties::HEAT_RELATED)
       {
-        moveset.editExtraprop(addr, -1, -1, 300);
+        moveset.editExtrapropValue(addr, "value", 300);
       }
       if (prop == ExtraMoveProperties::SHORT_FLAG)
       {
-        moveset.editExtraprop(addr, -1, -1, 0x220001);
+        moveset.editExtrapropValue(addr, "value", 0x220001);
       }
       // Cancels & Props both have requirements at offset 0x8
       if (moveset.cancelHasCondition(addr, Requirements::DLC_STORY1_BATTLE_NUM))
       {
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
       }
       addr += Sizes::Moveset::ExtraMoveProperty;
     }
@@ -604,34 +603,6 @@ private:
     int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
     moveset.replaceRequirements(Requirements::STORY_FLAGS, _777param);
     moveset.replaceRequirements(Requirements::NOT_STORY_MODE, 0, Requirements::STORY_FLAGS);
-
-    // Adjusting Rage Art
-    // uintptr_t rageArt = moveset.getMoveAddress(0x9BAE061E, 2100);
-    // if (rageArt && bossCode != BossCodes::RegularJin)
-    // {
-    //   uintptr_t cancel = moveset.getMoveNthCancel(rageArt, 0);
-    //   moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1ADAB0CB, 2000));
-    // }
-    // auto fixRageArtCamera = [&](uintptr_t startAddr) {
-    //   for (uintptr_t addr = startAddr;;
-    //        addr = moveset.iterateExtraprops(addr, 1)) {
-    //     int prop = moveset.getExtrapropValue(addr, "prop");
-
-    //     if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
-    //       moveset.editExtrapropValue(addr, "value", 5);
-
-    //     if (!prop && !moveset.getExtrapropValue(addr, "frame"))
-    //       break;
-    //   }
-    // };
-
-    // uintptr_t rageArt = moveset.getMoveAddress(0x9bae061e, 2300);
-    // if (rageArt && bossCode != BossCodes::RegularJin)
-    // {
-    //   fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
-    //   rageArt = moveset.getMoveAddress(0x22e4beeb, 2100);
-    //   fixRageArtCamera(moveset.getMoveExtrapropAddr(rageArt));
-    // }
 
     // Rage Art Camera (requires Assembly Injection)
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
@@ -667,9 +638,9 @@ private:
         uintptr_t count = moveset.getMovesetCount("cancels");
         for (int i = 3500; i < (count - 2000); i++) { // First cancel appears around index 3700 and last around 11000
           uintptr_t addr = cancel + i * Sizes::Moveset::Cancel;
-          if (moveset.getCancelMoveId(addr) == ff12)
+          if (moveset.getCancelValue(addr, "move") == ff12)
           {
-            moveset.editCancelMoveId(addr, (short)ff2);
+            moveset.editCancelValue(addr, "move", ff2);
           }
         }
       }
@@ -681,69 +652,63 @@ private:
         uintptr_t cancel = 0;
 
         // Replacing df from that ZEN with the story version
+        short tMoveId = -1;
         moveId = moveset.getMoveId(0xda8608b7, 1790); // Jz_shoryu_P
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x39b5f537, 2200));
+          tMoveId = moveset.getMoveId(0x39b5f537, 2200);
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
 
         // ZEN 1+2 becomes ZEN u+1+2 because of command priority
         cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
         if (cancel) {
-          moveset.editMoveCancel(cancel,
-            0x4000000300000300,
-            moveset.getMovesetHeader("requirements"),
-            0,
-            -1,
-            -1,
-            -1,
-            (short)moveset.getMoveId(0x91130746, 2300), // ZEN u+1+2
-            -1);
+          tMoveId = moveset.getMoveId(0x91130746, 2300); // ZEN u+1+2
+          moveset.editCancelValue(cancel, "command", 0x4000000300000300);
+          moveset.editCancelValue(cancel, "requirement_idx", 0);
+          moveset.editCancelValue(cancel, "move", tMoveId); // ZEN u+1+2
         }
 
         // Adjusting ZEN 3+4
         moveId = moveset.getMoveId(0x362078c4, 1820); // ZEN 3+4
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x1a53432b, 2300));
+          tMoveId = moveset.getMoveId(0x1a53432b, 2300); // ZEN u+1+2
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
 
         // Disabling ZEN u+1
         moveId = moveset.getMoveId(0xc69959b0, 1580); // ZEN u+1
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editMoveCancel(
-            cancel, 
-            0x4000000300000000,
-            0,
-            0,
-            -1,
-            -1,
-            -1,
-            (short)moveset.getMoveId(0xb235481b, 1600), // ZEN 1+2
-            -1);
+          tMoveId = moveset.getMoveId(0xb235481b, 1600); // ZEN 1+2
+          moveset.editCancelValue(cancel, "command", 0x4000000300000000);
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
 
         // Adjusting ZEN 1
         moveId = moveset.getMoveId(0xea6240d3, 1580); // ZEN 1
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0x69655f3c, 2300));
+          tMoveId = moveset.getMoveId(0x69655f3c, 2300);
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
 
         // Adjusting ZEN 2
         moveId = moveset.getMoveId(0xc48dd080, 1580); // ZEN 2
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelExtradata(cancel, moveset.findCancelExtradata(389));
-          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0xa34e66df, 2300));
+          tMoveId = moveset.getMoveId(0xa34e66df, 2300);
+          moveset.editCancelValue(cancel, "extradata", moveset.findCancelExtradata(389));
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
 
         // Adjusting ZEN 4
         moveId = moveset.getMoveId(0xfd3fe1a6, 1800); // ZEN 2
         cancel = moveset.findCancel(firstCancel, "move", moveId);
         if (cancel) {
-          moveset.editCancelMoveId(cancel, (short)moveset.getMoveId(0xc2c9eadc, 2300));
+          tMoveId = moveset.getMoveId(0xc2c9eadc, 2300);
+          moveset.editCancelValue(cancel, "move", tMoveId);
         }
       }
     }
@@ -753,7 +718,8 @@ private:
     {
       uintptr_t addr = moveset.getMoveAddress(0x530890fb, moveset.getAliasMoveId(0x8000));
       addr = moveset.getMoveNthCancel(addr, 2);
-      moveset.editCancelMoveId(addr, moveset.getMoveId(0x459c84c1, 1800)); // Jz_shoryu_shift
+      int moveId = moveset.getMoveId(0x459c84c1, 1800); // Jz_shoryu_shift
+      moveset.editCancelValue(addr, "move", moveId);
     }
 
     // EWGF > OTGF bug fix. Only Final Jin should be able to do it, other variants shouldn't
@@ -762,8 +728,8 @@ private:
       uintptr_t addr = moveset.getMoveAddress(0x39b5f537, moveset.getAliasMoveId(0x8000));
       addr = moveset.getMoveNthCancel(addr, 0);
       addr = moveset.findCancel(addr, "command", 0x4000000300000000);
-      int moveId = moveset.getCancelMoveId(moveset.iterateCancel(addr, 1)); // Get CD+1 ID from next cancel
-      moveset.editCancelMoveId(addr, moveId); // Jz_Story_623_LP_fast
+      int moveId = moveset.getCancelValue(moveset.iterateCancel(addr, 1), "move"); // Get CD+1 ID from next cancel
+      moveset.editCancelValue(addr, "move", moveId); // Jz_Story_623_LP_fast
     }
 
     switch (bossCode)
@@ -771,7 +737,8 @@ private:
     case BossCodes::RegularJin:
     {
       uintptr_t addr = moveset.getMoveAddress(0x9b789d36, 1865); // d/b+1+2
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0), 0);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"), 0);
     }
     break;
     case BossCodes::NerfedJin:
@@ -784,7 +751,7 @@ private:
         uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
         if (cancel) {
           for (int i = 0; i < 4; i++) {
-            uintptr_t reqAddr = moveset.getCancelReqAddr(cancel);
+            uintptr_t reqAddr = moveset.getCancelValue(cancel, "requirements");
             moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
             cancel = moveset.iterateCancel(cancel, 1);
           }
@@ -804,7 +771,6 @@ private:
     break;
     case BossCodes::ChainedJin:
     {
-      uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
       std::vector<std::pair<int, int>> moves = {
           {0xCAD0CF3C, 1500}, // 1+2
           {0xE383D012, 2000}, // f,f+2
@@ -817,7 +783,8 @@ private:
         uintptr_t moveAddr = moveset.getMoveAddress(move.first, move.second);
         if (moveAddr)
         {
-          moveset.editCancelReqAddr(moveset.getMoveNthCancel(moveAddr, 0), reqHeader);
+          uintptr_t cancel = moveset.getMoveNthCancel(moveAddr, 0);
+          moveset.editCancelValue(cancel, "requirement_idx", 0);
         }
       }
     }
@@ -842,25 +809,20 @@ private:
       addr = moveset.getMoveExtrapropAddr(addr);
       moveset.editExtraprop(addr, ExtraMoveProperties::PERMA_DEVIL, 1);
 
-      // Disabling some requirements for basic attacks
-      // 0x8000 alias
-      // addr = movesHeader + (defaultAliasIdx * Sizes::Moveset::Move);
-      // 32th cancel
-      // disableStoryRelatedReqs(getMoveNthCancel1stReqAddr(addr, 31), Requirements::STORY_FLAGS);
-
       addr = moveset.getMoveAddress(0x42CCE45A, idleStanceIdx); // CD+4, 1 last hit key
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE, -1);
       if (addr != 0)
       {
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
         addr = moveset.iterateCancel(addr, 2); // Move 2 cancels forward
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       }
 
       // 1,1,2
       addr = moveset.getMoveAddress(0x2226A9EE, idleStanceIdx);
       // 3rd cancel
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 2));
+      addr = moveset.getMoveNthCancel(addr, 2);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
 
       // Juggle Escape
       addr = moveset.getMoveAddress(0xDEBED999, 5);
@@ -873,19 +835,19 @@ private:
       // f,f+2 (story version)
       addr = moveset.getMoveAddress(0x1A571FA1, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       addr += Sizes::Moveset::Cancel; // Move 1 cancel forward
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
 
       // d/b+1+2
       addr = moveset.getMoveAddress(0x73EBDBA2, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
-      moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
+      moveset.editCancelValue(addr, "requirement_idx", 0);
 
       // d/b+4
       addr = moveset.getMoveAddress(0x9364E2F5, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
-      addr = moveset.getCancelReqAddr(addr);
+      addr = moveset.getCancelValue(addr, "requirements");
       moveset.disableStoryRelatedReqs(addr);
       // Disabling standing req
       game.write<int>(addr + Sizes::Moveset::Requirement, 0);
@@ -931,16 +893,13 @@ private:
         int moveId = moveset.getMoveId(0xbe4863c0, idx + 1); // Kz_66rp_DVL
         addr = moveset.getMoveNthCancel(addr, 0);
         uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
-        moveset.editMoveCancel(
-            addr,
-            0,
-            moveset.getMovesetHeader("requirements"),
-            moveset.findCancelExtradata(1025),
-            1,
-            1,
-            1,
-            (short)moveId,
-            65);
+        moveset.editCancelValue(addr, "requirement_idx", 0);
+        moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(1025));
+        moveset.editCancelValue(addr, "start", 1);
+        moveset.editCancelValue(addr, "end", 1);
+        moveset.editCancelValue(addr, "transition", 1);
+        moveset.editCancelValue(addr, "move", moveId);
+        moveset.editCancelValue(addr, "option", 65);
       }
 
       // Replacing Rage Art with Tekken-Ball counterpart
@@ -949,57 +908,51 @@ private:
         uintptr_t addr = moveset.getMoveAddress(0xfaf65ab0, defaultAliasIdx - 100);
         int moveId = moveset.getMoveId(0xffd3c168, idleStanceIdx - 100); // Tekken Ball blast
         addr = moveset.getMoveNthCancel(addr, 0);
-        moveset.editMoveCancel(
-            addr,
-            0,
-            moveset.getMovesetHeader("requirements"),
-            moveset.findCancelExtradata(1025),
-            1,
-            1,
-            1,
-            (short)moveId,
-            65);
+        moveset.editCancelValue(addr, "requirement_idx", 0);
+        moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(1025));
+        moveset.editCancelValue(addr, "start", 1);
+        moveset.editCancelValue(addr, "end", 1);
+        moveset.editCancelValue(addr, "transition", 1);
+        moveset.editCancelValue(addr, "move", moveId);
+        moveset.editCancelValue(addr, "option", 65);
       }
 
       // Single-spin uppercut
       uintptr_t addr = moveset.getMoveAddress(0xD172C176, idleStanceIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.editCancelCommand(addr, 0x10);
-      moveset.editCancelOption(addr, 0x50);
+      moveset.editCancelValue(addr, "command", 0x10);
+      moveset.editCancelValue(addr, "option", 0x50);
 
       uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
 
       // Ultra-wavedash
       addr = moveset.getMoveAddress(0x77314B09, idleStanceIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.editCancelReqAddr(addr, reqHeader);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
 
       // CD+1+2
       addr = moveset.getMoveAddress(0x0C9CE140, idleStanceIdx);
-      moveset.editCancelReqAddr(moveset.getMoveNthCancel(addr, 0), reqHeader);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
 
       // b+2,2
       addr = moveset.getMoveAddress(0x8B5BFA6C, idleStanceIdx);
-      moveset.editCancelReqAddr(moveset.getMoveNthCancel(addr, 0), reqHeader);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
 
       // NEW b+2,2. Disabling laser cancel
       addr = moveset.getMoveAddress(0x8FE28C6A, defaultAliasIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.editCancelExtradata(addr, moveset.findCancelExtradata(16383));
+      moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(16383));
 
       // Disabling u/b+1+2 laser
       addr = moveset.getMoveAddress(0x07F32E0C, 2000);
       addr = moveset.getMoveNthCancel(addr, 0);
-      moveset.editMoveCancel(
-          addr,
-          0,
-          reqHeader,
-          moveset.findCancelExtradata(386),
-          -1,
-          -1,
-          1,
-          moveset.getMoveId(0x1376C644, idleStanceIdx),
-          65);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
+      moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(386));
+      moveset.editCancelValue(addr, "transition", 1);
+      moveset.editCancelValue(addr, "move", moveset.getMoveId(0x1376C644, idleStanceIdx));
+      moveset.editCancelValue(addr, "option", 65);
 
       // d/f+3+4, 1
       {
@@ -1009,8 +962,8 @@ private:
         int df34_1_db2 = moveset.getCancelMoveId(addr);
         int df34_1_2 = moveset.getMoveId(0xD63CD0E6, df34_1);
         addr = moveset.findCancel(addr, "move", df34_1_2);
-        moveset.editCancelMoveId(moveset.iterateCancel(addr, 0), df34_1_db2);
-        moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), df34_1_db2);
+        moveset.editCancelValue(addr, "move", df34_1_db2);
+        moveset.editCancelValue(moveset.iterateCancel(addr, 1), "move", df34_1_db2);
       }
 
       // d/b+1, 2
@@ -1019,34 +972,35 @@ private:
       // Grabbing move ID from 3rd cancel
       int moveId_db2 = moveset.getCancelMoveId(moveset.iterateCancel(addr, 2));
       addr = moveset.iterateCancel(addr, 9); // 10th cancel
-      moveset.editCancelFrames(addr, 19, 19, 19);
-      moveset.editCancelMoveId(addr, moveId_db2);
+      moveset.editCancelValue(addr, "start", 19);
+      moveset.editCancelValue(addr, "end", 19);
+      moveset.editCancelValue(addr, "transition", 19);
+      moveset.editCancelValue(addr, "move", moveId_db2);
 
       // 11th cancel
       addr = moveset.iterateCancel(addr, 1);
-      moveset.editCancelFrames(addr, 19, 19, 19);
-      moveset.editCancelMoveId(addr, moveId_db2);
+      moveset.editCancelValue(addr, "start", 19);
+      moveset.editCancelValue(addr, "end", 19);
+      moveset.editCancelValue(addr, "transition", 19);
+      moveset.editCancelValue(addr, "move", moveId_db2);
 
       // Adjusting d/b+1+2 to cancel into this on frame-1
       int moveId_db1 = moveset.getMoveId(0xFE501006, moveId_db2);
       addr = moveset.getMoveAddress(0x73EBDBA2, moveId_db1);
       addr = moveset.getMoveNthCancel(addr, 0);
-      moveset.editCancelReqAddr(addr, reqHeader);
-      moveset.editCancelMoveId(addr, (short)moveId_db1);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
+      moveset.editCancelValue(addr, "move", moveId_db1);
 
       // ws+2
       addr = moveset.getMoveAddress(0xB253E5F2, idleStanceIdx);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.editMoveCancel(
-          addr,
-          0,
-          reqHeader,
-          moveset.findCancelExtradata(1025),
-          5,
-          5,
-          5,
-          moveset.getMoveId(0x0AB42E52, defaultAliasIdx),
-          65);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
+      moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(1025));
+      moveset.editCancelValue(addr, "start", 5);
+      moveset.editCancelValue(addr, "end", 5);
+      moveset.editCancelValue(addr, "transition", 5);
+      moveset.editCancelValue(addr, "move", moveset.getMoveId(0x0AB42E52, defaultAliasIdx));
+      moveset.editCancelValue(addr, "option", 65);
 
       // Tone down ws+2 damage
       if (config->toneDownDamage) {
@@ -1073,7 +1027,8 @@ private:
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
 
     uintptr_t addr = moveset.getMoveAddrByIdx(0x8000);
-    addr = moveset.getMoveNthCancel1stReqAddr(addr, 0); // 1st req
+    addr = moveset.getMoveNthCancel(addr, 0);
+    addr = moveset.getCancelValue(addr, "requirements"); // 1st req
     moveset.editRequirement(addr, -1, 8);
     addr = moveset.iterateRequirements(addr, 1); // 2nd req
     moveset.editRequirement(addr, Requirements::OUTRO1, 0);
@@ -1094,11 +1049,11 @@ private:
     uintptr_t addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
 
     uintptr_t cancelAddr = moveset.findMoveCancelByCondition(addr, Requirements::ARCADE_BATTLE);
-    addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
+    addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
     moveset.editRequirement(addr, 0);
 
     cancelAddr = moveset.iterateCancel(cancelAddr, 1);
-    addr = moveset.findRequirement(moveset.getCancelReqAddr(cancelAddr), Requirements::ARCADE_BATTLE);
+    addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
     moveset.editRequirement(addr, 0);
 
     // Adjust damage for the new CD+1
@@ -1158,9 +1113,10 @@ private:
     {
       addr = moveset.getMoveAddrByIdx(idleStanceIdx);
       uintptr_t cancel1 = moveset.getMoveNthCancel(addr, 0);
-      uintptr_t reqListCancel1 = moveset.getCancelReqAddr(cancel1);
-      uintptr_t reqListCancel2 = moveset.getMoveNthCancel1stReqAddr(addr, 1);
-      moveset.editCancelReqAddr(cancel1, reqListCancel2);
+      uintptr_t cancel2 = moveset.getMoveNthCancel(addr, 1);
+      uintptr_t reqListCancel1 = moveset.getCancelValue(cancel1, "requirements");
+      uintptr_t reqListCancel2 = moveset.getCancelValue(cancel2, "requirements");
+      moveset.editCancelValue(cancel1, "requirements", reqListCancel2);
       moveset.disableStoryRelatedReqs(reqListCancel1);
 
       // Dialogue for RA
@@ -1168,14 +1124,13 @@ private:
       {
         addr = moveset.getMoveAddress(0x942c4d5c, defaultAliasIdx - 20); // He_RageArts01_St
         addr = moveset.getMoveExtrapropAddr(addr);
-        uintptr_t header = moveset.getMovesetHeader("requirements");
         while (true)
         {
           int frame = moveset.getExtrapropValue(addr, "frame");
           int prop = moveset.getExtrapropValue(addr, "prop");
           if (frame == 0 && prop == 0) break;
-          uintptr_t reqAddr = moveset.getExtrapropValue(addr, "requirements");
-          if (reqAddr != header)
+          int reqIdx = moveset.getExtrapropValue(addr, "requirement_idx");
+          if (reqIdx != 0)
           {
             moveset.editExtrapropValue(addr, "prop", 0);
           }
@@ -1187,7 +1142,7 @@ private:
       addr = moveset.getMoveAddress(0xfb78fa92, defaultAliasIdx - 20); // He_RageArts01_St
       addr = moveset.getMoveExtrapropAddr(addr);
       addr = moveset.findExtraProp(addr, ExtraMoveProperties::STORE_VALUE_80C5);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
 
       // TODO: b,f+2 functional
       // TODO: Broken Toy functional
@@ -1203,7 +1158,7 @@ private:
       //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
       //   if (addr != 0)
       //   {
-      //     moveset.editExtrapropValue(addr, "requirements", moveset.getMovesetHeader("requirements"));
+      //     moveset.editExtrapropValue(addr, "requirement_idx", 0);
       //     moveset.editExtrapropValue(addr, "prop", ExtraMoveProperties::HEI_WARRIOR);
       //     moveset.editExtrapropValue(addr, "value", 0);
       //   }
@@ -1213,21 +1168,21 @@ private:
       {
         addr = moveset.getMoveAddress(0xc9c8dd57, idleStanceIdx); // He_ZoneD
         addr = moveset.getMoveNthCancel(addr, 1); // 2nd cancel
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
         addr = moveset.iterateCancel(addr, 1); // 3rd cancel
-        moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       }
 
       // 2nd hit of regular 2,2
       addr = moveset.getMoveAddress(0xf69e2bef, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       // Alternate 2nd hit of 2,2
       addr = moveset.getMoveAddress(0xaffba07b, defaultAliasIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 1);
       for (int i = 0; i < 4; i++) // 4 cancels have the req that need to be disabled
       {
-        uintptr_t reqs = moveset.getCancelReqAddr(moveset.iterateCancel(addr, i));
+        uintptr_t reqs = moveset.getCancelValue(moveset.iterateCancel(addr, i), "requirements");
         moveset.disableStoryRelatedReqs(reqs);
       }
       return markMovesetEdited(movesetAddr);
@@ -1241,7 +1196,7 @@ private:
       //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
       //   for (int i = 0; i < 2; i++)
       //   {
-      //     uintptr_t reqAddr = moveset.getCancelReqAddr(addr);
+      //     uintptr_t reqAddr = moveset.getCancelValue(addr, "requirements");
       //     moveset.editRequirement(moveset.iterateRequirements(reqAddr, 0), 0, 0); // 1st req
       //     moveset.editRequirement(moveset.iterateRequirements(reqAddr, 1), 0, 0); // 2nd req
       //     addr = moveset.iterateExtraprops(addr, 1);
@@ -1250,12 +1205,10 @@ private:
 
       // Activating Heat on idle stance
       {
-        auto iterReq = [&moveset](uintptr_t addr, int n) {
-          return moveset.iterateRequirements(addr, n);
-        };
         // He_sKAM00_shadow
         uintptr_t addr = moveset.getMoveAddress(0xb36a0b80, moveset.getAliasMoveId(0x8000));
-        uintptr_t reqList = moveset.getMoveNthCancel1stReqAddr(addr);
+        addr = moveset.getMoveNthCancel(addr, 0);
+        uintptr_t reqList = moveset.getCancelValue(addr, "requirements");
         // Preparing req-list
         addr = moveset.editRequirement(reqList, Requirements::HEAT_AVAILABLE, 1, 0);
         addr = moveset.editRequirement(addr, Requirements::PLAYER_IN_HEAT, 0, 0);
@@ -1271,21 +1224,26 @@ private:
         addr = moveset.editRequirement(addr, Requirements::EOL, 0, 0);
         // Assigning this reqList to idle stance
         uintptr_t cancel = moveset.getMoveNthCancel(moveset.getMoveAddrByIdx(0x8001));
-        moveset.editMoveCancel(cancel, 0, reqList, moveset.findCancelExtradata(10240), 1, 32767, 1, 0x8001, 257);
+        moveset.editCancelValue(cancel, "requirements", reqList);
+        moveset.editCancelValue(cancel, "extradata", moveset.findCancelExtradata(10240));
+        moveset.editCancelValue(cancel, "start", 1);
+        moveset.editCancelValue(cancel, "end", 32767);
+        moveset.editCancelValue(cancel, "transition", 1);
+        moveset.editCancelValue(cancel, "move", 0x8001);
+        moveset.editCancelValue(cancel, "option", 257);
       }
 
       // Activating WI in intro against Lidia
       {
         addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
         addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR);
-        uintptr_t reqAddr = moveset.getExtrapropValue(addr, "requirements");
-        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
+        uintptr_t reqIdx = moveset.getExtrapropValue(addr, "requirement_idx");
         // Iterating all extraprops to disable all props that have a requirement addr
         while (true)
         {
-          if (moveset.getExtrapropValue(addr, "requirements") == reqAddr)
+          if (moveset.getExtrapropValue(addr, "requirement_idx") == reqIdx)
           {
-            moveset.editExtrapropValue(addr, "requirements", reqHeader);
+            moveset.editExtrapropValue(addr, "requirement_idx", 0);
           }
           int prop = moveset.getExtrapropValue(addr, "prop");
           int frame = moveset.getExtrapropValue(addr, "frame");
@@ -1298,17 +1256,22 @@ private:
       // Enable most of the moves by modifying 2,2
       addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
       addr = moveset.getMoveNthCancel(addr, 1);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       int new22 = moveset.getCancelMoveId(addr);
-      addr = moveset.getMoveAddrByIdx(new22);
+      uintptr_t moveAddr = moveset.getMoveAddrByIdx(new22);
       // 2,2,2
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 5));
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 6));
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 7));
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 8));
+      addr = moveset.getMoveNthCancel(moveAddr, 5);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
+      addr = moveset.getMoveNthCancel(moveAddr, 6);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
+      addr = moveset.getMoveNthCancel(moveAddr, 7);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
+      addr = moveset.getMoveNthCancel(moveAddr, 8);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       // 1,1 > 1+3 throw
       addr = moveset.getMoveAddress(0x10E04C8A, 2000);
-      moveset.disableStoryRelatedReqs(moveset.getMoveNthCancel1stReqAddr(addr, 0));
+      addr = moveset.getMoveNthCancel(addr, 0);
+      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
       // Parry cancels from idle stance
       addr = moveset.getMoveAddrByIdx(idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::DLC_STORY1_FLAGS, 3);
@@ -1317,7 +1280,7 @@ private:
       {
         for (int i = 0; i < 4; i++)
         {
-          moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(moveset.iterateCancel(addr, i)));
+          moveset.disableStoryRelatedReqs(moveset.getCancelValue(moveset.iterateCancel(addr, i), "requirements"));
         }
       }
 
@@ -1347,9 +1310,9 @@ private:
     uintptr_t addr = moveset.getMoveAddress(0xc8c48167, moveset.getAliasMoveId(0x8030));
     addr = moveset.getMoveNthCancel(addr);
     addr = moveset.findCancelByCondition(addr, Requirements::ARCADE_BATTLE);
-    moveset.disableRequirement(moveset.getCancelReqAddr(addr), Requirements::ARCADE_BATTLE);
+    moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
     addr = moveset.iterateCancel(addr, 1); // Next cancel
-    moveset.disableRequirement(moveset.getCancelReqAddr(addr), Requirements::ARCADE_BATTLE);
+    moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
     // Move this in the beginning if I figure out how to get the correct intros to play
     adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
     return markMovesetEdited(movesetAddr);
@@ -1382,20 +1345,41 @@ private:
         addr += Sizes::Moveset::Move;
       }
 
-      // Rage Art init (0xa02e070b)
-      addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20);
+      addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20); // Dj_RageArts01
       addr = moveset.getMoveExtrapropAddr(addr);
-      // `getCancelReqAddr` can also be used to grab extraprop's req addr
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
-      // Rage Art throw (0xfe2cd621)
-      addr = moveset.getMoveAddress(0xfe2cd621, defaultAliasIdx - 15);
+      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+      addr = moveset.getMoveAddress(0xfe2cd621, defaultAliasIdx - 15); // Dj_RageArts_n
       // 1st extraprop
       addr = moveset.getMoveExtrapropAddr(addr);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
       // 5th extraprop
       addr = moveset.iterateExtraprops(addr, 4);
-      moveset.disableStoryRelatedReqs(moveset.getCancelReqAddr(addr));
+      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+      if (bossCode == BossCodes::DevilJin_2 || bossCode == BossCodes::DevilJin_3) {
+        addr = moveset.findExtraProp(addr, ExtraMoveProperties::STORE_VALUE_80C8);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+        {
+          uintptr_t start = moveset.getMovesetHeader("extra_move_properties");
+          uintptr_t count = moveset.getMovesetCount("extra_move_properties");
+          for (int i = 9000; i < count; i++) // 9000 idx is near the Rage Art
+          {
+            addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
+            int prop = moveset.getExtrapropValue(addr, "prop");
+            int param = moveset.getExtrapropValue(addr, "value");
+            if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
+            {
+              if (param == 48 || param == 49) {
+                moveset.editExtraprop(addr, -1, param - 43);
+              }
+            }
+          }
+        }
+      }
     }
+
     return markMovesetEdited(movesetAddr);
   }
 
@@ -1463,18 +1447,22 @@ private:
     emit({0x83, 0x78, 0x08, 0x00});
     size_t jeSkipEligible = emitRel32Hole({0x0F, 0x84});
 
-    // cmp r9d, 6 / je check_cam
-    emit({0x41, 0x83, 0xF9, 0x06});
+    // cmp r9d, 6 / je check_cam (Jin)
+    emit({0x41, 0x83, 0xF9, FighterId::Jin});
     size_t jeCheckCamJin = emitRel32Hole({0x0F, 0x84});
-    // cmp r9d, 35 / je check_cam
-    emit({0x41, 0x83, 0xF9, 0x23});
+    // cmp r9d, 35 / je check_cam (Heihachi)
+    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
     size_t jeCheckCamHei = emitRel32Hole({0x0F, 0x84});
+    // cmp r9d, 121 / je check_cam (DevilJin2)
+    emit({0x41, 0x83, 0xF9, FighterId::DevilJin2});
+    size_t jeCheckCamDvj = emitRel32Hole({0x0F, 0x84});
     // jmp skip
     size_t jmpSkipChar = emitRel32Hole({0xE9});
 
     size_t checkCam = code.size();
     patchRel32(jeCheckCamJin, checkCam);
     patchRel32(jeCheckCamHei, checkCam);
+    patchRel32(jeCheckCamDvj, checkCam);
 
     // cmp r8d, 0x24 / jb check_p2
     emit({0x41, 0x83, 0xF8, 0x24});
@@ -1483,35 +1471,48 @@ private:
     emit({0x41, 0x83, 0xF8, 0x29});
     size_t jaCheckP2 = emitRel32Hole({0x0F, 0x87});
 
-    // --- P1 ---
-    // cmp r9d, 6 / jne p1_hei
-    emit({0x41, 0x83, 0xF9, 0x06});
-    size_t jneP1Hei = emitRel32Hole({0x0F, 0x85});
+    // --- P1: dispatch by character ---
+    // cmp r9d, 6 / je p1_jin
+    emit({0x41, 0x83, 0xF9, FighterId::Jin});
+    size_t jeP1Jin = emitRel32Hole({0x0F, 0x84});
+    // cmp r9d, 35 / je p1_hei
+    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
+    size_t jeP1Hei = emitRel32Hole({0x0F, 0x84});
+    // cmp r9d, 121 / je p1_dvj
+    emit({0x41, 0x83, 0xF9, FighterId::DevilJin2});
+    size_t jeP1Dvj = emitRel32Hole({0x0F, 0x84});
+    size_t jmpSkipP1Unknown = emitRel32Hole({0xE9});
 
-    auto emitP1JinCompare = [&](uint32_t bossCode, size_t &jeRemapHole)
+    auto emitP1Compare = [&](uint32_t bossCode, size_t &jeRemapHole)
     {
       emit({0x81, 0x38});
       emitU32(bossCode);
       jeRemapHole = emitRel32Hole({0x0F, 0x84});
     };
 
+    size_t p1Jin = code.size();
+    patchRel32(jeP1Jin, p1Jin);
     size_t jeRemapP1Jin[5];
-    emitP1JinCompare(BossCodes::NerfedJin, jeRemapP1Jin[0]);
-    emitP1JinCompare(BossCodes::MishimaJin, jeRemapP1Jin[1]);
-    emitP1JinCompare(BossCodes::KazamaJin, jeRemapP1Jin[2]);
-    emitP1JinCompare(BossCodes::FinalJin, jeRemapP1Jin[3]);
-    emitP1JinCompare(BossCodes::ChainedJin, jeRemapP1Jin[4]);
+    emitP1Compare(BossCodes::NerfedJin, jeRemapP1Jin[0]);
+    emitP1Compare(BossCodes::MishimaJin, jeRemapP1Jin[1]);
+    emitP1Compare(BossCodes::KazamaJin, jeRemapP1Jin[2]);
+    emitP1Compare(BossCodes::FinalJin, jeRemapP1Jin[3]);
+    emitP1Compare(BossCodes::ChainedJin, jeRemapP1Jin[4]);
     size_t jmpSkipP1Jin = emitRel32Hole({0xE9});
 
     size_t p1Hei = code.size();
-    patchRel32(jneP1Hei, p1Hei);
-    emit({0x81, 0x38});
-    emitU32(BossCodes::AmnesiaHeihachi);
-    size_t jeRemapP1Hei0 = emitRel32Hole({0x0F, 0x84});
-    emit({0x81, 0x38});
-    emitU32(BossCodes::ShadowHeihachi);
-    size_t jeRemapP1Hei1 = emitRel32Hole({0x0F, 0x84});
+    patchRel32(jeP1Hei, p1Hei);
+    size_t jeRemapP1Hei0, jeRemapP1Hei1;
+    emitP1Compare(BossCodes::AmnesiaHeihachi, jeRemapP1Hei0);
+    emitP1Compare(BossCodes::ShadowHeihachi, jeRemapP1Hei1);
     size_t jmpSkipP1Hei = emitRel32Hole({0xE9});
+
+    size_t p1Dvj = code.size();
+    patchRel32(jeP1Dvj, p1Dvj);
+    size_t jeRemapP1Dvj0, jeRemapP1Dvj1;
+    emitP1Compare(BossCodes::DevilJin_2, jeRemapP1Dvj0);
+    emitP1Compare(BossCodes::DevilJin_3, jeRemapP1Dvj1);
+    size_t jmpSkipP1Dvj = emitRel32Hole({0xE9});
 
     size_t checkP2 = code.size();
     patchRel32(jbCheckP2, checkP2);
@@ -1523,34 +1524,46 @@ private:
     // cmp r8d, 0x2F / ja skip
     emit({0x41, 0x83, 0xF8, 0x2F});
     size_t jaSkipP2Hi = emitRel32Hole({0x0F, 0x87});
-    // cmp r9d, 6 / jne p2_hei
-    emit({0x41, 0x83, 0xF9, 0x06});
-    size_t jneP2Hei = emitRel32Hole({0x0F, 0x85});
 
-    auto emitP2JinCompare = [&](uint32_t bossCode, size_t &jeRemapHole)
+    // --- P2: dispatch by character ---
+    emit({0x41, 0x83, 0xF9, FighterId::Jin});
+    size_t jeP2Jin = emitRel32Hole({0x0F, 0x84});
+    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
+    size_t jeP2Hei = emitRel32Hole({0x0F, 0x84});
+    emit({0x41, 0x83, 0xF9, FighterId::DevilJin2});
+    size_t jeP2Dvj = emitRel32Hole({0x0F, 0x84});
+    size_t jmpSkipP2Unknown = emitRel32Hole({0xE9});
+
+    auto emitP2Compare = [&](uint32_t bossCode, size_t &jeRemapHole)
     {
       emit({0x81, 0x78, 0x04});
       emitU32(bossCode);
       jeRemapHole = emitRel32Hole({0x0F, 0x84});
     };
 
+    size_t p2Jin = code.size();
+    patchRel32(jeP2Jin, p2Jin);
     size_t jeRemapP2Jin[5];
-    emitP2JinCompare(BossCodes::NerfedJin, jeRemapP2Jin[0]);
-    emitP2JinCompare(BossCodes::MishimaJin, jeRemapP2Jin[1]);
-    emitP2JinCompare(BossCodes::KazamaJin, jeRemapP2Jin[2]);
-    emitP2JinCompare(BossCodes::FinalJin, jeRemapP2Jin[3]);
-    emitP2JinCompare(BossCodes::ChainedJin, jeRemapP2Jin[4]);
+    emitP2Compare(BossCodes::NerfedJin, jeRemapP2Jin[0]);
+    emitP2Compare(BossCodes::MishimaJin, jeRemapP2Jin[1]);
+    emitP2Compare(BossCodes::KazamaJin, jeRemapP2Jin[2]);
+    emitP2Compare(BossCodes::FinalJin, jeRemapP2Jin[3]);
+    emitP2Compare(BossCodes::ChainedJin, jeRemapP2Jin[4]);
     size_t jmpSkipP2Jin = emitRel32Hole({0xE9});
 
     size_t p2Hei = code.size();
-    patchRel32(jneP2Hei, p2Hei);
-    emit({0x81, 0x78, 0x04});
-    emitU32(BossCodes::AmnesiaHeihachi);
-    size_t jeRemapP2Hei0 = emitRel32Hole({0x0F, 0x84});
-    emit({0x81, 0x78, 0x04});
-    emitU32(BossCodes::ShadowHeihachi);
-    size_t jeRemapP2Hei1 = emitRel32Hole({0x0F, 0x84});
+    patchRel32(jeP2Hei, p2Hei);
+    size_t jeRemapP2Hei0, jeRemapP2Hei1;
+    emitP2Compare(BossCodes::AmnesiaHeihachi, jeRemapP2Hei0);
+    emitP2Compare(BossCodes::ShadowHeihachi, jeRemapP2Hei1);
     size_t jmpSkipP2Hei = emitRel32Hole({0xE9});
+
+    size_t p2Dvj = code.size();
+    patchRel32(jeP2Dvj, p2Dvj);
+    size_t jeRemapP2Dvj0, jeRemapP2Dvj1;
+    emitP2Compare(BossCodes::DevilJin_2, jeRemapP2Dvj0);
+    emitP2Compare(BossCodes::DevilJin_3, jeRemapP2Dvj1);
+    size_t jmpSkipP2Dvj = emitRel32Hole({0xE9});
 
     size_t remap = code.size();
     emit({0x41, 0x81, 0xC0});
@@ -1559,20 +1572,28 @@ private:
     size_t skip = code.size();
     patchRel32(jeSkipEligible, skip);
     patchRel32(jmpSkipChar, skip);
+    patchRel32(jmpSkipP1Unknown, skip);
     patchRel32(jmpSkipP1Jin, skip);
     patchRel32(jmpSkipP1Hei, skip);
+    patchRel32(jmpSkipP1Dvj, skip);
     patchRel32(jbSkipP2Lo, skip);
     patchRel32(jaSkipP2Hi, skip);
+    patchRel32(jmpSkipP2Unknown, skip);
     patchRel32(jmpSkipP2Jin, skip);
     patchRel32(jmpSkipP2Hei, skip);
+    patchRel32(jmpSkipP2Dvj, skip);
     for (size_t hole : jeRemapP1Jin)
       patchRel32(hole, remap);
     patchRel32(jeRemapP1Hei0, remap);
     patchRel32(jeRemapP1Hei1, remap);
+    patchRel32(jeRemapP1Dvj0, remap);
+    patchRel32(jeRemapP1Dvj1, remap);
     for (size_t hole : jeRemapP2Jin)
       patchRel32(hole, remap);
     patchRel32(jeRemapP2Hei0, remap);
     patchRel32(jeRemapP2Hei1, remap);
+    patchRel32(jeRemapP2Dvj0, remap);
+    patchRel32(jeRemapP2Dvj1, remap);
 
     // pop rax
     emit({0x58});
@@ -2059,7 +2080,9 @@ bool isStoryCameraBoss(int bossCode)
   if (isValidJinBoss(bossCode) && bossCode != BossCodes::RegularJin)
     return true;
   return bossCode == BossCodes::AmnesiaHeihachi ||
-         bossCode == BossCodes::ShadowHeihachi;
+         bossCode == BossCodes::ShadowHeihachi ||
+         bossCode == BossCodes::DevilJin_2 ||
+         bossCode == BossCodes::DevilJin_3;
 }
 
 bool isCorrectHeihachiFlag(int storyFlag, int param)

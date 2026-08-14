@@ -20,12 +20,31 @@ uintptr_t getItemAddress(uintptr_t start, u_int index, size_t size)
   return start ? start + size * index : 0;
 }
 
+int getItemIndex(uintptr_t start, uintptr_t addr, size_t size)
+{
+  if (!start || !addr || addr < start)
+    return -1;
+  return static_cast<int>((addr - start) / size);
+}
+
 class TkMoveset
 {
 private:
   uintptr_t moveset;
   uintptr_t decryptFuncAddr;
   GameClass &game;
+
+  // Helper methods
+  uintptr_t getAddressFromIndex(std::string column, uintptr_t value, size_t size)
+  {
+    uintptr_t start = getMovesetHeader(column);
+    uintptr_t count = getMovesetCount(column);
+    uintptr_t addr = getItemAddress(start, value, size);
+    if (addr >= start && addr < getItemAddress(start, count - 1, size))
+      return addr;
+    else
+      return 0;
+  }
 
 public:
   // Constructor
@@ -199,7 +218,7 @@ public:
 
   uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n = 0)
   {
-    return getCancelReqAddr(getMoveNthCancel(move, n));
+    return getCancelValue(getMoveNthCancel(move, n), "requirements");
   }
 
   // Returns the address of cancel extradata given index
@@ -258,6 +277,12 @@ public:
       return game.readInt32(addr + Offsets::ExtraProp::Type);
     else if (column == "requirements")
       return game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
+    else if (column == "requirement_idx")
+    {
+      uintptr_t header = getMovesetHeader("requirements");
+      uintptr_t value = game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
+      return getItemIndex(header, value, Sizes::Moveset::Requirement);
+    }
     else if (column == "prop")
       return game.readInt32(addr + Offsets::ExtraProp::Prop);
     else if (column == "value")
@@ -282,6 +307,12 @@ public:
       game.write<int>(addr + Offsets::ExtraProp::Type, value);
     else if (column == "requirements")
       game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, value);
+    else if (column == "requirement_idx")
+    {
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      if (!tAddr) return;
+      game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, tAddr);
+    }
     else if (column == "prop")
       game.write<int>(addr + Offsets::ExtraProp::Prop, value);
     else if (column == "value")
@@ -335,7 +366,7 @@ public:
   {
     if (!cancel)
       return false;
-    uintptr_t requirements = getCancelReqAddr(cancel);
+    uintptr_t requirements = getCancelValue(cancel, "requirements");
     return reqListHas(requirements, targetReq, targetParam);
   }
 
@@ -609,8 +640,20 @@ public:
       return game.readUInt64(addr + Offsets::Cancel::Command);
     else if (column == "requirements")
       return game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+    else if (column == "requirement_idx")
+    {
+      uintptr_t header = getMovesetHeader("requirements");
+      uintptr_t value = game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+      return getItemIndex(header, value, Sizes::Moveset::Requirement);
+    }
     else if (column == "extradata")
       return game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
+    else if (column == "extradata_idx")
+    {
+      uintptr_t header = getMovesetHeader("cancel_extra_datas");
+      uintptr_t value = game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
+      return getItemIndex(header, value, Sizes::Moveset::CancelExtradata);
+    }
     else if (column == "start")
       return game.readUInt32(addr + Offsets::Cancel::WindowStart);
     else if (column == "end")
@@ -623,6 +666,39 @@ public:
       return game.readUInt16(addr + Offsets::Cancel::Option);
 
     return 0;
+  }
+
+  void editCancelValue(uintptr_t addr, std::string column, uintptr_t value)
+  {
+    if (!addr) return;
+    if (column == "command")
+      game.write<uintptr_t>(addr + Offsets::Cancel::Command, value);
+    else if (column == "requirements")
+      game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, value);
+    else if (column == "requirement_idx")
+    {
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      if (!tAddr) return;
+      game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, tAddr);
+    }
+    else if (column == "extradata")
+      game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, value);
+    else if (column == "extradata_idx")
+    {
+      uintptr_t tAddr = getAddressFromIndex("cancel_extra_datas", value, Sizes::Moveset::CancelExtradata);
+      if (!tAddr) return;
+      game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, tAddr);
+    }
+    else if (column == "start")
+      game.write<int>(addr + Offsets::Cancel::WindowStart, value);
+    else if (column == "end")
+      game.write<int>(addr + Offsets::Cancel::WindowEnd, value);
+    else if (column == "transition")
+      game.write<int>(addr + Offsets::Cancel::TransitionFrame, value);
+    else if (column == "move")
+      game.write<uint16_t>(addr + Offsets::Cancel::Move, value);
+    else if (column == "option")
+      game.write<uint16_t>(addr + Offsets::Cancel::Option, value);
   }
 
   // Moves `n` cancels forward given a cancel's address
@@ -667,11 +743,22 @@ public:
     if (column == "requirement")
       game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC,
                             value);
+    else if (column == "requirement_idx")
+    {
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      if (!tAddr) return;
+      game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC, tAddr);
+    }
     else if (column == "damage")
       game.write<int>(addr + Offsets::HitCondition::Damage, value);
     else if (column == "reaction")
-      game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr,
-                            value);
+      game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr, value);
+    else if (column == "reaction_idx")
+    {
+      uintptr_t tAddr = getAddressFromIndex("reactions", value, Sizes::Moveset::ReactionList);
+      if (!tAddr) return;
+      game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr, tAddr);
+    }
   }
 
   uintptr_t getMovesetHeader(std::string column)
