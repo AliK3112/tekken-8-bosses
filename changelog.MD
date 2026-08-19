@@ -1,3 +1,6 @@
+## Changelog (August 20, 2026)
+ - Added support for game version 3.02.01 and Bob
+
 ## Changelog (August 15, 2026)
  - Added support for Devil Jin's story rage for `Chapter 12` and `Chapter 13` variants
 
