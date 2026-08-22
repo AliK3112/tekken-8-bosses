@@ -1,5 +1,6 @@
 // This class will be responsible for loading boss characters
 #include "moveset.h"
+#include "charcodes.h"
 #include "utils.h"
 #include <cstring>
 #include <vector>
@@ -340,6 +341,15 @@ private:
     {
       cameraHookAddr = 0;
       AppendLog("Story Camera Hook Address not found (camera remap disabled)");
+    }
+
+    // Picks up fighters released after this build; falls back to the built-in
+    // codes if the scan cannot be validated.
+    std::string charCodeStatus;
+    int newFighters = scanFighterCodes(game, charCodeStatus);
+    if (newFighters != 0 || devMode)
+    {
+      AppendLog(charCodeStatus);
     }
 
     if (devMode)
@@ -1378,6 +1388,25 @@ private:
           }
         }
       }
+
+      // TEMP
+      // {
+      //   uintptr_t header, count;
+
+      //   header = moveset.getMovesetHeader("requirements");
+      //   count = moveset.getMovesetCount("requirements");
+
+      //   for (uintptr_t i = 0; i < count; i++)
+      //   {
+      //     uintptr_t addr = header + i * Sizes::Moveset::Requirement;
+      //     int req = moveset.getRequirementValue(addr, "req");
+      //     int param = moveset.getRequirementValue(addr, "param");
+      //     if (req == Requirements::STORY_BATTLE_NUM && param == 0xC3)
+      //     {
+      //       moveset.editRequirement(addr, 0, 0);
+      //     }
+      //   }
+      // }
     }
 
     return markMovesetEdited(movesetAddr);
