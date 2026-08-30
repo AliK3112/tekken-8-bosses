@@ -606,286 +606,328 @@ private:
     }
   }
 
-  bool loadJin(uintptr_t movesetAddr, int bossCode)
-  {
-    if (!isValidJinBoss(bossCode))
-      return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
-    int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
+  // --- Jin boss helpers (used by loadJin) ---
 
-    // Adjusting requirements
+  // ChainedJin (11) uses story-flag param 1 — same unlock pool as NerfedJin.
+  void applyJinStoryRequirements(TkMoveset &moveset, int bossCode)
+  {
+    int storyFlagParam = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
+    uintptr_t start = moveset.getMovesetHeader("requirements");
+    uintptr_t count = moveset.getMovesetCount("requirements");
+    for (size_t i = 0; i < count; i++)
     {
-      uintptr_t start = moveset.getMovesetHeader("requirements");
-      uintptr_t count = moveset.getMovesetCount("requirements");
-      for (size_t i = 0; i < count; i++)
+      uintptr_t addr = start + i * Sizes::Requirement;
+      TK_Requirement requirement = game.read<TK_Requirement>(addr);
+      if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == storyFlagParam)
       {
-        uintptr_t addr = start + i * Sizes::Requirement;
-        TK_Requirement requirement = game.read<TK_Requirement>(addr);
-        if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == _777param)
-        {
-          game.write<int>(addr, 0);
-        }
-        else if (requirement.req == Requirements::NOT_STORY_MODE)
-        {
-          game.write<int>(addr, Requirements::STORY_FLAGS);
-        }
+        game.write<int>(addr, 0);
+      }
+      else if (requirement.req == Requirements::NOT_STORY_MODE)
+      {
+        game.write<int>(addr, Requirements::STORY_FLAGS);
       }
     }
+  }
 
-    // Rage Art Camera (requires Assembly Injection)
+  // Rage Art Camera (requires Assembly Injection)
+  void applyJinRageArtCameras(TkMoveset &moveset)
+  {
+    if (!ADJUST_RA_CAMERA || !cameraHookInstalled)
+      return;
+
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
     {
-      if (!ADJUST_RA_CAMERA || !cameraHookInstalled) return;
       uintptr_t addr = moveset.getMoveAddress(nameKey, moveset.getAliasMoveId(0x8000) - 20);
       addr = moveset.getMoveExtrapropAddr(addr);
       addr = moveset.findExtraProp(addr, ExtraMoveProperties::RAGE_ART_CAMERA);
-
       if (addr)
       {
         moveset.editExtrapropValue(addr, "value", value);
       }
     };
 
-    if (bossCode != BossCodes::RegularJin) {
-      setRageArtCamera(0x9bae061e, 5); // Jz_Story_RageArts00
-      setRageArtCamera(0x22e4beeb, 5); // Jz_RageArts01_St
-      setRageArtCamera(0x5898e42a, 6); // Jz_RageArts_n_St
+    setRageArtCamera(0x9bae061e, 5); // Jz_Story_RageArts00
+    setRageArtCamera(0x22e4beeb, 5); // Jz_RageArts01_St
+    setRageArtCamera(0x5898e42a, 6); // Jz_RageArts_n_St
+  }
+
+  // Season 2: replace f,f+1+2 with f,f+2; adjust FC df4 ~ ZEN cancels
+  void applyJinSeason2Fixes(TkMoveset &moveset)
+  {
+    {
+      int ff2 = moveset.getMoveId(0xE383D012, 2200);  // f,f+2
+      int ff12 = moveset.getMoveId(0xEB242623, 1750); // f,f+1+2
+      std::vector<std::pair<int, int>> moves = {{ff12, ff2}};
+      moveset.replaceCancelMoveIndexes(moves);
     }
 
-    // Handling season 2 bugs and moves
-    // FF+1+2 and FC df4 ~ ZEN cancel
+    uintptr_t addr = moveset.getMoveAddress(0x8c0f6a17, 1600); // Jz_zan_srk00EX_zan
+    if (!addr)
+      return;
+
+    uintptr_t firstCancel = moveset.getMoveNthCancel(addr, 0);
+    uintptr_t cancel = 0;
+    int moveId = -1;
+    short tMoveId = -1;
+
+    // Replacing df from that ZEN with the story version
+    moveId = moveset.getMoveId(0xda8608b7, 1790); // Jz_shoryu_P
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0x39b5f537, 2200);
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
+    // ZEN 1+2 becomes ZEN u+1+2 because of command priority
+    cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0x91130746, 2300); // ZEN u+1+2
+      moveset.editCancelValue(cancel, "command", 0x4000000300000300);
+      moveset.editCancelValue(cancel, "requirement_idx", 0);
+      moveset.editCancelValue(cancel, "move", tMoveId); // ZEN u+1+2
+    }
+
+    // Adjusting ZEN 3+4
+    moveId = moveset.getMoveId(0x362078c4, 1820); // ZEN 3+4
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0x1a53432b, 2300); // ZEN u+1+2
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
+    // Disabling ZEN u+1
+    moveId = moveset.getMoveId(0xc69959b0, 1580); // ZEN u+1
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0xb235481b, 1600); // ZEN 1+2
+      moveset.editCancelValue(cancel, "command", 0x4000000300000000);
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
+    // Adjusting ZEN 1
+    moveId = moveset.getMoveId(0xea6240d3, 1580); // ZEN 1
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0x69655f3c, 2300);
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
+    // Adjusting ZEN 2
+    moveId = moveset.getMoveId(0xc48dd080, 1580); // ZEN 2
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0xa34e66df, 2300);
+      moveset.editCancelValue(cancel, "extradata", moveset.findCancelExtradata(389));
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
+    // Adjusting ZEN 4
+    moveId = moveset.getMoveId(0xfd3fe1a6, 1800); // ZEN 2
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0xc2c9eadc, 2300);
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+  }
+
+  // Solving the "ws+1, [3,3] ~ df" bug (skipped for MishimaJin)
+  void fixJinWs1DfBug(TkMoveset &moveset)
+  {
+    uintptr_t addr = moveset.getMoveAddress(0x530890fb, 0x8000);
+    addr = moveset.getMoveNthCancel(addr, 2);
+    int moveId = moveset.getMoveId(0x459c84c1, 1800); // Jz_shoryu_shift
+    moveset.editCancelValue(addr, "move", moveId);
+  }
+
+  // EWGF > OTGF bug fix. Only Final Jin should keep OTGF; other variants redirect to CD+1
+  void fixJinEwgfOtgfCancel(TkMoveset &moveset)
+  {
+    uintptr_t addr = moveset.getMoveAddress(0x39b5f537, 0x8000);
+    addr = moveset.getMoveNthCancel(addr, 0);
+    addr = moveset.findCancel(addr, "command", 0x4000000300000000);
+    int moveId = moveset.getCancelValue(moveset.iterateCancel(addr, 1), "move"); // Get CD+1 ID from next cancel
+    moveset.editCancelValue(addr, "move", moveId); // Jz_Story_623_LP_fast
+  }
+
+  void installJinStanceAlias(TkMoveset &moveset, uintptr_t movesetAddr, uint32_t nameKey)
+  {
+    int moveId = moveset.getMoveId(nameKey, 2000);
+    if (moveId != 0)
+    {
+      game.write<short>(movesetAddr + 0xAA, moveId);
+    }
+  }
+
+  void applyRegularJinExclusive(TkMoveset &moveset)
+  {
+    uintptr_t addr = moveset.getMoveAddress(0x9b789d36, 1865); // d/b+1+2
+    addr = moveset.getMoveNthCancel(addr, 0);
+    moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"), 0);
+  }
+
+  void applyFinalJinExclusive(TkMoveset &moveset)
+  {
+    if (shouldDisableAutoParries())
+    {
+      uintptr_t addr = moveset.getMoveAddrByIdx(0x8001);
+      int targetMoveId = moveset.getMoveId(0xc2da6f70, 2500);
+      uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
+      if (cancel)
+      {
+        for (int i = 0; i < 4; i++)
+        {
+          uintptr_t reqAddr = moveset.getCancelValue(cancel, "requirements");
+          moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
+          cancel = moveset.iterateCancel(cancel, 1);
+        }
+      }
+    }
+
+    int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
+    int Jz_FinalKarate_Std_46RP = moveset.getMoveId(0x60335bf7, 2400);
+    std::vector<std::pair<int, int>> moves = {{Jz_karate01, Jz_FinalKarate_Std_46RP}};
+    moveset.replaceCancelMoveIndexes(moves);
+  }
+
+  void applyMishimaJinExclusive(TkMoveset &moveset, uintptr_t movesetAddr)
+  {
+    installJinStanceAlias(moveset, movesetAddr, 0xA33CD19D);
+
+    int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
+    int Jz_Mishima_Std_46RP = moveset.getMoveId(0x75ae247, 2350);
+
+    // Left: Target. Right: Replacement
+    std::vector<std::pair<int, int>> moves = {
+        {
+            Jz_karate01,
+            Jz_Mishima_Std_46RP,
+        },
+        {
+            moveset.getMoveId(0x27a2625e, Jz_karate01),         // Jz_dslpS
+            moveset.getMoveId(0xa668cc41, Jz_Mishima_Std_46RP), // Jz_Mishima_623_LP
+        },
+        {
+            moveset.getMoveId(0xd4044cc, Jz_karate01),          // Jz_shoryu24
+            moveset.getMoveId(0x88805a0e, Jz_Mishima_Std_46RP), // Jz_Mishima_623_RP_fast
+        },
+    };
+
+    moveset.replaceCancelMoveIndexes(moves);
+  }
+
+  void applyKazamaJinExclusive(TkMoveset &moveset, uintptr_t movesetAddr)
+  {
+    installJinStanceAlias(moveset, movesetAddr, 0x7614EF15);
+
+    if (!shouldDisableAutoParries())
+      return;
+
+    // 4 moves' cancel list should be updated to remove any cancels to parries
+    // Jz_sWALKB (1489)
+    // Jz_sKAM00_Ac15B3 (2454)
+    // Jz_Kazama_sWALKB (2456)
+    // Jz_Kazama_sWALKF (2457)
+
+    int Jz_sKAM00_Ac15B3 = moveset.getMoveId(0x7614ef15, 2400);
+    int Jz_Kazama_Atemi_throw_LP_nage = moveset.getMoveId(0xe94d6d9a, Jz_sKAM00_Ac15B3); // Jz_Kazama_Atemi_throw_LP_nage
+    const std::array<int, 4> moves = {
+        Jz_Kazama_Atemi_throw_LP_nage,
+        moveset.getMoveId(0x826a36b7, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RP_nage
+        moveset.getMoveId(0xc3750ffb, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_LK_nage
+        moveset.getMoveId(0x67008eea, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RK_nage
+    };
+
+    auto disableParryCancels = [&](uint32_t nameKey, int startParam)
+    {
+      uintptr_t addr = moveset.getMoveAddress(nameKey, startParam);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      if (!addr)
+        return;
+      while (moveset.getCancelValue(addr, "command") != 0x8000)
+      {
+        if (!addr)
+          return;
+        const int cMoveId = moveset.getCancelValue(addr, "move");
+        if (std::find(moves.begin(), moves.end(), cMoveId) != moves.end())
+        {
+          moveset.editCancelValue(addr, "start", 0x7FFF);
+        }
+        addr = moveset.iterateCancel(addr, 1);
+      }
+    };
+
+    disableParryCancels(0x6e61c919, 0x8001); // Jz_sWALKB
+    disableParryCancels(0x7614ef15, Jz_sKAM00_Ac15B3);
+    disableParryCancels(0x15088ae1, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKB
+    disableParryCancels(0x87ca9ecf, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKF
+  }
+
+  void applyChainedJinExclusive(TkMoveset &moveset)
+  {
+    std::vector<std::pair<int, int>> moves = {
+        {0xCAD0CF3C, 1500}, // 1+2
+        {0xE383D012, 2000}, // f,f+2
+        {0xEEE71DFB, 1400}, // b+1+2
+        {0x9B789D36, 1600}  // d/b+1+2
+    };
+
+    for (const auto &move : moves)
+    {
+      uintptr_t moveAddr = moveset.getMoveAddress(move.first, move.second);
+      if (moveAddr)
+      {
+        uintptr_t cancel = moveset.getMoveNthCancel(moveAddr, 0);
+        moveset.editCancelValue(cancel, "requirement_idx", 0);
+      }
+    }
+  }
+
+  bool loadJin(uintptr_t movesetAddr, int bossCode)
+  {
+    if (!isValidJinBoss(bossCode))
+      return false;
+    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+
+    applyJinStoryRequirements(moveset, bossCode);
+
     if (bossCode != BossCodes::RegularJin)
     {
-      uintptr_t addr = 0;
-      int moveId = -1;
-      // Replace the new f,f+1+2 with f,f+2. Taking the long approach to remove weird animation snap
-      {
-        int ff2 = moveset.getMoveId(0xE383D012, 2200); // f,f+2
-        int ff12 = moveset.getMoveId(0xEB242623, 1750); // f,f+1+2
-        std::vector<std::pair<int, int>> moves = {{ff12, ff2}};
-        moveset.replaceCancelMoveIndexes(moves);
-      }
-
-      // Adjusting FC df4 ~ ZEN cancels
-      addr = moveset.getMoveAddress(0x8c0f6a17, 1600); // Jz_zan_srk00EX_zan
-      if (addr) {
-        uintptr_t firstCancel = moveset.getMoveNthCancel(addr, 0);
-        uintptr_t cancel = 0;
-
-        // Replacing df from that ZEN with the story version
-        short tMoveId = -1;
-        moveId = moveset.getMoveId(0xda8608b7, 1790); // Jz_shoryu_P
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0x39b5f537, 2200);
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-
-        // ZEN 1+2 becomes ZEN u+1+2 because of command priority
-        cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0x91130746, 2300); // ZEN u+1+2
-          moveset.editCancelValue(cancel, "command", 0x4000000300000300);
-          moveset.editCancelValue(cancel, "requirement_idx", 0);
-          moveset.editCancelValue(cancel, "move", tMoveId); // ZEN u+1+2
-        }
-
-        // Adjusting ZEN 3+4
-        moveId = moveset.getMoveId(0x362078c4, 1820); // ZEN 3+4
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0x1a53432b, 2300); // ZEN u+1+2
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-
-        // Disabling ZEN u+1
-        moveId = moveset.getMoveId(0xc69959b0, 1580); // ZEN u+1
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0xb235481b, 1600); // ZEN 1+2
-          moveset.editCancelValue(cancel, "command", 0x4000000300000000);
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-
-        // Adjusting ZEN 1
-        moveId = moveset.getMoveId(0xea6240d3, 1580); // ZEN 1
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0x69655f3c, 2300);
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-
-        // Adjusting ZEN 2
-        moveId = moveset.getMoveId(0xc48dd080, 1580); // ZEN 2
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0xa34e66df, 2300);
-          moveset.editCancelValue(cancel, "extradata", moveset.findCancelExtradata(389));
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-
-        // Adjusting ZEN 4
-        moveId = moveset.getMoveId(0xfd3fe1a6, 1800); // ZEN 2
-        cancel = moveset.findCancel(firstCancel, "move", moveId);
-        if (cancel) {
-          tMoveId = moveset.getMoveId(0xc2c9eadc, 2300);
-          moveset.editCancelValue(cancel, "move", tMoveId);
-        }
-      }
+      applyJinRageArtCameras(moveset);
+      applyJinSeason2Fixes(moveset);
     }
-
-    // Solving the "ws+1, [3,3] ~ df" bug
     if (bossCode != BossCodes::MishimaJin)
-    {
-      uintptr_t addr = moveset.getMoveAddress(0x530890fb, moveset.getAliasMoveId(0x8000));
-      addr = moveset.getMoveNthCancel(addr, 2);
-      int moveId = moveset.getMoveId(0x459c84c1, 1800); // Jz_shoryu_shift
-      moveset.editCancelValue(addr, "move", moveId);
-    }
-
-    // EWGF > OTGF bug fix. Only Final Jin should be able to do it, other variants shouldn't
+      fixJinWs1DfBug(moveset);
+    // Only Final Jin should keep EWGF > OTGF
     if (bossCode != BossCodes::FinalJin)
-    {
-      uintptr_t addr = moveset.getMoveAddress(0x39b5f537, moveset.getAliasMoveId(0x8000));
-      addr = moveset.getMoveNthCancel(addr, 0);
-      addr = moveset.findCancel(addr, "command", 0x4000000300000000);
-      int moveId = moveset.getCancelValue(moveset.iterateCancel(addr, 1), "move"); // Get CD+1 ID from next cancel
-      moveset.editCancelValue(addr, "move", moveId); // Jz_Story_623_LP_fast
-    }
+      fixJinEwgfOtgfCancel(moveset);
 
     switch (bossCode)
     {
     case BossCodes::RegularJin:
-    {
-      uintptr_t addr = moveset.getMoveAddress(0x9b789d36, 1865); // d/b+1+2
-      addr = moveset.getMoveNthCancel(addr, 0);
-      moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"), 0);
-    }
-    break;
+      applyRegularJinExclusive(moveset);
+      break;
     case BossCodes::NerfedJin:
+      // Story flag param 1 already applied in applyJinStoryRequirements; no exclusive edits
+      break;
     case BossCodes::FinalJin:
-    {
-      // Disabling auto-parries
-      if (BossCodes::FinalJin == bossCode) {
-        if (shouldDisableAutoParries())
-        {
-          uintptr_t addr = moveset.getMoveAddrByIdx(0x8001);
-          int targetMoveId = moveset.getMoveId(0xc2da6f70, 2500);
-          uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
-          if (cancel)
-          {
-            for (int i = 0; i < 4; i++)
-            {
-              uintptr_t reqAddr = moveset.getCancelValue(cancel, "requirements");
-              moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
-              cancel = moveset.iterateCancel(cancel, 1);
-            }
-          }
-        }
-
-        int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
-        int Jz_Mishima_Std_46RP = moveset.getMoveId(0x60335bf7, 2400);
-        std::vector<std::pair<int, int>> moves = {{Jz_karate01, Jz_Mishima_Std_46RP}};
-        moveset.replaceCancelMoveIndexes(moves);
-      }
-    }
+      applyFinalJinExclusive(moveset);
       break;
     case BossCodes::MishimaJin:
+      applyMishimaJinExclusive(moveset, movesetAddr);
+      break;
     case BossCodes::KazamaJin:
-    {
-      uintptr_t moveId = moveset.getMoveId(bossCode == BossCodes::MishimaJin ? 0xA33CD19D : 0x7614EF15, 2000);
-      if (moveId != 0)
-      {
-        game.write<short>(movesetAddr + 0xAA, moveId);
-      }
-
-      // Fixing some moves for Mishima Jin
-      if (bossCode == BossCodes::MishimaJin)
-      {
-        int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
-        int Jz_Mishima_Std_46RP = moveset.getMoveId(0x75ae247, 2350);
-
-        // Left: Target. Right: Replacement
-        std::vector<std::pair<int, int>> moves = {
-            {
-                Jz_karate01,
-                Jz_Mishima_Std_46RP,
-            },
-            {
-                moveset.getMoveId(0x27a2625e, Jz_karate01),         // Jz_dslpS
-                moveset.getMoveId(0xa668cc41, Jz_Mishima_Std_46RP), // Jz_Mishima_623_LP
-            },
-            {
-                moveset.getMoveId(0xd4044cc, Jz_karate01),          // Jz_shoryu24
-                moveset.getMoveId(0x88805a0e, Jz_Mishima_Std_46RP), // Jz_Mishima_623_RP_fast
-            },
-        };
-
-        moveset.replaceCancelMoveIndexes(moves);
-      }
-
-      // Disabling Auto-parries
-      if (bossCode == BossCodes::KazamaJin && shouldDisableAutoParries())
-      {
-        // 4 moves' cancel list should be updated to remove any cancels to parries
-        // Jz_sWALKB (1489)
-        // Jz_sKAM00_Ac15B3 (2454)
-        // Jz_Kazama_sWALKB (2456)
-        // Jz_Kazama_sWALKF (2457)
-
-        int Jz_sKAM00_Ac15B3 = moveset.getMoveId(0x7614ef15, 2400);
-        int Jz_Kazama_Atemi_throw_LP_nage = moveset.getMoveId(0xe94d6d9a, Jz_sKAM00_Ac15B3); // Jz_Kazama_Atemi_throw_LP_nage
-        const std::array<int, 4> moves = {
-          Jz_Kazama_Atemi_throw_LP_nage,
-          moveset.getMoveId(0x826a36b7, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RP_nage
-          moveset.getMoveId(0xc3750ffb, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_LK_nage
-          moveset.getMoveId(0x67008eea, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RK_nage
-        };
-
-        auto disableParryCancels = [&](uint32_t nameKey, int startParam)
-        {
-          uintptr_t addr = moveset.getMoveAddress(nameKey, startParam);
-          addr = moveset.getMoveNthCancel(addr, 0);
-          if (!addr) return;
-          while (moveset.getCancelValue(addr, "command") != 0x8000)
-          {
-            if (!addr) return;
-            const int cMoveId = moveset.getCancelValue(addr, "move");
-            if (std::find(moves.begin(), moves.end(), cMoveId) != moves.end())
-            {
-              moveset.editCancelValue(addr, "start", 0x7FFF);
-            }
-            addr = moveset.iterateCancel(addr, 1);
-          }
-        };
-
-        disableParryCancels(0x6e61c919, moveset.getAliasMoveId(0x8001)); // Jz_sWALKB
-        disableParryCancels(0x7614ef15, Jz_sKAM00_Ac15B3);
-        disableParryCancels(0x15088ae1, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKB
-        disableParryCancels(0x87ca9ecf, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKF
-      }
-    }
-    break;
+      applyKazamaJinExclusive(moveset, movesetAddr);
+      break;
     case BossCodes::ChainedJin:
-    {
-      std::vector<std::pair<int, int>> moves = {
-          {0xCAD0CF3C, 1500}, // 1+2
-          {0xE383D012, 2000}, // f,f+2
-          {0xEEE71DFB, 1400}, // b+1+2
-          {0x9B789D36, 1600}  // d/b+1+2
-      };
-
-      for (const auto &move : moves)
-      {
-        uintptr_t moveAddr = moveset.getMoveAddress(move.first, move.second);
-        if (moveAddr)
-        {
-          uintptr_t cancel = moveset.getMoveNthCancel(moveAddr, 0);
-          moveset.editCancelValue(cancel, "requirement_idx", 0);
-        }
-      }
-    }
-    break;
+      applyChainedJinExclusive(moveset);
+      break;
     default:
       return false;
     }
@@ -1155,7 +1197,7 @@ private:
 
     // Adjust damage for the new CD+1
     if (config->toneDownDamage) {
-      addr = moveset.getMoveAddress(0x3cbbe67a, moveset.getAliasMoveId(0x8001));
+      addr = moveset.getMoveAddress(0x3cbbe67a, 0x8001);
       addr = moveset.getMoveExtrapropAddr(addr);
       moveset.editExtrapropValue(addr, "value", 0);
     }
@@ -1303,7 +1345,7 @@ private:
       // Activating Heat on idle stance
       {
         // He_sKAM00_shadow
-        uintptr_t addr = moveset.getMoveAddress(0xb36a0b80, moveset.getAliasMoveId(0x8000));
+        uintptr_t addr = moveset.getMoveAddress(0xb36a0b80, 0x8000);
         addr = moveset.getMoveNthCancel(addr, 0);
         uintptr_t reqList = moveset.getCancelValue(addr, "requirements");
         // Preparing req-list
