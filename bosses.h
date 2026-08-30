@@ -1106,17 +1106,17 @@ private:
       }
 
       // d/b+1, 2
-      addr = moveset.getMoveAddress(0xFE501006, idleStanceIdx); // d/b+1
+      addr = moveset.getMoveAddress(0xFE501006, idleStanceIdx); // Co_t_slp00EX
       addr = moveset.getMoveNthCancel(addr, 0);
       // Grabbing move ID from 3rd cancel
       int moveId_db2 = moveset.getCancelMoveId(moveset.iterateCancel(addr, 2));
-      addr = moveset.iterateCancel(addr, 9); // 10th cancel
+      addr = moveset.findCancel(addr, "move", moveset.getMoveId(0xbc4e3d37, 1700)); // Kz_1lprp
       moveset.editCancelValue(addr, "start", 19);
       moveset.editCancelValue(addr, "end", 19);
       moveset.editCancelValue(addr, "transition", 19);
       moveset.editCancelValue(addr, "move", moveId_db2);
 
-      // 11th cancel
+      // Next cancel
       addr = moveset.iterateCancel(addr, 1);
       moveset.editCancelValue(addr, "start", 19);
       moveset.editCancelValue(addr, "end", 19);
@@ -1129,6 +1129,7 @@ private:
       addr = moveset.getMoveNthCancel(addr, 0);
       moveset.editCancelValue(addr, "requirement_idx", 0);
       moveset.editCancelValue(addr, "move", moveId_db1);
+      moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(1025));
 
       // ws+2
       addr = moveset.getMoveAddress(0xB253E5F2, idleStanceIdx);

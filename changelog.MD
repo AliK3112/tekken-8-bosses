@@ -1,6 +1,7 @@
 ## Changelog (August 30, 2026)
  - Fixed `Mishima Jin` performing regular CD+1 (ETU) and CD+2 (EWHF) using the `f, n` input, instead of the Mishima CD+1 (TGF) and CD+2 (EWGF).
- - Disabling Auto-Parries now also disables them for `Kazama Jin`
+ - Disabling Auto-Parries now also disables them for `Kazama Jin`.
+ - Restored `Final Kazuya` d/b+1, 2 after the last patch broke it.
 
 ## Changelog (August 20, 2026)
  - Added support for game version 3.02.01 and Bob
