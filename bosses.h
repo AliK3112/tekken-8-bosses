@@ -2,6 +2,7 @@
 #include "moveset.h"
 #include "charcodes.h"
 #include "utils.h"
+#include <array>
 #include <cstring>
 #include <vector>
 
@@ -611,8 +612,25 @@ private:
       return false;
     TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
     int _777param = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
-    moveset.replaceRequirements(Requirements::STORY_FLAGS, _777param);
-    moveset.replaceRequirements(Requirements::NOT_STORY_MODE, 0, Requirements::STORY_FLAGS);
+
+    // Adjusting requirements
+    {
+      uintptr_t start = moveset.getMovesetHeader("requirements");
+      uintptr_t count = moveset.getMovesetCount("requirements");
+      for (size_t i = 0; i < count; i++)
+      {
+        uintptr_t addr = start + i * Sizes::Requirement;
+        TK_Requirement requirement = game.read<TK_Requirement>(addr);
+        if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == _777param)
+        {
+          game.write<int>(addr, 0);
+        }
+        else if (requirement.req == Requirements::NOT_STORY_MODE)
+        {
+          game.write<int>(addr, Requirements::STORY_FLAGS);
+        }
+      }
+    }
 
     // Rage Art Camera (requires Assembly Injection)
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
@@ -644,15 +662,8 @@ private:
       {
         int ff2 = moveset.getMoveId(0xE383D012, 2200); // f,f+2
         int ff12 = moveset.getMoveId(0xEB242623, 1750); // f,f+1+2
-        uintptr_t cancel = moveset.getMovesetHeader("cancels");
-        uintptr_t count = moveset.getMovesetCount("cancels");
-        for (int i = 3500; i < (count - 2000); i++) { // First cancel appears around index 3700 and last around 11000
-          uintptr_t addr = cancel + i * Sizes::Moveset::Cancel;
-          if (moveset.getCancelValue(addr, "move") == ff12)
-          {
-            moveset.editCancelValue(addr, "move", ff2);
-          }
-        }
+        std::vector<std::pair<int, int>> moves = {{ff12, ff2}};
+        moveset.replaceCancelMoveIndexes(moves);
       }
 
       // Adjusting FC df4 ~ ZEN cancels
@@ -755,17 +766,27 @@ private:
     case BossCodes::FinalJin:
     {
       // Disabling auto-parries
-      if (BossCodes::FinalJin == bossCode && shouldDisableAutoParries()) {
-        uintptr_t addr = moveset.getMoveAddrByIdx(0x8001);
-        int targetMoveId = moveset.getMoveId(0xc2da6f70, 2500);
-        uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
-        if (cancel) {
-          for (int i = 0; i < 4; i++) {
-            uintptr_t reqAddr = moveset.getCancelValue(cancel, "requirements");
-            moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
-            cancel = moveset.iterateCancel(cancel, 1);
+      if (BossCodes::FinalJin == bossCode) {
+        if (shouldDisableAutoParries())
+        {
+          uintptr_t addr = moveset.getMoveAddrByIdx(0x8001);
+          int targetMoveId = moveset.getMoveId(0xc2da6f70, 2500);
+          uintptr_t cancel = moveset.findCancel(moveset.getMoveNthCancel(addr), "move", targetMoveId);
+          if (cancel)
+          {
+            for (int i = 0; i < 4; i++)
+            {
+              uintptr_t reqAddr = moveset.getCancelValue(cancel, "requirements");
+              moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE);
+              cancel = moveset.iterateCancel(cancel, 1);
+            }
           }
         }
+
+        int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
+        int Jz_Mishima_Std_46RP = moveset.getMoveId(0x60335bf7, 2400);
+        std::vector<std::pair<int, int>> moves = {{Jz_karate01, Jz_Mishima_Std_46RP}};
+        moveset.replaceCancelMoveIndexes(moves);
       }
     }
       break;
@@ -776,6 +797,72 @@ private:
       if (moveId != 0)
       {
         game.write<short>(movesetAddr + 0xAA, moveId);
+      }
+
+      // Fixing some moves for Mishima Jin
+      if (bossCode == BossCodes::MishimaJin)
+      {
+        int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
+        int Jz_Mishima_Std_46RP = moveset.getMoveId(0x75ae247, 2350);
+
+        // Left: Target. Right: Replacement
+        std::vector<std::pair<int, int>> moves = {
+            {
+                Jz_karate01,
+                Jz_Mishima_Std_46RP,
+            },
+            {
+                moveset.getMoveId(0x27a2625e, Jz_karate01),         // Jz_dslpS
+                moveset.getMoveId(0xa668cc41, Jz_Mishima_Std_46RP), // Jz_Mishima_623_LP
+            },
+            {
+                moveset.getMoveId(0xd4044cc, Jz_karate01),          // Jz_shoryu24
+                moveset.getMoveId(0x88805a0e, Jz_Mishima_Std_46RP), // Jz_Mishima_623_RP_fast
+            },
+        };
+
+        moveset.replaceCancelMoveIndexes(moves);
+      }
+
+      // Disabling Auto-parries
+      if (bossCode == BossCodes::KazamaJin && shouldDisableAutoParries())
+      {
+        // 4 moves' cancel list should be updated to remove any cancels to parries
+        // Jz_sWALKB (1489)
+        // Jz_sKAM00_Ac15B3 (2454)
+        // Jz_Kazama_sWALKB (2456)
+        // Jz_Kazama_sWALKF (2457)
+
+        int Jz_sKAM00_Ac15B3 = moveset.getMoveId(0x7614ef15, 2400);
+        int Jz_Kazama_Atemi_throw_LP_nage = moveset.getMoveId(0xe94d6d9a, Jz_sKAM00_Ac15B3); // Jz_Kazama_Atemi_throw_LP_nage
+        const std::array<int, 4> moves = {
+          Jz_Kazama_Atemi_throw_LP_nage,
+          moveset.getMoveId(0x826a36b7, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RP_nage
+          moveset.getMoveId(0xc3750ffb, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_LK_nage
+          moveset.getMoveId(0x67008eea, Jz_Kazama_Atemi_throw_LP_nage), // Jz_Kazama_Atemi_throw_RK_nage
+        };
+
+        auto disableParryCancels = [&](uint32_t nameKey, int startParam)
+        {
+          uintptr_t addr = moveset.getMoveAddress(nameKey, startParam);
+          addr = moveset.getMoveNthCancel(addr, 0);
+          if (!addr) return;
+          while (moveset.getCancelValue(addr, "command") != 0x8000)
+          {
+            if (!addr) return;
+            const int cMoveId = moveset.getCancelValue(addr, "move");
+            if (std::find(moves.begin(), moves.end(), cMoveId) != moves.end())
+            {
+              moveset.editCancelValue(addr, "start", 0x7FFF);
+            }
+            addr = moveset.iterateCancel(addr, 1);
+          }
+        };
+
+        disableParryCancels(0x6e61c919, moveset.getAliasMoveId(0x8001)); // Jz_sWALKB
+        disableParryCancels(0x7614ef15, Jz_sKAM00_Ac15B3);
+        disableParryCancels(0x15088ae1, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKB
+        disableParryCancels(0x87ca9ecf, Jz_sKAM00_Ac15B3); // Jz_Kazama_sWALKF
       }
     }
     break;

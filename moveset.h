@@ -4,6 +4,11 @@
 
 using namespace Tekken;
 
+struct TK_Requirement {
+  int req;
+  int param[4];
+};
+
 const int ALIASES = 60;
 
 std::vector<int> STORY_REQS = {
@@ -759,6 +764,32 @@ public:
       if (!tAddr) return;
       game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr, tAddr);
     }
+  }
+
+  void replaceCancelMoveIndexes(std::vector<std::pair<int, int>> moves, bool groupCancels = false)
+  {
+    auto func = [&](std::string section)
+    {
+      const uintptr_t start = getMovesetHeader(section);
+      const uintptr_t count = getMovesetCount(section);
+
+      for (uintptr_t i = 0; i < count; ++i)
+      {
+        const uintptr_t addr = start + i * Sizes::Cancel;
+        const int cMoveId = getCancelValue(addr, "move");
+
+        for (const auto &[targetMoveId, replacementMoveId] : moves)
+        {
+          if (cMoveId == targetMoveId)
+          {
+            editCancelValue(addr, "move", replacementMoveId);
+          }
+        }
+      }
+    };
+
+    func("cancels");
+    if (groupCancels) func("group_cancels");
   }
 
   uintptr_t getMovesetHeader(std::string column)
