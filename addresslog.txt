@@ -181,7 +181,7 @@ match_struct_base=0x9B75568
 moveset_offset=0x38C8
 permanent_devil_offset=0x155C
 
-v3.01.01
+v3.01.01 (Kuni Update)
 decryption_function_offset=0x1807BB0
 moveset_offset_addr_offset=0x18EAB0E
 permanent_devil_offset_addr_offset=0x1908A5D
@@ -194,3 +194,17 @@ player_struct_base=0x9B87FD0
 match_struct_base=0x9B82BE8
 moveset_offset=0x38D8
 permanent_devil_offset=0x155C
+
+v3.02.01 (Bob Update)
+decryption_function_offset=0x180A020
+moveset_offset_addr_offset=0x18ED6EE
+permanent_devil_offset_addr_offset=0x190B4B4
+camera_hook_offset=0x5C38A40
+player_struct_base_addr_offset=0x5E77255
+hud_icon_addr_offset=0x5E7C1F1
+hud_name_addr_offset=0x5E7C867
+match_struct_base_addr_offset=0x5F32EA1
+player_struct_base=0x9B91BC0
+match_struct_base=0x9B8C7E8
+moveset_offset=0x39E8
+permanent_devil_offset=0x156C
