@@ -737,13 +737,22 @@ private:
     }
   }
 
-  // Solving the "ws+1, [3,3] ~ df" bug (skipped for MishimaJin)
-  void fixJinWs1DfBug(TkMoveset &moveset)
+  void applyNonMishimaJinFixes(TkMoveset &moveset)
   {
-    uintptr_t addr = moveset.getMoveAddress(0x530890fb, 0x8000);
+    // Solving the "ws+1, [3,3] ~ df" bug (skipped for MishimaJin)
+    uintptr_t addr = moveset.getMoveAddress(0x530890fb, 0x8000); // Jz_Mishima_Std_3LKsLK
     addr = moveset.getMoveNthCancel(addr, 2);
-    int moveId = moveset.getMoveId(0x459c84c1, 1800); // Jz_shoryu_shift
-    moveset.editCancelValue(addr, "move", moveId);
+    int Jz_shoryu_shift = moveset.getMoveId(0x459c84c1, 1800);
+    moveset.editCancelValue(addr, "move", Jz_shoryu_shift);
+
+    // `f, n, df1` CD1 fix, apply story variant
+    std::vector<std::pair<int, int>> moves = {
+      {
+        moveset.getMoveId(0x27a2625e, Jz_shoryu_shift), // Jz_dslpS
+        moveset.getMoveId(0x38391750, 0x8000), // Jz_Story_623_LP_fast
+      },
+    };
+    moveset.replaceCancelMoveIndexes(moves);
   }
 
   // EWGF > OTGF bug fix. Only Final Jin should keep OTGF; other variants redirect to CD+1
@@ -800,22 +809,30 @@ private:
   {
     installJinStanceAlias(moveset, movesetAddr, 0xA33CD19D);
 
-    int Jz_karate01 = moveset.getMoveId(0xf60501d3, 1800);
-    int Jz_Mishima_Std_46RP = moveset.getMoveId(0x75ae247, 2350);
+    int moveId1 = moveset.getMoveId(0xf60501d3, 1800); // Jz_karate01
+    int moveId2 = moveset.getMoveId(0x075ae247, 2350); // Jz_Mishima_Std_46RP
 
     // Left: Target. Right: Replacement
     std::vector<std::pair<int, int>> moves = {
         {
-            Jz_karate01,
-            Jz_Mishima_Std_46RP,
+            moveId1,
+            moveId2,
         },
         {
-            moveset.getMoveId(0x27a2625e, Jz_karate01),         // Jz_dslpS
-            moveset.getMoveId(0xa668cc41, Jz_Mishima_Std_46RP), // Jz_Mishima_623_LP
+            moveset.getMoveId(0x27a2625e, moveId1), // Jz_dslpS
+            moveset.getMoveId(0xa668cc41, moveId2), // Jz_Mishima_623_LP
         },
         {
-            moveset.getMoveId(0xd4044cc, Jz_karate01),          // Jz_shoryu24
-            moveset.getMoveId(0x88805a0e, Jz_Mishima_Std_46RP), // Jz_Mishima_623_RP_fast
+            moveset.getMoveId(0x38391750, 0x8000),  // Jz_Story_623_LP_fast
+            moveset.getMoveId(0xa668cc41, moveId2), // Jz_Mishima_623_LP
+        },
+        {
+            moveset.getMoveId(0xc5f63209, 2300),    // Jz_Karate_623_RK
+            moveset.getMoveId(0xc52dcc87, moveId2), // Jz_Mishima_623_RK
+        },
+        {
+            moveset.getMoveId(0x0d4044cc, moveId1 + 50), // Jz_shoryu24
+            moveset.getMoveId(0x88805a0e, moveId2),      // Jz_Mishima_623_RP_fast
         },
     };
 
@@ -825,6 +842,28 @@ private:
   void applyKazamaJinExclusive(TkMoveset &moveset, uintptr_t movesetAddr)
   {
     installJinStanceAlias(moveset, movesetAddr, 0x7614EF15);
+
+    // Disabling 1+4 > 1+2 cancel, this shouldn't exist for Kazama-Jin
+    {
+      // Take the Idx and apply it to appropriate places
+      int moveId = moveset.getMoveId(0xfe41a93c, 2400); // Jz_Kazama_Std_LPRK2
+      uintptr_t addr = moveset.getMoveAddrByIdx(moveId);
+      addr = moveset.getMoveNthCancel(addr, 0);
+      int reqIdx = moveset.getCancelValue(addr, "requirement_idx");
+
+      addr = moveset.getMoveAddress(0xd4095da0, moveId - 10); // Jz_Kazama_Std_LPRK
+      addr = moveset.getMoveNthCancel(addr, 0);
+      while (true)
+      {
+        uintptr_t command = moveset.getCancelValue(addr, "command");
+        if (command == 0x8000)
+          break;
+        // For 1+2 command, place the above acquired req_idx to disable these cancels
+        if (command == 0x4000000300000000)
+          moveset.editCancelValue(addr, "requirement_idx", reqIdx);
+        addr = moveset.iterateCancel(addr, 1);
+      }
+    }
 
     if (!shouldDisableAutoParries())
       return;
@@ -903,7 +942,7 @@ private:
       applyJinSeason2Fixes(moveset);
     }
     if (bossCode != BossCodes::MishimaJin)
-      fixJinWs1DfBug(moveset);
+      applyNonMishimaJinFixes(moveset);
     // Only Final Jin should keep EWGF > OTGF
     if (bossCode != BossCodes::FinalJin)
       fixJinEwgfOtgfCancel(moveset);

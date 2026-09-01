@@ -133,7 +133,10 @@ public:
   {
     uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     int movesCount = game.readUInt64(moveset + Offsets::Moveset::MovesCount);
-    start = start >= movesCount ? 0 : start;
+    if (start >= 0x8000 && start < 0x803B)
+      start = getAliasMoveId(start);
+    else
+      start = start >= movesCount ? 0 : start;
     uintptr_t addr = 0;
     int rawIdx = -1;
     for (int i = start; i < movesCount; i++)
@@ -167,13 +170,9 @@ public:
     uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
     int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
     if (start >= 0x8000 && start < 0x803B)
-    {
       start = getAliasMoveId(start);
-    }
     else
-    {
       start = start >= movesCount ? 0 : start;
-    }
     int rawIdx = -1;
     for (int i = start; i < movesCount; i++)
     {
