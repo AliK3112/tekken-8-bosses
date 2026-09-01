@@ -1,6 +1,7 @@
 ## Changelog (September 1, 2026)
- - Fixed `f, n` issue for all Jin variants. Now `f, n, df1` properly results in story version of CD+1
- - Fixed `Mishima Jin` incorrect moves out of ZEN ~ CD. No more EWHF, ETU or LLRK. E.g, doing `b+3 ~ f ~ df > delayed df4` caused LLRK to come out
+ - Performance improvement by caching all the move "nameKeys," dramatically reduces number of `ReadProcessMemory` calls.
+ - Fixed `f, n` issue for all Jin variants. Now `f, n, df1` properly results in story version of CD+1.
+ - Fixed `Mishima Jin` incorrect moves out of ZEN ~ CD. No more EWHF, ETU or LLRK. E.g, doing `b+3 ~ f ~ df > delayed df4` caused LLRK to come out.
  - Fixed `Kazama Jin` bug where he could do `1+4 > 1+2` which is supposed to be a `Final Jin` move.
 
 ## Changelog (August 30, 2026)

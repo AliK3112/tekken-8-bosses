@@ -1,6 +1,9 @@
 #include "game.h"
 #include "tekken.h"
 #include <algorithm>
+#include <cstring>
+#include <unordered_map>
+#include <vector>
 
 using namespace Tekken;
 
@@ -38,6 +41,9 @@ private:
   uintptr_t moveset;
   uintptr_t decryptFuncAddr;
   GameClass &game;
+  uintptr_t movesHead = 0;
+  int movesCount = 0;
+  std::unordered_map<int, int> nameKeyToIndex;
 
   // Helper methods
   uintptr_t getAddressFromIndex(std::string column, uintptr_t value, size_t size)
@@ -51,15 +57,101 @@ private:
       return 0;
   }
 
+  void cacheMoves()
+  {
+    nameKeyToIndex.clear();
+    movesHead = 0;
+    movesCount = 0;
+    if (!moveset)
+      return;
+
+    movesHead = getMovesetHeader("moves");
+    movesCount = static_cast<int>(getMovesetCount("moves"));
+    if (!movesHead || movesCount <= 0)
+    {
+      movesHead = 0;
+      movesCount = 0;
+      return;
+    }
+
+    const size_t tableSize = static_cast<size_t>(movesCount) * Sizes::Moveset::Move;
+    std::vector<uint8_t> blob(tableSize);
+    if (!game.readBytes(movesHead, blob.data(), tableSize))
+      return;
+
+    nameKeyToIndex.reserve(static_cast<size_t>(movesCount));
+    for (int i = 0; i < movesCount; i++)
+    {
+      const uint8_t *movePtr = blob.data() + static_cast<size_t>(i) * Sizes::Moveset::Move;
+      int rawIdx = (i % 8) - 4;
+      int nameKey = 0;
+      if (rawIdx > -1)
+      {
+        memcpy(&nameKey, movePtr + 0x10 + rawIdx * 4, sizeof(int));
+      }
+      else
+      {
+        EncryptedValue encrypted;
+        memcpy(&encrypted, movePtr, sizeof(EncryptedValue));
+        nameKey = static_cast<int>(validateAndTransform64BitValue(&encrypted));
+      }
+      nameKeyToIndex[nameKey] = i;
+    }
+  }
+
+  int findMoveIndexLive(int moveNameKey)
+  {
+    uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+    int count = static_cast<int>(game.readUInt64(moveset + Offsets::Moveset::MovesCount));
+    if (!head || count <= 0)
+      return -1;
+    for (int i = 0; i < count; i++)
+    {
+      int rawIdx = (i % 8) - 4;
+      uintptr_t addr = head + i * Sizes::Moveset::Move;
+      if (rawIdx > -1)
+      {
+        int value = game.readInt32(addr + 0x10 + rawIdx * 4);
+        if (value == moveNameKey)
+          return i;
+      }
+      else
+      {
+        EncryptedValue encrypted = game.read<EncryptedValue>(addr);
+        uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
+        if ((int)decryptedValue == moveNameKey)
+          return i;
+      }
+    }
+    return -1;
+  }
+
+  int findMoveIndex(int moveNameKey)
+  {
+    auto it = nameKeyToIndex.find(moveNameKey);
+    if (it != nameKeyToIndex.end())
+      return it->second;
+    // Don't find it live, if it doesn't exist, it doesn't exist
+    // if (nameKeyToIndex.empty())
+    //   return findMoveIndexLive(moveNameKey);
+    return -1;
+  }
+
 public:
   // Constructor
   TkMoveset(GameClass &game, uintptr_t moveset, uintptr_t decryptFuncAddr)
-      : game(game), moveset(moveset), decryptFuncAddr(decryptFuncAddr) {}
+      : game(game), moveset(moveset), decryptFuncAddr(decryptFuncAddr)
+  {
+    cacheMoves();
+  }
 
   ~TkMoveset()
   {
     this->moveset = 0;
     this->decryptFuncAddr = 0;
+    this->movesHead = 0;
+    this->movesCount = 0;
+    this->nameKeyToIndex.clear();
   }
 
   // Getter for moveset
@@ -72,6 +164,7 @@ public:
   void setMoveset(uintptr_t newMoveset)
   {
     moveset = newMoveset;
+    cacheMoves();
   }
 
   // Getter for game
@@ -131,71 +224,27 @@ public:
 
   int getMoveId(int moveNameKey, int start = 0)
   {
-    uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-    int movesCount = game.readUInt64(moveset + Offsets::Moveset::MovesCount);
-    if (start >= 0x8000 && start < 0x803B)
-      start = getAliasMoveId(start);
-    else
-      start = start >= movesCount ? 0 : start;
-    uintptr_t addr = 0;
-    int rawIdx = -1;
-    for (int i = start; i < movesCount; i++)
+    int idx = findMoveIndex(moveNameKey);
+    if (idx < 0)
     {
-      rawIdx = (i % 8) - 4;
-      addr = movesHead + i * Sizes::Moveset::Move;
-      if (rawIdx > -1)
-      {
-        int value = game.readInt32(addr + 0x10 + rawIdx * 4);
-        if (value == moveNameKey)
-          return i;
-      }
-      else
-      {
-        EncryptedValue encrypted = game.read<EncryptedValue>(addr);
-        uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
-        if ((int)decryptedValue == moveNameKey)
-          return i;
-      }
+      std::ostringstream oss;
+      oss << "Failed to find ID for move 0x" << std::hex << moveNameKey;
+      throw std::runtime_error(oss.str());
     }
-    std::ostringstream oss;
-    oss << "Failed to find ID for move 0x" << std::hex << moveNameKey;
-    throw std::runtime_error(oss.str());
-    return -1;
+    return idx;
   }
 
   uintptr_t getMoveAddress(int moveNameKey, int start = 0)
   {
-    if (start < 0)
-      return 0;
-    uintptr_t movesHead = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-    int movesCount = game.readInt32(moveset + Offsets::Moveset::MovesCount);
-    if (start >= 0x8000 && start < 0x803B)
-      start = getAliasMoveId(start);
-    else
-      start = start >= movesCount ? 0 : start;
-    int rawIdx = -1;
-    for (int i = start; i < movesCount; i++)
+    int idx = findMoveIndex(moveNameKey);
+    if (idx < 0)
     {
-      rawIdx = (i % 8) - 4;
-      uintptr_t addr = movesHead + i * Sizes::Moveset::Move;
-      if (rawIdx > -1)
-      {
-        int value = game.readInt32(addr + 0x10 + rawIdx * 4);
-        if (value == moveNameKey)
-          return addr;
-      }
-      else
-      {
-        EncryptedValue encrypted = game.read<EncryptedValue>(addr);
-        uintptr_t decryptedValue = validateAndTransform64BitValue(&encrypted);
-        if ((int)decryptedValue == moveNameKey)
-          return addr;
-      }
+      std::ostringstream oss;
+      oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
+      throw std::runtime_error(oss.str());
     }
-    std::ostringstream oss;
-    oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
-    throw std::runtime_error(oss.str());
-    return 0;
+    uintptr_t head = movesHead ? movesHead : game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+    return head + idx * Sizes::Moveset::Move;
   }
 
   void disableStoryRelatedReqs(uintptr_t requirements, int givenReq = Requirements::CHARA_CONTROLLER)
