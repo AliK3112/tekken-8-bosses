@@ -354,6 +354,8 @@ struct TK_Requirement
     int param[4];
 };
 
+static_assert(sizeof(TK_Requirement) == 0x14, "TK_Requirement layout mismatch");
+
 // Size: 0x28
 struct TK_ExtraProp
 {

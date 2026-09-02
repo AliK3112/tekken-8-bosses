@@ -565,7 +565,7 @@ private:
     int req = -1;
     for (int i = start; i < reqCount; i++)
     {
-      requirement = reqHeader + i * Sizes::Moveset::Requirement;
+      requirement = reqHeader + i * sizeof(TK_Requirement);
       req = game.readInt32(requirement);
       if (req == Requirements::INTRO_RELATED)
       {
@@ -616,7 +616,7 @@ private:
     uintptr_t count = moveset.getMovesetCount("requirements");
     for (size_t i = 0; i < count; i++)
     {
-      uintptr_t addr = start + i * Sizes::Requirement;
+      uintptr_t addr = start + i * sizeof(TK_Requirement);
       TK_Requirement requirement = moveset.getRequirement(addr);
       if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == storyFlagParam)
       {
@@ -1028,7 +1028,7 @@ private:
       addr = moveset.getCancelValue(addr, "requirements");
       moveset.disableStoryRelatedReqs(addr);
       // Disabling standing req
-      game.write<int>(addr + Sizes::Moveset::Requirement, 0);
+      game.write<int>(addr + sizeof(TK_Requirement), 0);
 
       return markMovesetEdited(movesetAddr);
     }
@@ -1040,7 +1040,7 @@ private:
       uintptr_t count = moveset.getMovesetCount("requirements");
       for (uintptr_t i = 4530; i < count - 2000; i++)
       {
-        uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
+        uintptr_t addr = start + (i * sizeof(TK_Requirement));
         TK_Requirement requirement = moveset.getRequirement(addr);
         if ((requirement.req == ExtraMoveProperties::DEVIL_STATE && requirement.param[0] >= 1) ||
             (requirement.req == ExtraMoveProperties::WING_ANIM))
@@ -1570,7 +1570,7 @@ private:
 
       //   for (uintptr_t i = 0; i < count; i++)
       //   {
-      //     uintptr_t addr = header + i * Sizes::Moveset::Requirement;
+      //     uintptr_t addr = header + i * sizeof(TK_Requirement);
       //     TK_Requirement requirement = moveset.getRequirement(addr);
       //     if (requirement.req == Requirements::STORY_BATTLE_NUM && requirement.param[0] == 0xC3)
       //     {

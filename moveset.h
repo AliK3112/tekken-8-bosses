@@ -182,7 +182,7 @@ public:
     uintptr_t addr = requirements;
     uintptr_t start = getMovesetHeader("requirements");
     uintptr_t count = getMovesetCount("requirements");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (addr >= start && addr < end)
     {
       int req = getRequirementValue(addr, "req");
@@ -203,7 +203,7 @@ public:
     size_t requirementsCount = getMovesetCount("requirements");
     for (size_t i = 0; i < requirementsCount; i++)
     {
-      uintptr_t addr = requirements + i * Sizes::Requirement;
+      uintptr_t addr = requirements + i * sizeof(TK_Requirement);
       int req = game.ReadSignedInt(addr);
       int param = game.ReadSignedInt(addr + 4);
       if (req == targetReq && (param == targetParam || targetParam == -1))
@@ -246,8 +246,8 @@ public:
       return;
     uintptr_t start = getMovesetHeader("requirements");
     uintptr_t count = getMovesetCount("requirements");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
-    for (uintptr_t addr = requirements; addr >= start && addr < end; addr += Sizes::Requirement)
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
+    for (uintptr_t addr = requirements; addr >= start && addr < end; addr += sizeof(TK_Requirement))
     {
       int req = game.readUInt32(addr);
       if (req == Requirements::EOL)
@@ -341,7 +341,7 @@ public:
     {
       uintptr_t header = getMovesetHeader("requirements");
       uintptr_t value = game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
-      return getItemIndex(header, value, Sizes::Moveset::Requirement);
+      return getItemIndex(header, value, sizeof(TK_Requirement));
     }
     else if (column == "prop")
       return game.readInt32(addr + Offsets::ExtraProp::Prop);
@@ -369,7 +369,7 @@ public:
       game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, value);
     else if (column == "requirement_idx")
     {
-      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
       if (!tAddr) return;
       game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, tAddr);
     }
@@ -436,7 +436,7 @@ public:
       return 0;
     uintptr_t start = getMovesetHeader("requirements");
     uintptr_t count = getMovesetCount("requirements");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (requirement >= start && requirement < end)
     {
       TK_Requirement req = getRequirement(requirement);
@@ -540,7 +540,7 @@ public:
       return 0;
     uintptr_t start = getMovesetHeader("requirements");
     uintptr_t count = getMovesetCount("requirements");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (addr >= start && addr < end)
     {
       TK_Requirement requirement = getRequirement(addr);
@@ -680,7 +680,7 @@ public:
     {
       uintptr_t header = getMovesetHeader("requirements");
       uintptr_t value = game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-      return getItemIndex(header, value, Sizes::Moveset::Requirement);
+      return getItemIndex(header, value, sizeof(TK_Requirement));
     }
     else if (column == "extradata")
       return game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
@@ -713,7 +713,7 @@ public:
       game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, value);
     else if (column == "requirement_idx")
     {
-      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
       if (!tAddr) return;
       game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, tAddr);
     }
@@ -746,7 +746,7 @@ public:
   // Moves `n` requirements forward given a requirement's address
   uintptr_t iterateRequirements(uintptr_t requirement, int n)
   {
-    return requirement ? (requirement + (n * Sizes::Moveset::Requirement)) : 0;
+    return requirement ? (requirement + (n * sizeof(TK_Requirement))) : 0;
   }
 
   // Hit Conditions
@@ -781,7 +781,7 @@ public:
                             value);
     else if (column == "requirement_idx")
     {
-      uintptr_t tAddr = getAddressFromIndex("requirements", value, Sizes::Moveset::Requirement);
+      uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
       if (!tAddr) return;
       game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC, tAddr);
     }
