@@ -16,7 +16,7 @@ std::string DEVIL_JIN_COSTUME_PATH_2 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn
 std::string DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn_bw.CS_swl_ant_1p_horn_bw";
 std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
-bool ADJUST_RA_CAMERA = true;
+bool INSTALL_CAMERA_HOOKS = true;
 
 bool isCorrectCharacter(int bossCode, int charId);
 bool isValidJinBoss(int bossCode);
@@ -58,6 +58,7 @@ private:
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
   uintptr_t cameraHookAddr = 0;
+  uintptr_t dramaCameraHookAddr = 0;
   // STORY CAMERA HOOK
   CameraTrainerState *cameraRemoteState = nullptr;
   uint8_t *cameraCodeCave = nullptr;
@@ -71,6 +72,18 @@ private:
       0x55,                         // push rbp
       0x57,                         // push rdi
       0x41, 0x54};                  // push r12
+  // DRAMA CAMERA HOOK (Devil Jin intro/winpose: R9D 121 -> 12)
+  uint8_t *dramaCameraCodeCave = nullptr;
+  bool dramaCameraHookInstalled = false;
+  static constexpr size_t DRAMA_CAMERA_HOOK_PATCH_SIZE = 14;
+  const uint8_t dramaCameraHookOriginal[DRAMA_CAMERA_HOOK_PATCH_SIZE] = {
+      0x48, 0x89, 0x5C, 0x24, 0x08, // mov [rsp+8], rbx
+      0x55,                         // push rbp
+      0x56,                         // push rsi
+      0x57,                         // push rdi
+      0x41, 0x54,                   // push r12
+      0x41, 0x55,                   // push r13
+      0x41, 0x56};                  // push r14
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
@@ -333,7 +346,7 @@ private:
     }
 
     // AoB starts at function prologue — Story RA camera hook injection point
-    addr = game.FastAoBScan(Tekken::CAMERA_HOOK_SIG_BYTES, base + 0x5C00000);
+    addr = game.FastAoBScan(Tekken::STORY_CAMERA_HOOK_SIG_BYTES, base + 0x5C00000);
     if (addr != 0)
     {
       cameraHookAddr = addr;
@@ -342,6 +355,18 @@ private:
     {
       cameraHookAddr = 0;
       AppendLog("Story Camera Hook Address not found (camera remap disabled)");
+    }
+
+    // AoB starts at function prologue — Drama camera hook (Devil Jin intro/winpose)
+    addr = game.FastAoBScan(Tekken::DRAMA_CAMERA_HOOK_SIG_BYTES, base + 0x5C00000);
+    if (addr != 0)
+    {
+      dramaCameraHookAddr = addr;
+    }
+    else
+    {
+      dramaCameraHookAddr = 0;
+      AppendLog("Drama Camera Hook Address not found (intro/winpose remap disabled)");
     }
 
     // Picks up fighters released after this build; falls back to the built-in
@@ -364,6 +389,7 @@ private:
       printf("permaDevilOffset: 0x%llX\n", permaDevilOffset);
       printf("heihachiWIOffset: 0x%llX\n", heihachiWIOffset);
       printf("cameraHookAddr: 0x%llX\n", cameraHookAddr);
+      printf("dramaCameraHookAddr: 0x%llX\n", dramaCameraHookAddr);
     }
     this->ready = true; // Ready to load bosses
   }
@@ -632,7 +658,7 @@ private:
   // Rage Art Camera (requires Assembly Injection)
   void applyJinRageArtCameras(TkMoveset &moveset)
   {
-    if (!ADJUST_RA_CAMERA || !cameraHookInstalled)
+    if (!INSTALL_CAMERA_HOOKS || !cameraHookInstalled)
       return;
 
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
@@ -1262,7 +1288,7 @@ private:
     // Rage Art Camera (requires Assembly Injection)
     auto setRageArtCamera = [&](uint32_t nameKey, int value)
     {
-      if (!ADJUST_RA_CAMERA || !cameraHookInstalled)
+      if (!INSTALL_CAMERA_HOOKS || !cameraHookInstalled)
         return;
       addr = moveset.getMoveAddress(nameKey, defaultAliasIdx - 20);
       addr = moveset.getMoveExtrapropAddr(addr);
@@ -1507,24 +1533,43 @@ private:
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
-    adjustIntroOutroReq(moveset, bossCode, 2000); // I know targetReq is first seen after index 2000
+    // adjustIntroOutroReq(moveset, FighterId::DevilJin2, 2000); // I know targetReq is first seen after index 2000
 
     // Adjusting winposes
     {
-      int enderId = moveset.getMoveId(0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
-      // Grabbing ID of the first intro from alias 0x8000
-      addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
-      addr = moveset.getMoveNthCancel(addr, 1); // 2nd Cancel
-      int start = moveset.getCancelMoveId(addr);
+      // This is no longer needed if you handle the cameras
+      // int enderId = moveset.getMoveId(0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
+      // // Grabbing ID of the first intro from alias 0x8000
+      // addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
+      // addr = moveset.getMoveNthCancel(addr, 1); // 2nd Cancel
+      // int start = moveset.getCancelMoveId(addr);
 
-      uintptr_t cancel = 0;
-      addr = moveset.getMoveAddress(0xD9CDC1C0, start);
-      for (int i = 0; i < 3; i++)
-      {
-        cancel = moveset.getMoveNthCancel(addr, 0);
-        moveset.editCancelMoveId(cancel, enderId);
-        addr += Sizes::Moveset::Move;
-      }
+      // uintptr_t cancel = 0;
+      // addr = moveset.getMoveAddress(0xD9CDC1C0, start);
+      // for (int i = 0; i < 3; i++)
+      // {
+      //   cancel = moveset.getMoveNthCancel(addr, 0);
+      //   moveset.editCancelMoveId(cancel, enderId);
+      //   addr += Sizes::Moveset::Move;
+      // }
+
+      // This had no affect
+      // addr = moveset.getMoveAddress(0xAB7FA036); // Dj_Direct
+      // addr = moveset.getMoveNthCancel(addr, 70);
+      // while (true)
+      // {
+      //   bool flag1 = moveset.cancelHasCondition(addr, Requirements::FATE_RELATED1);
+      //   bool flag2 = moveset.cancelHasCondition(addr, Requirements::FATE_RELATED2);
+      //   if (flag1 || flag2)
+      //   {
+      //     // Setting requirement to "Story Mode" to effectively disable it
+      //     uintptr_t reqAddr = moveset.getCancelValue(addr, "requirements");
+      //     moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE, 0);
+      //   }
+      //   if (moveset.getCancelValue(addr, "command") == 0x8000)
+      //     break;
+      //   addr = moveset.iterateCancel(addr, 1);
+      // }
 
       addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20); // Dj_RageArts01
       addr = moveset.getMoveExtrapropAddr(addr);
@@ -1922,6 +1967,122 @@ private:
     return true;
   }
 
+  bool installDramaCameraHook()
+  {
+    if (dramaCameraHookInstalled)
+      return true;
+    if (!dramaCameraHookAddr)
+    {
+      AppendLog("Drama camera hook: address not scanned");
+      return false;
+    }
+
+    uintptr_t hookAddr = dramaCameraHookAddr;
+    uint8_t currentBytes[DRAMA_CAMERA_HOOK_PATCH_SIZE] = {};
+    if (!game.readBytes(hookAddr, currentBytes, DRAMA_CAMERA_HOOK_PATCH_SIZE))
+    {
+      AppendLog("Drama camera hook: failed to read hook site");
+      return false;
+    }
+    if (memcmp(currentBytes, dramaCameraHookOriginal, DRAMA_CAMERA_HOOK_PATCH_SIZE) != 0)
+    {
+      AppendLog("Drama camera hook: unexpected bytes at hook site (skipped)");
+      return false;
+    }
+
+    uintptr_t returnAddr = hookAddr + DRAMA_CAMERA_HOOK_PATCH_SIZE;
+
+    // cmp r9d, 121 / jne code / mov r9d, 12 / stolen prologue / abs jmp return
+    std::vector<uint8_t> shellcode;
+    auto emit = [&](std::initializer_list<uint8_t> bytes)
+    {
+      shellcode.insert(shellcode.end(), bytes);
+    };
+    auto emitU32 = [&](uint32_t value)
+    {
+      for (int i = 0; i < 4; ++i)
+        shellcode.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+    };
+    auto emitU64 = [&](uint64_t value)
+    {
+      for (int i = 0; i < 8; ++i)
+        shellcode.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+    };
+
+    // cmp r9d, 121
+    emit({0x41, 0x83, 0xF9, 0x79});
+    // jne code (rel8 = +6, skip mov r9d, 12)
+    emit({0x75, 0x06});
+    // mov r9d, 12
+    emit({0x41, 0xB9});
+    emitU32(12);
+    // stolen prologue
+    emit({0x48, 0x89, 0x5C, 0x24, 0x08});
+    emit({0x55});
+    emit({0x56});
+    emit({0x57});
+    emit({0x41, 0x54});
+    emit({0x41, 0x55});
+    emit({0x41, 0x56});
+    // jmp qword ptr [rip+0]; dq returnAddr
+    emit({0xFF, 0x25, 0x00, 0x00, 0x00, 0x00});
+    emitU64(returnAddr);
+
+    dramaCameraCodeCave = game.allocateInTarget<uint8_t>(shellcode.size());
+    if (!dramaCameraCodeCave)
+    {
+      AppendLog("Drama camera hook: failed to allocate code cave");
+      return false;
+    }
+
+    uintptr_t caveAddr = reinterpret_cast<uintptr_t>(dramaCameraCodeCave);
+    if (!game.writeBytes(caveAddr, shellcode.data(), shellcode.size()))
+    {
+      AppendLog("Drama camera hook: failed to write code cave");
+      game.freeInTarget(dramaCameraCodeCave);
+      dramaCameraCodeCave = nullptr;
+      return false;
+    }
+
+    DWORD caveOldProtect = 0;
+    if (!game.protectMemory(caveAddr, shellcode.size(), PAGE_EXECUTE_READWRITE, &caveOldProtect))
+    {
+      AppendLog("Drama camera hook: failed to protect code cave");
+      game.freeInTarget(dramaCameraCodeCave);
+      dramaCameraCodeCave = nullptr;
+      return false;
+    }
+
+    uint8_t patch[DRAMA_CAMERA_HOOK_PATCH_SIZE] = {
+        0xFF, 0x25, 0x00, 0x00, 0x00, 0x00,
+        0, 0, 0, 0, 0, 0, 0, 0};
+    for (int i = 0; i < 8; ++i)
+      patch[6 + i] = static_cast<uint8_t>((caveAddr >> (8 * i)) & 0xFF);
+
+    DWORD hookOldProtect = 0;
+    if (!game.protectMemory(hookAddr, DRAMA_CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &hookOldProtect))
+    {
+      AppendLog("Drama camera hook: failed to unprotect hook site");
+      game.freeInTarget(dramaCameraCodeCave);
+      dramaCameraCodeCave = nullptr;
+      return false;
+    }
+
+    if (!game.writeBytes(hookAddr, patch, DRAMA_CAMERA_HOOK_PATCH_SIZE))
+    {
+      AppendLog("Drama camera hook: failed to patch hook site");
+      game.protectMemory(hookAddr, DRAMA_CAMERA_HOOK_PATCH_SIZE, hookOldProtect, &hookOldProtect);
+      game.freeInTarget(dramaCameraCodeCave);
+      dramaCameraCodeCave = nullptr;
+      return false;
+    }
+
+    game.protectMemory(hookAddr, DRAMA_CAMERA_HOOK_PATCH_SIZE, hookOldProtect, &hookOldProtect);
+    dramaCameraHookInstalled = true;
+    AppendLog("Drama camera hook installed (cave=0x%llX)", (unsigned long long)caveAddr);
+    return true;
+  }
+
 public:
   GameClass game;
 
@@ -1945,6 +2106,7 @@ public:
   ~TkBossLoader()
   {
     uninstallStoryCameraHook();
+    uninstallDramaCameraHook();
     restoreHudAddr(0);
   }
 
@@ -1976,6 +2138,30 @@ public:
       cameraRemoteState = nullptr;
     }
     cameraHookInstalled = false;
+  }
+
+  void uninstallDramaCameraHook()
+  {
+    if (!dramaCameraHookInstalled)
+      return;
+
+    uintptr_t hookAddr = dramaCameraHookAddr;
+    if (hookAddr)
+    {
+      DWORD oldProtect = 0;
+      if (game.protectMemory(hookAddr, DRAMA_CAMERA_HOOK_PATCH_SIZE, PAGE_EXECUTE_READWRITE, &oldProtect))
+      {
+        game.writeBytes(hookAddr, dramaCameraHookOriginal, DRAMA_CAMERA_HOOK_PATCH_SIZE);
+        game.protectMemory(hookAddr, DRAMA_CAMERA_HOOK_PATCH_SIZE, oldProtect, &oldProtect);
+      }
+    }
+
+    if (dramaCameraCodeCave)
+    {
+      game.freeInTarget(dramaCameraCodeCave);
+      dramaCameraCodeCave = nullptr;
+    }
+    dramaCameraHookInstalled = false;
   }
 
   void setDevModeFlag(bool flag)
@@ -2053,9 +2239,10 @@ public:
     if (!this->attached)
       return;
 
-    if (ADJUST_RA_CAMERA)
+    if (INSTALL_CAMERA_HOOKS)
     {
       installStoryCameraHook(); // best-effort; failure must not block boss loading
+      installDramaCameraHook(); // best-effort; failure must not block boss loading
     }
 
     const std::vector<DWORD> offsets = {(DWORD)matchStructOffset, 0x50, 0x8, 0x18, 0x8};
