@@ -1393,12 +1393,12 @@ private:
         // Preparing req-list
         addr = moveset.editRequirement(reqList, Requirements::HEAT_AVAILABLE, 1, 0);
         addr = moveset.editRequirement(addr, Requirements::PLAYER_IN_HEAT, 0, 0);
-        addr = moveset.editRequirement(addr, Requirements::HEAT_ACTIVE_RELATED2, 0, 0);
-        addr = moveset.editRequirement(addr, 0x8382, 1, 0);
+        addr = moveset.editRequirement(addr, Requirements::CHECK_TRADE, 0, 0);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_ENGAGER_SUCCESS_FLAG, 1, 0);
         addr = moveset.editRequirement(addr, ExtraMoveProperties::HEI_WARRIOR, 1, 0);
         addr = moveset.editRequirement(addr, 0x83f4, 1, 0);
         addr = moveset.editRequirement(addr, ExtraMoveProperties::MULTILEVEL_INSTALLS, 3, 0);
-        addr = moveset.editRequirement(addr, 0x8139, 1, 1);
+        addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_METER, 1, 1);
         addr = moveset.editRequirement(addr, ExtraMoveProperties::ADD_HEAT_VALUE, 900, 0);
         addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_RELATED, 300, 0);
         addr = moveset.editRequirement(addr, ExtraMoveProperties::HEAT_AURA_VFX, 0, 0);
