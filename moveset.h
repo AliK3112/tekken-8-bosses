@@ -324,6 +324,13 @@ public:
     return move ? game.readUInt64(move + Offsets::Move::ExtraPropList) : 0;
   }
 
+  TK_ExtraProp getExtraProp(uintptr_t addr)
+  {
+    if (!addr)
+      return {};
+    return game.read<TK_ExtraProp>(addr);
+  }
+
   uintptr_t getExtrapropValue(uintptr_t addr, std::string column)
   {
     if (column == "frame")
@@ -383,7 +390,7 @@ public:
   // Moves `n` Extraprops forward given a prop's address
   uintptr_t iterateExtraprops(uintptr_t addr, int n)
   {
-    return addr ? addr + n * Sizes::Moveset::ExtraMoveProperty : 0;
+    return addr ? addr + n * sizeof(TK_ExtraProp) : 0;
   }
 
   void editExtraprop(uintptr_t propAddr, int propId, int paramValue = -1)
@@ -488,39 +495,23 @@ public:
     return 0;
   }
 
-  uintptr_t findMoveCancelByMoveId(uintptr_t move, int targetMoveId, int start = 0)
-  {
-    if (!move)
-      return 0;
-    start = start < 0 ? 0 : start;
-    return findCancel(getMoveNthCancel(move, start), "move", targetMoveId);
-  }
-
-  uintptr_t findMoveExtraprop(uintptr_t move, int targetProp, int targetFrame = -1, int targetParam = -1)
-  {
-    uintptr_t addr = getMoveExtrapropAddr(move);
-    return findExtraProp(addr, targetProp, targetFrame, targetParam);
-  }
-
   uintptr_t findExtraProp(uintptr_t addr, int targetProp, int targetFrame = -1, int targetParam = -1)
   {
     if (!addr)
       return 0;
     uintptr_t start = getMovesetHeader("extra_move_properties");
     uintptr_t count = getMovesetCount("extra_move_properties");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::ExtraMoveProperty);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_ExtraProp));
     while (addr >= start && addr < end)
     {
-      int frame = game.readInt32(addr + Offsets::ExtraProp::Type);
-      int prop = game.readInt32(addr + Offsets::ExtraProp::Prop);
-      int param = game.readInt32(addr + Offsets::ExtraProp::Value);
-      if (!prop && !frame && !param)
+      TK_ExtraProp prop = getExtraProp(addr);
+      if (!prop.property && !prop.frame && !prop.params[0])
         break;
-      if ((targetFrame == frame || targetFrame == -1) && targetProp == prop && (targetParam == param || targetParam == -1))
+      if ((targetFrame == prop.frame || targetFrame == -1) && targetProp == prop.property && (targetParam == prop.params[0] || targetParam == -1))
       {
         return addr;
       }
-      addr += Sizes::Moveset::ExtraMoveProperty;
+      addr += sizeof(TK_ExtraProp);
     }
     return 0;
   }
@@ -540,21 +531,6 @@ public:
       game.write<int>(addr + 12, param3);
     if (param4 != -1)
       game.write<int>(addr + 16, param4);
-    return iterateRequirements(addr, 1);
-  }
-
-  uintptr_t editRequirement(uintptr_t addr, const TkRequirement &req)
-  {
-    if (addr == 0)
-      return 0;
-    if (req.req != -1)
-      game.write<int>(addr, req.req);
-    for (int i = 0; i < 4; i++)
-    {
-      int value = static_cast<int>(req.param[i].param_unsigned);
-      if (value != -1)
-        game.write<int>(addr + 4 + i * 4, value);
-    }
     return iterateRequirements(addr, 1);
   }
 

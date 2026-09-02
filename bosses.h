@@ -602,7 +602,7 @@ private:
       {
         moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
       }
-      addr += Sizes::Moveset::ExtraMoveProperty;
+      addr += sizeof(TK_ExtraProp);
     }
   }
 
@@ -1055,7 +1055,7 @@ private:
 
       for (uintptr_t i = 2200; i < count; i++)
       {
-        uintptr_t addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
+        uintptr_t addr = start + (i * sizeof(TK_ExtraProp));
         int prop = moveset.getExtrapropValue(addr, "prop");
         int param = moveset.getExtrapropValue(addr, "value");
         if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
@@ -1334,7 +1334,8 @@ private:
       // Disabling WI completely
       // {
       //   addr = moveset.getMoveAddrByIdx(idleStanceIdx);
-      //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+      //   addr = moveset.getMoveExtrapropAddr(addr);
+      //   addr = moveset.findExtraProp(addr, ExtraMoveProperties::_0x8555);
       //   if (addr != 0)
       //   {
       //     moveset.editExtrapropValue(addr, "requirement_idx", 0);
@@ -1372,7 +1373,8 @@ private:
       // Health regenration prop
       // {
       //   addr = moveset.getMoveAddrByIdx(idleStanceIdx);
-      //   addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::_0x8555);
+      //   addr = moveset.getMoveExtrapropAddr(addr);
+      //   addr = moveset.findExtraProp(addr, ExtraMoveProperties::_0x8555);
       //   for (int i = 0; i < 2; i++)
       //   {
       //     uintptr_t reqAddr = moveset.getCancelValue(addr, "requirements");
@@ -1415,7 +1417,8 @@ private:
       // Activating WI in intro against Lidia
       {
         addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
-        addr = moveset.findMoveExtraprop(addr, ExtraMoveProperties::HEI_WARRIOR);
+        addr = moveset.getMoveExtrapropAddr(addr);
+        addr = moveset.findExtraProp(addr, ExtraMoveProperties::HEI_WARRIOR);
         uintptr_t reqIdx = moveset.getExtrapropValue(addr, "requirement_idx");
         // Iterating all extraprops to disable all props that have a requirement addr
         while (true)
@@ -1545,7 +1548,7 @@ private:
           uintptr_t count = moveset.getMovesetCount("extra_move_properties");
           for (int i = 9000; i < count; i++) // 9000 idx is near the Rage Art
           {
-            addr = start + (i * Sizes::Moveset::ExtraMoveProperty);
+            addr = start + (i * sizeof(TK_ExtraProp));
             int prop = moveset.getExtrapropValue(addr, "prop");
             int param = moveset.getExtrapropValue(addr, "value");
             if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)

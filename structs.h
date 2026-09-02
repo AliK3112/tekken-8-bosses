@@ -354,6 +354,17 @@ struct TK_Requirement
     int param[4];
 };
 
+// Size: 0x28
+struct TK_ExtraProp
+{
+    int frame;
+    uint64_t requirements_ptr;
+    int property;
+    int params[4];
+};
+
+static_assert(sizeof(TK_ExtraProp) == 0x28, "TK_ExtraProp layout mismatch");
+
 struct Motbin
 {
     uint16_t skip_anim_lookup;
