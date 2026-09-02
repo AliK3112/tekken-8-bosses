@@ -1419,17 +1419,16 @@ private:
         addr = moveset.getMoveAddress(0xE323DEDC, defaultAliasIdx);
         addr = moveset.getMoveExtrapropAddr(addr);
         addr = moveset.findExtraProp(addr, ExtraMoveProperties::HEI_WARRIOR);
-        uintptr_t reqIdx = moveset.getExtrapropValue(addr, "requirement_idx");
+        uintptr_t reqAddr = moveset.getExtrapropValue(addr, "requirements");
         // Iterating all extraprops to disable all props that have a requirement addr
         while (true)
         {
-          if (moveset.getExtrapropValue(addr, "requirement_idx") == reqIdx)
+          TK_ExtraProp prop = moveset.getExtraProp(addr);
+          if (prop.requirements_ptr == reqAddr)
           {
             moveset.editExtrapropValue(addr, "requirement_idx", 0);
           }
-          int prop = moveset.getExtrapropValue(addr, "prop");
-          int frame = moveset.getExtrapropValue(addr, "frame");
-          if (prop == 0 && frame == 0)
+          if (prop.property == 0 && prop.frame == 0)
             break;
           addr = moveset.iterateExtraprops(addr, 1);
         }
