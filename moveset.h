@@ -1,16 +1,12 @@
 #include "game.h"
 #include "tekken.h"
+#include "structs.h"
 #include <algorithm>
 #include <cstring>
 #include <unordered_map>
 #include <vector>
 
 using namespace Tekken;
-
-struct TK_Requirement {
-  int req;
-  int param[4];
-};
 
 const int ALIASES = 60;
 
@@ -41,8 +37,7 @@ private:
   uintptr_t moveset;
   uintptr_t decryptFuncAddr;
   GameClass &game;
-  uintptr_t movesHead = 0;
-  int movesCount = 0;
+  Motbin motbin{};
   std::unordered_map<int, int> nameKeyToIndex;
 
   // Helper methods
@@ -57,30 +52,27 @@ private:
       return 0;
   }
 
+  void cacheMotbin()
+  {
+    motbin = {};
+    if (!moveset)
+      return;
+    motbin = game.read<Motbin>(moveset);
+  }
+
   void cacheMoves()
   {
     nameKeyToIndex.clear();
-    movesHead = 0;
-    movesCount = 0;
-    if (!moveset)
+    if (!moveset || !motbin.moves_ptr || motbin.moves_count <= 0)
       return;
 
-    movesHead = getMovesetHeader("moves");
-    movesCount = static_cast<int>(getMovesetCount("moves"));
-    if (!movesHead || movesCount <= 0)
-    {
-      movesHead = 0;
-      movesCount = 0;
-      return;
-    }
-
-    const size_t tableSize = static_cast<size_t>(movesCount) * Sizes::Moveset::Move;
+    const size_t tableSize = static_cast<size_t>(motbin.moves_count) * Sizes::Moveset::Move;
     std::vector<uint8_t> blob(tableSize);
-    if (!game.readBytes(movesHead, blob.data(), tableSize))
+    if (!game.readBytes(motbin.moves_ptr, blob.data(), tableSize))
       return;
 
-    nameKeyToIndex.reserve(static_cast<size_t>(movesCount));
-    for (int i = 0; i < movesCount; i++)
+    nameKeyToIndex.reserve(static_cast<size_t>(motbin.moves_count));
+    for (int i = 0; i < motbin.moves_count; i++)
     {
       const uint8_t *movePtr = blob.data() + static_cast<size_t>(i) * Sizes::Moveset::Move;
       int rawIdx = (i % 8) - 4;
@@ -101,8 +93,8 @@ private:
 
   int findMoveIndexLive(int moveNameKey)
   {
-    uintptr_t head = game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
-    int count = static_cast<int>(game.readUInt64(moveset + Offsets::Moveset::MovesCount));
+    uintptr_t head = motbin.moves_ptr;
+    int count = motbin.moves_count;
     if (!head || count <= 0)
       return -1;
     for (int i = 0; i < count; i++)
@@ -142,6 +134,7 @@ public:
   TkMoveset(GameClass &game, uintptr_t moveset, uintptr_t decryptFuncAddr)
       : game(game), moveset(moveset), decryptFuncAddr(decryptFuncAddr)
   {
+    cacheMotbin();
     cacheMoves();
   }
 
@@ -149,8 +142,7 @@ public:
   {
     this->moveset = 0;
     this->decryptFuncAddr = 0;
-    this->movesHead = 0;
-    this->movesCount = 0;
+    this->motbin = {};
     this->nameKeyToIndex.clear();
   }
 
@@ -164,6 +156,7 @@ public:
   void setMoveset(uintptr_t newMoveset)
   {
     moveset = newMoveset;
+    cacheMotbin();
     cacheMoves();
   }
 
@@ -243,7 +236,7 @@ public:
       oss << "Failed to find the desired address: moveNameKey=0x" << std::hex << moveNameKey;
       throw std::runtime_error(oss.str());
     }
-    uintptr_t head = movesHead ? movesHead : game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+    uintptr_t head = motbin.moves_ptr;
     return head + idx * Sizes::Moveset::Move;
   }
 
@@ -419,7 +412,7 @@ public:
     idx = idx & 0x0FFF;
     if (idx < 0 || idx >= ALIASES)
       return -1;
-    return moveset ? game.readUInt16(moveset + 0x30 + idx * 2) : 0;
+    return motbin.original_aliases[idx];
   }
 
   bool cancelHasCondition(uintptr_t cancel, int targetReq, int targetParam = -1)
@@ -588,6 +581,7 @@ public:
 
   int getRequirementValue(uintptr_t addr, std::string column)
   {
+    if (!addr) return 0;
     if (column == "req")
       return game.readInt32(addr);
     else if (column == "param")
@@ -850,45 +844,45 @@ public:
   uintptr_t getMovesetHeader(std::string column)
   {
     if (column == "reactions")
-      return game.readUInt64(moveset + Offsets::Moveset::ReactionsHeader);
+      return motbin.reactions_ptr;
     else if (column == "requirements")
-      return game.readUInt64(moveset + Offsets::Moveset::RequirementsHeader);
+      return motbin.requirements_ptr;
     else if (column == "hit_conditions")
-      return game.readUInt64(moveset + Offsets::Moveset::HitConditionsHeader);
+      return motbin.hit_conditions_ptr;
     else if (column == "projectiles")
-      return game.readUInt64(moveset + Offsets::Moveset::ProjectilesHeader);
+      return motbin.projectiles_ptr;
     else if (column == "pushbacks")
-      return game.readUInt64(moveset + Offsets::Moveset::PushbacksHeader);
+      return motbin.pushbacks_ptr;
     else if (column == "pushback_extra_data")
-      return game.readUInt64(moveset + Offsets::Moveset::PushbackExtraDataHeader);
+      return motbin.pushback_extradata_ptr;
     else if (column == "cancels")
-      return game.readUInt64(moveset + Offsets::Moveset::CancelsHeader);
+      return motbin.cancels_ptr;
     else if (column == "group_cancels")
-      return game.readUInt64(moveset + Offsets::Moveset::GroupCancelsHeader);
+      return motbin.group_cancels_ptr;
     else if (column == "cancel_extra_datas")
-      return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasHeader);
+      return motbin.cancel_extradata_ptr;
     else if (column == "extra_move_properties")
-      return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesHeader);
+      return motbin.extra_move_properties_ptr;
     else if (column == "move_start_props")
-      return game.readUInt64(moveset + Offsets::Moveset::MoveStartPropsHeader);
+      return motbin.move_start_props_ptr;
     else if (column == "move_end_props")
-      return game.readUInt64(moveset + Offsets::Moveset::MoveEndPropsHeader);
+      return motbin.move_end_props_ptr;
     else if (column == "moves")
-      return game.readUInt64(moveset + Offsets::Moveset::MovesHeader);
+      return motbin.moves_ptr;
     else if (column == "voiceclips")
-      return game.readUInt64(moveset + Offsets::Moveset::VoiceclipsHeader);
+      return motbin.voiceclips_ptr;
     else if (column == "input_sequences")
-      return game.readUInt64(moveset + Offsets::Moveset::InputSequencesHeader);
+      return motbin.input_sequences_ptr;
     else if (column == "input_extra_data")
-      return game.readUInt64(moveset + Offsets::Moveset::InputExtraDataHeader);
+      return motbin.inputs_ptr;
     else if (column == "parry_list")
-      return game.readUInt64(moveset + Offsets::Moveset::ParryListHeader);
+      return motbin.parryable_list_ptr;
     else if (column == "throw_extras")
-      return game.readUInt64(moveset + Offsets::Moveset::ThrowExtrasHeader);
+      return motbin.throw_extras_ptr;
     else if (column == "throws")
-      return game.readUInt64(moveset + Offsets::Moveset::ThrowsHeader);
+      return motbin.throws_ptr;
     else if (column == "dialogues")
-      return game.readUInt64(moveset + Offsets::Moveset::DialoguesHeader);
+      return motbin.dialogues_ptr;
 
     return 0;
   }
@@ -896,45 +890,45 @@ public:
   uintptr_t getMovesetCount(std::string column)
   {
     if (column == "reactions")
-      return game.readUInt64(moveset + Offsets::Moveset::ReactionsCount);
+      return motbin.reactions_count;
     else if (column == "requirements")
-      return game.readUInt64(moveset + Offsets::Moveset::RequirementsCount);
+      return motbin.requirements_count;
     else if (column == "hit_conditions")
-      return game.readUInt64(moveset + Offsets::Moveset::HitConditionsCount);
+      return motbin.hit_conditions_count;
     else if (column == "projectiles")
-      return game.readUInt64(moveset + Offsets::Moveset::ProjectilesCount);
+      return motbin.projectiles_count;
     else if (column == "pushbacks")
-      return game.readUInt64(moveset + Offsets::Moveset::PushbacksCount);
+      return motbin.pushbacks_count;
     else if (column == "pushback_extra_data")
-      return game.readUInt64(moveset + Offsets::Moveset::PushbackExtraDataCount);
+      return motbin.pushback_extradata_count;
     else if (column == "cancels")
-      return game.readUInt64(moveset + Offsets::Moveset::CancelsCount);
+      return motbin.cancels_count;
     else if (column == "group_cancels")
-      return game.readUInt64(moveset + Offsets::Moveset::GroupCancelsCount);
+      return motbin.group_cancels_count;
     else if (column == "cancel_extra_datas")
-      return game.readUInt64(moveset + Offsets::Moveset::CancelExtraDatasCount);
+      return motbin.cancel_extradata_count;
     else if (column == "extra_move_properties")
-      return game.readUInt64(moveset + Offsets::Moveset::ExtraMovePropertiesCount);
+      return motbin.extra_move_properties_count;
     else if (column == "move_start_props")
-      return game.readUInt64(moveset + Offsets::Moveset::MoveStartPropsCount);
+      return motbin.move_start_props_count;
     else if (column == "move_end_props")
-      return game.readUInt64(moveset + Offsets::Moveset::MoveEndPropsCount);
+      return motbin.move_end_props_count;
     else if (column == "moves")
-      return game.readUInt64(moveset + Offsets::Moveset::MovesCount);
+      return motbin.moves_count;
     else if (column == "voiceclips")
-      return game.readUInt64(moveset + Offsets::Moveset::VoiceclipsCount);
+      return motbin.voiceclips_count;
     else if (column == "input_sequences")
-      return game.readUInt64(moveset + Offsets::Moveset::InputSequencesCount);
+      return motbin.input_sequences_count;
     else if (column == "input_extra_data")
-      return game.readUInt64(moveset + Offsets::Moveset::InputExtraDataCount);
+      return motbin.inputs_count;
     else if (column == "parry_list")
-      return game.readUInt64(moveset + Offsets::Moveset::ParryListCount);
+      return motbin.parryable_list_count;
     else if (column == "throw_extras")
-      return game.readUInt64(moveset + Offsets::Moveset::ThrowExtrasCount);
+      return motbin.throw_extras_count;
     else if (column == "throws")
-      return game.readUInt64(moveset + Offsets::Moveset::ThrowsCount);
+      return motbin.throws_count;
     else if (column == "dialogues")
-      return game.readUInt64(moveset + Offsets::Moveset::DialoguesCount);
+      return motbin.dialogues_count;
 
     return 0;
   }
