@@ -432,11 +432,10 @@ public:
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
     while (requirement >= start && requirement < end)
     {
-      int req = getRequirementValue(requirement, "req");
-      int param = getRequirementValue(requirement, "param");
-      if (req == targetReq && (param == targetParam || targetParam == -1))
+      TK_Requirement req = getRequirement(requirement);
+      if (req.req == targetReq && (req.param[0] == targetParam || targetParam == -1))
         return requirement;
-      if (req == Requirements::EOL)
+      if (req.req == Requirements::EOL)
         break;
       requirement = iterateRequirements(requirement, 1);
     }
@@ -568,20 +567,27 @@ public:
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Requirement);
     while (addr >= start && addr < end)
     {
-      int req = getRequirementValue(addr, "req");
-      int param = getRequirementValue(addr, "param");
-      if (req == tReq && (param == tParam || tParam == -1))
+      TK_Requirement requirement = getRequirement(addr);
+      if (requirement.req == tReq && (requirement.param[0] == tParam || tParam == -1))
         return true;
-      if (req == Requirements::EOL)
+      if (requirement.req == Requirements::EOL)
         break;
       addr = iterateRequirements(addr, 1);
     }
     return false;
   }
 
+  TK_Requirement getRequirement(uintptr_t addr)
+  {
+    if (!addr)
+      return {};
+    return game.read<TK_Requirement>(addr);
+  }
+
   int getRequirementValue(uintptr_t addr, std::string column)
   {
-    if (!addr) return 0;
+    if (!addr)
+      return 0;
     if (column == "req")
       return game.readInt32(addr);
     else if (column == "param")

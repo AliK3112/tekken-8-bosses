@@ -617,7 +617,7 @@ private:
     for (size_t i = 0; i < count; i++)
     {
       uintptr_t addr = start + i * Sizes::Requirement;
-      TK_Requirement requirement = game.read<TK_Requirement>(addr);
+      TK_Requirement requirement = moveset.getRequirement(addr);
       if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == storyFlagParam)
       {
         game.write<int>(addr, 0);
@@ -1041,9 +1041,9 @@ private:
       for (uintptr_t i = 4530; i < count - 2000; i++)
       {
         uintptr_t addr = start + (i * Sizes::Moveset::Requirement);
-        int req = moveset.getRequirementValue(addr, "req");
-        int param = moveset.getRequirementValue(addr, "param");
-        if ((req == ExtraMoveProperties::DEVIL_STATE && param >= 1) || (req == ExtraMoveProperties::WING_ANIM))
+        TK_Requirement requirement = moveset.getRequirement(addr);
+        if ((requirement.req == ExtraMoveProperties::DEVIL_STATE && requirement.param[0] >= 1) ||
+            (requirement.req == ExtraMoveProperties::WING_ANIM))
         {
           moveset.editRequirement(addr, 0, 0);
         }
@@ -1568,9 +1568,8 @@ private:
       //   for (uintptr_t i = 0; i < count; i++)
       //   {
       //     uintptr_t addr = header + i * Sizes::Moveset::Requirement;
-      //     int req = moveset.getRequirementValue(addr, "req");
-      //     int param = moveset.getRequirementValue(addr, "param");
-      //     if (req == Requirements::STORY_BATTLE_NUM && param == 0xC3)
+      //     TK_Requirement requirement = moveset.getRequirement(addr);
+      //     if (requirement.req == Requirements::STORY_BATTLE_NUM && requirement.param[0] == 0xC3)
       //     {
       //       moveset.editRequirement(addr, 0, 0);
       //     }
