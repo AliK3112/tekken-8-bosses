@@ -149,14 +149,14 @@ namespace Tekken
 
     for (const std::pair<const int, std::string> &entry : scanned)
     {
-      const std::string known = getCharCode(entry.first);
-      if (known == "Unknown")
+      const char *known = getCharCode(entry.first);
+      if (strcmp(known, "Unknown") == 0)
       {
         newcomers.push_back(entry.first);
         continue;
       }
 
-      if (known != entry.second)
+      if (entry.second != known)
       {
         status = "Fighter code scan rejected: id " + std::to_string(entry.first) +
                  " reads \"" + entry.second + "\", expected \"" + known + "\" (using built-in codes)";

@@ -432,7 +432,7 @@ private:
     if (isStoryDvj)
     {
       if (bossCode == BossCodes::DevilJin || bossCode == BossCodes::DevilJin_1) {
-        buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::Jin).c_str());
+        buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::Jin));
         buildNamePath(name, sizeof(name), FighterId::Jin);
       }
       else if (bossCode == BossCodes::DevilJin_2) {

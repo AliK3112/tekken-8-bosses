@@ -119,13 +119,13 @@ void buildNamePath(char *out, size_t outSize, const char *code)
 
 void getIconPath(char *out, size_t outSize, int side, int charId)
 {
-  buildIconPath(out, outSize, side == 0 ? 'L' : 'R', getCharCode(charId).c_str());
+  buildIconPath(out, outSize, side == 0 ? 'L' : 'R', getCharCode(charId));
 }
 
 // This is an override
 void buildNamePath(char *out, size_t outSize, int charId)
 {
-  buildNamePath(out, outSize, getCharCode(charId).c_str());
+  buildNamePath(out, outSize, getCharCode(charId));
 }
 
 std::string getBossName(int bossCode)

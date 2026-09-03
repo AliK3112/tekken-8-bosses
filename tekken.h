@@ -269,7 +269,8 @@ namespace Tekken
   // did not exist when this table was written. Never overrides the cases below.
   std::map<int, std::string> scannedCharCodes;
 
-  std::string getCharCode(int charId)
+  // Pointer is valid until the next scanFighterCodes() / scannedCharCodes.clear().
+  const char *getCharCode(int charId)
   {
     switch (charId)
     {
@@ -378,7 +379,7 @@ namespace Tekken
     default:
     {
       std::map<int, std::string>::const_iterator scanned = scannedCharCodes.find(charId);
-      return scanned != scannedCharCodes.end() ? scanned->second : "Unknown";
+      return scanned != scannedCharCodes.end() ? scanned->second.c_str() : "Unknown";
     }
     }
   }
