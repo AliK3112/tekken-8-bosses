@@ -128,7 +128,7 @@ void buildNamePath(char *out, size_t outSize, int charId)
   buildNamePath(out, outSize, getCharCode(charId));
 }
 
-std::string getBossName(int bossCode)
+const char *getBossName(int bossCode)
 {
   switch (bossCode)
   {

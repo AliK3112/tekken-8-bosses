@@ -57,6 +57,8 @@ private:
   uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
+  uintptr_t m_player1 = 0;
+  uintptr_t m_player2 = 0;
   // jz rel8 at sig+13 — masked in AoB so already-NOP'd (0x90 0x90) sites still match
   static constexpr uint16_t HUD_ICON_ORIG = 0x5274; // 74 52
   static constexpr uint16_t HUD_NAME_ORIG = 0x3174; // 74 31
@@ -76,18 +78,19 @@ private:
       0x55,                         // push rbp
       0x57,                         // push rdi
       0x41, 0x54};                  // push r12
-  // DRAMA CAMERA HOOK (Devil Jin intro/winpose: R9D 121 -> 12)
+  // DRAMA CAMERA HOOK (Devil Jin drama/fate: R8D 121 -> 12 when edx in [1,28])
   uint8_t *dramaCameraCodeCave = nullptr;
   bool dramaCameraHookInstalled = false;
   static constexpr size_t DRAMA_CAMERA_HOOK_PATCH_SIZE = 14;
   const uint8_t dramaCameraHookOriginal[DRAMA_CAMERA_HOOK_PATCH_SIZE] = {
-      0x48, 0x89, 0x5C, 0x24, 0x08, // mov [rsp+8], rbx
-      0x55,                         // push rbp
+      0x40, 0x55,                   // push rbp
+      0x53,                         // push rbx
       0x56,                         // push rsi
       0x57,                         // push rdi
       0x41, 0x54,                   // push r12
-      0x41, 0x55,                   // push r13
-      0x41, 0x56};                  // push r14
+      0x41, 0x56,                   // push r14
+      0x41, 0x57,                   // push r15
+      0x48, 0x8B, 0xEC};            // mov rbp, rsp
   // CONFIGURATIONS
   bool devMode = false;
   bool handleIcons = false;
@@ -1580,45 +1583,13 @@ private:
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
-    // Doesn't do anything
-    // adjustIntroOutroReq(moveset, FighterId::DevilJin2, 2000); // I know targetReq is first seen after index 2000
+    // Used in tandem with the Drama hook, helps trigger Fate cameras
+    // TODO: Check if only changing Dj_Direct cancel reqs is enough to trigger Fate cameras
+    // I suspect that us also updating dialogue reqs is messing up with the voicelines being played
+    adjustIntroOutroReq(moveset, FighterId::DevilJin2, 2000); // I know targetReq is first seen after index 2000
 
-    // Adjusting winposes
+    // Adjusting Rage Art dialogues
     {
-      // This is no longer needed if you handle the cameras
-      // int enderId = moveset.getMoveId(0xAB7FA036, defaultAliasIdx); // Grabbed ID of the match-ender
-      // // Grabbing ID of the first intro from alias 0x8000
-      // addr = moveset.getMoveAddrByIdx(defaultAliasIdx);
-      // addr = moveset.getMoveNthCancel(addr, 1); // 2nd Cancel
-      // int start = moveset.getCancelMoveId(addr);
-
-      // uintptr_t cancel = 0;
-      // addr = moveset.getMoveAddress(0xD9CDC1C0, start);
-      // for (int i = 0; i < 3; i++)
-      // {
-      //   cancel = moveset.getMoveNthCancel(addr, 0);
-      //   moveset.editCancelMoveId(cancel, enderId);
-      //   addr += Sizes::Moveset::Move;
-      // }
-
-      // This had no affect
-      // addr = moveset.getMoveAddress(0xAB7FA036); // Dj_Direct
-      // addr = moveset.getMoveNthCancel(addr, 70);
-      // while (true)
-      // {
-      //   bool flag1 = moveset.cancelHasCondition(addr, Requirements::FATE_RELATED1);
-      //   bool flag2 = moveset.cancelHasCondition(addr, Requirements::FATE_RELATED2);
-      //   if (flag1 || flag2)
-      //   {
-      //     // Setting requirement to "Story Mode" to effectively disable it
-      //     uintptr_t reqAddr = moveset.getCancelValue(addr, "requirements");
-      //     moveset.editRequirement(reqAddr, Requirements::STORY_BATTLE, 0);
-      //   }
-      //   if (moveset.getCancelValue(addr, "command") == 0x8000)
-      //     break;
-      //   addr = moveset.iterateCancel(addr, 1);
-      // }
-
       addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20); // Dj_RageArts01
       addr = moveset.getMoveExtrapropAddr(addr);
       moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
@@ -2040,7 +2011,8 @@ private:
 
     uintptr_t returnAddr = hookAddr + DRAMA_CAMERA_HOOK_PATCH_SIZE;
 
-    // cmp r9d, 121 / jne code / mov r9d, 12 / stolen prologue / abs jmp return
+    // cmp r8d,121 / jne code / cmp edx,1 / jb code / cmp edx,28 / ja code / mov r8d,12
+    // then stolen prologue / abs jmp return
     std::vector<uint8_t> shellcode;
     auto emit = [&](std::initializer_list<uint8_t> bytes)
     {
@@ -2057,21 +2029,30 @@ private:
         shellcode.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
     };
 
-    // cmp r9d, 121
-    emit({0x41, 0x83, 0xF9, 0x79});
-    // jne code (rel8 = +6, skip mov r9d, 12)
-    emit({0x75, 0x06});
-    // mov r9d, 12
-    emit({0x41, 0xB9});
+    // cmp r8d, 121
+    emit({0x41, 0x83, 0xF8, 0x79});
+    // jne code (skip remaining checks + mov) — 3+2+3+2+6 = 16
+    emit({0x75, 0x10});
+    // cmp edx, 1
+    emit({0x83, 0xFA, 0x01});
+    // jb code — 3+2+6 = 11
+    emit({0x72, 0x0B});
+    // cmp edx, 28
+    emit({0x83, 0xFA, 0x1C});
+    // ja code — 6
+    emit({0x77, 0x06});
+    // mov r8d, 12
+    emit({0x41, 0xB8});
     emitU32(12);
-    // stolen prologue
-    emit({0x48, 0x89, 0x5C, 0x24, 0x08});
-    emit({0x55});
+    // stolen prologue: push rbp/rbx/rsi/rdi/r12/r14/r15; mov rbp,rsp
+    emit({0x40, 0x55});
+    emit({0x53});
     emit({0x56});
     emit({0x57});
     emit({0x41, 0x54});
-    emit({0x41, 0x55});
     emit({0x41, 0x56});
+    emit({0x41, 0x57});
+    emit({0x48, 0x8B, 0xEC});
     // jmp qword ptr [rip+0]; dq returnAddr
     emit({0xFF, 0x25, 0x00, 0x00, 0x00, 0x00});
     emitU64(returnAddr);
@@ -2307,6 +2288,9 @@ public:
       // Main Loop
       Sleep(10);
 
+      this->m_player1 = 0;
+      this->m_player2 = 0;
+
       if (this->bossCode_L == BossCodes::None && this->bossCode_R == BossCodes::None)
         continue;
 
@@ -2376,23 +2360,28 @@ public:
         continue;
       }
 
+      // When the code reaches here, it means the player is loaded
+      // Storing player addresses
+      this->m_player1 = getPlayerAddress(0);
+      this->m_player2 = getPlayerAddress(1);
+
       if (selectedSide != -1)
       {
         int code = getCode(selectedSide);
         if (loadBoss(code, selectedSide))
         {
-          AppendLog("Loaded Boss \"%s\" for Player %d", getBossName(code).c_str(), selectedSide + 1);
+          AppendLog("Loaded Boss \"%s\" for Player %d", getBossName(code), selectedSide + 1);
         }
       }
       else
       {
         if (loadBoss(this->bossCode_L, 0))
         {
-          AppendLog("Loaded Boss \"%s\" for Player 1", getBossName(this->bossCode_L).c_str());
+          AppendLog("Loaded Boss \"%s\" for Player 1", getBossName(this->bossCode_L));
         }
         if (loadBoss(this->bossCode_R, 1))
         {
-          AppendLog("Loaded Boss \"%s\" for Player 2", getBossName(this->bossCode_R).c_str());
+          AppendLog("Loaded Boss \"%s\" for Player 2", getBossName(this->bossCode_R));
         }
       }
 

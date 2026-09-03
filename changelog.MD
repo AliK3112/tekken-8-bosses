@@ -1,5 +1,6 @@
 ## Changelog (September 4, 2026)
  - Fix the intros for `True Devil Kazuya` and `Angel Jin`
+ - Fixed Fate intros for `Story Devil Jin`
  - More refactoring, replaced most instants of "std::string" with "const char" expressions
 
 ## Changelog (September 1, 2026)

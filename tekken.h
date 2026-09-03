@@ -142,7 +142,7 @@ namespace Tekken
   std::string RAW_MOVESET_FILE_PTR_SIG_BYTES = "48 C7 05 ?? ?? ?? ?? 00 00 00 00 48 8D 51 28 4C 8B 41 28 48 8B F9 48 83 C1 28 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 28 BA 30 00 00 00 E8 ?? ?? ?? ?? 4C 8B 47 18 48 8D 57 18 48 8D 4F 18 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 18";
   // Starts at function prologue — Story RA camera hook injection point (14-byte abs jmp)
   std::string STORY_CAMERA_HOOK_SIG_BYTES = "48 89 5C 24 08 48 89 74 24 18 55 57 41 54 41 56 41 57 48 8D AC 24 50 FE FF FF 48 81 EC B0 02 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 A0 01 00 00 41 8B F9";
-  std::string DRAMA_CAMERA_HOOK_SIG_BYTES = "48 89 5C 24 08 55 56 57 41 54 41 55 41 56 41 57 48 8D AC 24 60 FE FF FF 48 81 EC A0 02 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 90 01 00 00 44 89 4C 24 74";
+  std::string DRAMA_CAMERA_HOOK_SIG_BYTES = "40 55 53 56 57 41 54 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 F8 45 8B F1 41 8B F0 8B DA 48 8B F9 48 89 4D B0 44 0F B6 7D 60 E8 ?? ?? ?? ??";
 
   enum Cancels
   {
