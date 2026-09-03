@@ -57,6 +57,10 @@ private:
   uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
+  // jz rel8 at sig+13 — masked in AoB so already-NOP'd (0x90 0x90) sites still match
+  static constexpr uint16_t HUD_ICON_ORIG = 0x5274; // 74 52
+  static constexpr uint16_t HUD_NAME_ORIG = 0x3174; // 74 31
+  static constexpr uint16_t HUD_PATCH_NOP = 0x9090;
   uintptr_t cameraHookAddr = 0;
   uintptr_t dramaCameraHookAddr = 0;
   // STORY CAMERA HOOK
@@ -285,6 +289,9 @@ private:
     if (addr != 0)
     {
       hudIconAddr = addr + 13;
+      const uint16_t iconBytes = game.readUInt16(hudIconAddr);
+      if (iconBytes != HUD_ICON_ORIG && iconBytes != HUD_PATCH_NOP)
+        hudIconAddr = 0;
     }
     else
     {
@@ -297,6 +304,9 @@ private:
       if (addr != 0)
       {
         hudNameAddr = addr + 13;
+        const uint16_t nameBytes = game.readUInt16(hudNameAddr);
+        if (nameBytes != HUD_NAME_ORIG && nameBytes != HUD_PATCH_NOP)
+          hudNameAddr = 0;
       }
       else
       {
@@ -394,31 +404,36 @@ private:
     this->ready = true; // Ready to load bosses
   }
 
-  // Modifies the instructions that allows for custom HUD icon loading
+  // Modifies the instructions that allows for custom HUD icon loading.
+  // Sites may already be NOP'd (sig masks match either original jz or 90 90).
   void modifyHudAddr(uintptr_t matchStructAddr)
   {
     int mode = game.readInt32(matchStructAddr);
-    if (mode == 1 || mode == 6)
-    {
-      int icon = game.readUInt16(hudIconAddr);
-      int name = game.readUInt16(hudNameAddr);
-      if (icon == 0x5274 && name == 0x3174)
-      {
-        game.write<uint16_t>(hudIconAddr, 0x9090);
-        game.write<uint16_t>(hudNameAddr, 0x9090);
-      }
-    }
+    if (mode != 1 && mode != 6)
+      return;
+    if (!hudIconAddr || !hudNameAddr)
+      return;
+
+    const uint16_t icon = game.readUInt16(hudIconAddr);
+    if (icon == HUD_ICON_ORIG)
+      game.write<uint16_t>(hudIconAddr, HUD_PATCH_NOP);
+
+    const uint16_t name = game.readUInt16(hudNameAddr);
+    if (name == HUD_NAME_ORIG)
+      game.write<uint16_t>(hudNameAddr, HUD_PATCH_NOP);
   }
 
   void restoreHudAddr(uintptr_t matchStructAddr)
   {
-    int icon = game.readUInt16(hudIconAddr);
-    int name = game.readUInt16(hudNameAddr);
-    if (icon == 0x9090 && name == 0x9090)
-    {
-      game.write<uint16_t>(hudIconAddr, 0x5274);
-      game.write<uint16_t>(hudNameAddr, 0x3174);
-    }
+    (void)matchStructAddr;
+    if (!hudIconAddr || !hudNameAddr)
+      return;
+
+    if (game.readUInt16(hudIconAddr) == HUD_PATCH_NOP)
+      game.write<uint16_t>(hudIconAddr, HUD_ICON_ORIG);
+
+    if (game.readUInt16(hudNameAddr) == HUD_PATCH_NOP)
+      game.write<uint16_t>(hudNameAddr, HUD_NAME_ORIG);
   }
 
   void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
