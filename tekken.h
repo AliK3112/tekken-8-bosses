@@ -170,7 +170,7 @@ namespace Tekken
     PRE_ROUND_ANIM = 696,
     INTROS_RELATED = 697, // Intros related
     FATE_RELATED1 = 754,
-    INTRO_RELATED = 755,
+    FATE_INTRO_RELATED = 755,
     FATE_RELATED2 = 756,
     STORY_FLAGS = 777,
     NOT_STORY_MODE = 778,

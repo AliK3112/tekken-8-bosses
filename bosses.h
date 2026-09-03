@@ -612,7 +612,7 @@ private:
     {
       requirement = reqHeader + i * sizeof(TK_Requirement);
       req = game.readInt32(requirement);
-      if (req == Requirements::INTRO_RELATED)
+      if (req == Requirements::FATE_INTRO_RELATED)
       {
         game.write(requirement + 4, bossCode);
       }
