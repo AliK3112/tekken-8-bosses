@@ -1252,7 +1252,6 @@ private:
     if (bossCode != BossCodes::AngelJin)
       return false;
     TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
-    adjustIntroOutroReq(moveset, bossCode, 2085); // I know targetReq is first seen after index 2085
 
     // Fix Rage Art dialogue (2 cancels)
     uintptr_t addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
@@ -1270,6 +1269,19 @@ private:
       addr = moveset.getMoveAddress(0x3cbbe67a, 0x8001);
       addr = moveset.getMoveExtrapropAddr(addr);
       moveset.editExtrapropValue(addr, "value", 0);
+    }
+
+    // Setting swl_s00 as the default intro
+    {
+      addr = moveset.getMoveAddress(0xace34ec8); // Dj_Direct
+      addr = moveset.getMoveNthCancel(addr, 1);
+      int moveId = moveset.getCancelValue(addr, "move");
+      if (moveId == moveset.getMoveId(0x6b59f816)) // swl_s00
+      {
+        addr = moveset.getCancelValue(addr, "requirements");
+        addr = moveset.editRequirement(addr, Requirements::INTRO_RELATED, 0);
+        addr = moveset.editRequirement(addr, Requirements::EOL, 0);
+      }
     }
 
     return markMovesetEdited(movesetAddr);
@@ -1518,14 +1530,30 @@ private:
     if (bossCode != BossCodes::TrueDevilKazuya)
       return false;
     TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
-    uintptr_t addr = moveset.getMoveAddress(0xc8c48167, moveset.getAliasMoveId(0x8030));
+    uintptr_t addr = 0;
+    try {
+      addr = moveset.getMoveAddress(0xc8c48167);
+    } catch (...) {
+      return false;
+    }
     addr = moveset.getMoveNthCancel(addr);
     addr = moveset.findCancelByCondition(addr, Requirements::ARCADE_BATTLE);
     moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
     addr = moveset.iterateCancel(addr, 1); // Next cancel
     moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
-    // Move this in the beginning if I figure out how to get the correct intros to play
-    adjustIntroOutroReq(moveset, bossCode, 2900); // I know targetReq is first seen after index 2900
+
+    addr = moveset.getMoveAddress(0xfebdae71); // Kz_Direct
+    addr = moveset.getMoveNthCancel(addr, 1);
+    {
+      int moveId = moveset.getCancelValue(addr, "move");
+      if (moveId == moveset.getMoveId(0x69fa69b1)) // grl_s00
+      {
+        addr = moveset.getCancelValue(addr, "requirements");
+        addr = moveset.editRequirement(addr, Requirements::INTRO_RELATED, 0);
+        addr = moveset.editRequirement(addr, Requirements::EOL, 0);
+      }
+    }
+
     return markMovesetEdited(movesetAddr);
   }
 
@@ -1537,6 +1565,7 @@ private:
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
+    // Doesn't do anything
     // adjustIntroOutroReq(moveset, FighterId::DevilJin2, 2000); // I know targetReq is first seen after index 2000
 
     // Adjusting winposes
@@ -2261,7 +2290,7 @@ public:
     while (this->attached)
     {
       // Main Loop
-      Sleep(100);
+      Sleep(10);
 
       if (this->bossCode_L == BossCodes::None && this->bossCode_R == BossCodes::None)
         continue;
@@ -2376,36 +2405,43 @@ public:
     if (isMovesetEdited(movesetAddr))
       return false;
 
-    int charId = getCharId(playerAddr);
-    switch (charId)
+    try // Added so if "getMoveAddress" throws an error, the whole trainer doesn't crash.
     {
-    case FighterId::Jin:
-      return loadJin(movesetAddr, bossCode);
-    case FighterId::Kazuya:
-    {
-      if (bossCode == BossCodes::DevilKazuya)
+      int charId = getCharId(playerAddr);
+      switch (charId)
       {
-        setKazuyaPermaDevil(playerAddr, 1);
-      }
-      return loadKazuya(movesetAddr, bossCode);
-    }
-    case FighterId::Azazel:
-      return loadAzazel(movesetAddr, bossCode);
-    case FighterId::Heihachi:
-      return loadHeihachi(movesetAddr, bossCode);
-    case FighterId::AngelJin:
-      return loadAngelJin(movesetAddr, bossCode);
-    case FighterId::TrueDevilKazuya:
-    {
-      if (bossCode == BossCodes::TrueDevilKazuya)
+      case FighterId::Jin:
+        return loadJin(movesetAddr, bossCode);
+      case FighterId::Kazuya:
       {
-        setKazuyaPermaDevil(playerAddr, 1);
+        if (bossCode == BossCodes::DevilKazuya)
+        {
+          setKazuyaPermaDevil(playerAddr, 1);
+        }
+        return loadKazuya(movesetAddr, bossCode);
       }
-      return loadTrueDevilKazuya(movesetAddr, bossCode);
+      case FighterId::Azazel:
+        return loadAzazel(movesetAddr, bossCode);
+      case FighterId::Heihachi:
+        return loadHeihachi(movesetAddr, bossCode);
+      case FighterId::AngelJin:
+        return loadAngelJin(movesetAddr, bossCode);
+      case FighterId::TrueDevilKazuya:
+      {
+        if (bossCode == BossCodes::TrueDevilKazuya)
+        {
+          setKazuyaPermaDevil(playerAddr, 1);
+        }
+        return loadTrueDevilKazuya(movesetAddr, bossCode);
+      }
+      case FighterId::DevilJin2:
+        return loadStoryDevilJin(movesetAddr, bossCode);
+      default:
+        return false;
+      }
     }
-    case FighterId::DevilJin2:
-      return loadStoryDevilJin(movesetAddr, bossCode);
-    default:
+    catch (...)
+    {
       return false;
     }
   }

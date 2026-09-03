@@ -1,4 +1,8 @@
 ## Changelog (September 1, 2026)
+ - Fix the intros for `True Devil Kazuya` and `Angel Jin`
+ - More refactoring, replaced most instants of "std::string" with "const char" expressions
+
+## Changelog (September 1, 2026)
  - Performance improvements by caching all the move "nameKeys" and reading the entire "motbin" header whenever a moveset loads — dramatically reducing the number of `ReadProcessMemory` calls.
  - Fixed intro and outro cameras for Story Devil Jin.
  - Fixed `f, n` issue for all Jin variants. Now `f, n, df1` properly results in story version of CD+1.

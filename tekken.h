@@ -164,6 +164,11 @@ namespace Tekken
     ARCADE_BATTLE = 664,
     STORY_BATTLE = 667,
     STORY_BATTLE_NUM = 668,
+    OUTRO1 = 675,         // Outro related 1
+    INTRO_RELATED = 678,  // Used to play TKD and ANJ intros
+    OUTRO2 = 679,         // Outro related 2
+    PRE_ROUND_ANIM = 696,
+    INTROS_RELATED = 697, // Intros related
     FATE_RELATED1 = 754,
     INTRO_RELATED = 755,
     FATE_RELATED2 = 756,
@@ -172,10 +177,6 @@ namespace Tekken
     DLC_STORY1_BATTLE = 801,
     DLC_STORY1_BATTLE_NUM = 802,
     DLC_STORY1_FLAGS = 806,
-    PRE_ROUND_ANIM = 696,
-    INTROS_RELATED = 697, // Intros related
-    OUTRO1 = 675,         // Outro related 1
-    OUTRO2 = 679,         // Outro related 2
     PLAYER_IN_HEAT = 1028,
     EOL = 1100,           // End of the list
   };

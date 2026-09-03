@@ -672,6 +672,7 @@ public:
 
   uintptr_t getCancelValue(uintptr_t addr, std::string column)
   {
+    if (!addr) return 0;
     if (column == "command")
       return game.readUInt64(addr + Offsets::Cancel::Command);
     else if (column == "requirements")
