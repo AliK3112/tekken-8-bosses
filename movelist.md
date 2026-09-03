@@ -3,8 +3,19 @@
 ### Common Jin Changes
  - New String: d/b+4, 3 (except Kazama-style Jin)
  - All forms of CD+1 are +3 on block (except Kazama-style Jin's CD+1 done from neutral)
- - [UNINTENDED BUG] From ws+1, 3~3 df Crouch Dash, he can do EWGF, TGF and Hellsweep (except Devil-powered Jin)
+ - [UNINTENDED BUG] From ws+1, 3~3 df Crouch Dash, he can do EWGF, TGF and Hellsweep (except Normal Story Jin)
  - [UNINTENDED BUG] New String: 1+2 from a CD done outta ZEN or ZAN (EWGF > TGF)
+ - [UNINTENDED BUG] `f, n, df1` performs the regular CD+1 instead of the +3 oB story version, this input was added around v1.05 which makes it an oversight.
+
+### Normal Story Jin (has Devil Powers)
+ - New String: `1, 1` [Jab into ETU]
+ - New String: `2, 2` [Jab into ZEN]
+ - New String: `WR+3, 4` [Running Side Kick into Zen Dive Kick]
+ - `d+2` causes instant Tornado
+ - `1, 2, 1` (last hit) causes instant Tornado
+ - `CD+4` no stagger on-block
+ - `CD+4, 2` has a automatic Tornado followup on a successful hit
+ - `d/b+1+2` Omen no longer requires Heat, auto cancel to CD and is a PC
 
 ### Nerfed Jin ([Movelist Showcase](https://youtu.be/6HofnzDjPlM?si=50FrGFlMTeYukU4h))
   - 1, 2, 1 removed
@@ -18,7 +29,7 @@
   - ws+1, 3, 2, 1, 4 > 2 removed
   - Omen Stance followups removed
   - ZEN 1, 2 last hit reverted to T7
-  - ZEN 2 reverted to T7, Now a Heat Engager
+  - ZEN 2 reverted to T7, Now a PC Heat Engager
   - ZEN 4 changed. Has same anim as T7 f,f+4. Chip damange on block.
   - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2. Instant Tornado
   - ZEN u+1 removed
