@@ -8,14 +8,14 @@
 
 using namespace Tekken;
 
-std::string FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked_belt_off.CS_ant_1p_naked_belt_off";
-std::string CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
-std::string FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
-std::string DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
-std::string DEVIL_JIN_COSTUME_PATH_2 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn.CS_swl_ant_1p_horn";
-std::string DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn_bw.CS_swl_ant_1p_horn_bw";
-std::string HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
-std::string HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
+static constexpr const char *FINAL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_naked_belt_off.CS_ant_1p_naked_belt_off";
+static constexpr const char *CHAINED_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_ant_1p_chain.CS_ant_1p_chain";
+static constexpr const char *FINAL_KAZ_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_grl_1p_v2_white.CS_grl_1p_v2_white";
+static constexpr const char *DEVIL_JIN_COSTUME_PATH = "/Game/Demo/Story/Sets/CS_swl_ant_1p.CS_swl_ant_1p";
+static constexpr const char *DEVIL_JIN_COSTUME_PATH_2 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn.CS_swl_ant_1p_horn";
+static constexpr const char *DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/CS_swl_ant_1p_horn_bw.CS_swl_ant_1p_horn_bw";
+static constexpr const char *HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
+static constexpr const char *HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 bool INSTALL_CAMERA_HOOKS = true;
 
 bool isCorrectCharacter(int bossCode, int charId);
@@ -425,68 +425,72 @@ private:
   {
     if (bossCode == BossCodes::None)
       return;
-    std::string icon;
-    std::string name;
+    char icon[256]{};
+    char name[256]{};
     const char c = side == 0 ? 'L' : 'R';
     bool isStoryDvj = isValidDevilJinBoss(bossCode) && charId == FighterId::DevilJin2;
     if (isStoryDvj)
     {
       if (bossCode == BossCodes::DevilJin || bossCode == BossCodes::DevilJin_1) {
-        icon = buildString(c, getCharCode(FighterId::Jin));
-        name = getNamePath(FighterId::Jin);
+        buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::Jin).c_str());
+        buildNamePath(name, sizeof(name), FighterId::Jin);
       }
       else if (bossCode == BossCodes::DevilJin_2) {
-        icon = buildString(c, HudIcon::DvjCh12);
-        name = getNamePath(FighterId::DevilJin);
+        buildIconPath(icon, sizeof(icon), c, HudIcon::DvjCh12);
+        buildNamePath(name, sizeof(name), FighterId::DevilJin);
       }
       else if (bossCode == BossCodes::DevilJin_3) {
-        icon = buildString(c, HudIcon::DvjCh13);
-        name = getNamePath(FighterId::DevilJin);
+        buildIconPath(icon, sizeof(icon), c, HudIcon::DvjCh13);
+        buildNamePath(name, sizeof(name), FighterId::DevilJin);
       }
     } 
     else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
     {
-      icon = buildString(c, HudIcon::JinFinal);
-      name = getNamePath(FighterId::Jin);
+      buildIconPath(icon, sizeof(icon), c, HudIcon::JinFinal);
+      buildNamePath(name, sizeof(name), FighterId::Jin);
     }
     else if (bossCode == BossCodes::FinalKazuya && charId == FighterId::Kazuya)
     {
-      icon = buildString(c, HudIcon::KazFinal);
-      name = getNamePath(FighterId::Kazuya);
+      buildIconPath(icon, sizeof(icon), c, HudIcon::KazFinal);
+      buildNamePath(name, sizeof(name), FighterId::Kazuya);
     }
     else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
     {
-      icon = buildString(c, HudIcon::KazDevil);
-      name = getNamePath(HudName::KazDevil);
+      buildIconPath(icon, sizeof(icon), c, HudIcon::KazDevil);
+      buildNamePath(name, sizeof(name), HudName::KazDevil);
     }
     else if (bossCode == BossCodes::AmnesiaHeihachi && charId == FighterId::Heihachi)
     {
-      icon = buildString(c, HudIcon::HeiMonk);
-      name = getNamePath(FighterId::Heihachi);
+      buildIconPath(icon, sizeof(icon), c, HudIcon::HeiMonk);
+      buildNamePath(name, sizeof(name), FighterId::Heihachi);
     }
     else if (bossCode == BossCodes::ShadowHeihachi && charId == FighterId::Heihachi)
     {
-      icon = buildString(c, HudIcon::HeiShadow);
-      name = getNamePath(HudName::HeiShadow);
+      buildIconPath(icon, sizeof(icon), c, HudIcon::HeiShadow);
+      buildNamePath(name, sizeof(name), HudName::HeiShadow);
     }
-    if (!icon.empty() && (shouldHandleHudAndCostumes() || isStoryDvj))
-      game.writeString(matchStruct + 0x2C0 + side * 0x100, icon);
-    if (!name.empty() && (shouldHandleHudAndCostumes() || isStoryDvj))
-      game.writeString(matchStruct + 0x4C0 + side * 0x100, name);
+    if (icon[0] && (shouldHandleHudAndCostumes() || isStoryDvj))
+      game.writeString(matchStruct + 0x2C0 + side * 0x100, icon, HUD_PATH_MAX);
+    if (name[0] && (shouldHandleHudAndCostumes() || isStoryDvj))
+      game.writeString(matchStruct + 0x4C0 + side * 0x100, name, HUD_PATH_MAX);
   }
 
   void hudHandler(uintptr_t matchStruct)
   {
     int char1 = game.readInt32(matchStruct + 0x10);
     int char2 = game.readInt32(matchStruct + 0x94);
-    std::string icon1 = getIconPath(0, char1);
-    std::string icon2 = getIconPath(1, char2);
-    std::string name1 = getNamePath(char1);
-    std::string name2 = getNamePath(char2);
-    game.writeString(matchStruct + 0x2C0, icon1);
-    game.writeString(matchStruct + 0x3C0, icon2);
-    game.writeString(matchStruct + 0x4C0, name1);
-    game.writeString(matchStruct + 0x5C0, name2);
+    char icon1[256]{};
+    char icon2[256]{};
+    char name1[256]{};
+    char name2[256]{};
+    getIconPath(icon1, sizeof(icon1), 0, char1);
+    getIconPath(icon2, sizeof(icon2), 1, char2);
+    buildNamePath(name1, sizeof(name1), char1);
+    buildNamePath(name2, sizeof(name2), char2);
+    game.writeString(matchStruct + 0x2C0, icon1, HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x3C0, icon2, HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x4C0, name1, HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x5C0, name2, HUD_PATH_MAX);
 
     loadBossHud(matchStruct, 0, char1, this->bossCode_L);
     loadBossHud(matchStruct, 1, char2, this->bossCode_R);
@@ -523,10 +527,10 @@ private:
     }
   }
 
-  void loadCostume(uintptr_t matchStructAddr, int side, int costumeId, std::string costumePath)
+  void loadCostume(uintptr_t matchStructAddr, int side, int costumeId, const char *costumePath)
   {
     game.write<int>(matchStructAddr + 0x6F0 + side * 0x6760, costumeId);
-    game.writeString(matchStructAddr + 0x13D78 + side * 0x100, costumePath);
+    game.writeString(matchStructAddr + 0x13D78 + side * 0x100, costumePath, 255);
   }
 
   void costumeHandler(uintptr_t matchStructAddr, int side, int bossCode)
@@ -535,7 +539,7 @@ private:
       return;
     if (!isCorrectCharacter(bossCode, getCharId(matchStructAddr, side)))
       return;
-    std::string costumePath;
+    const char *costumePath = nullptr;
     switch (bossCode)
     {
     // case BossCodes::RegularJin:

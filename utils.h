@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -96,29 +97,35 @@ uintptr_t getValueByKey(const std::map<std::string, uintptr_t> &config, const st
   }
 }
 
-std::string buildString(const char side, const std::string& code) {
-    std::stringstream ss;
-    ss << "T_UI_HUD_Character_Icon_" << side << "_" << code;
-    return ss.str();
+static constexpr size_t HUD_PATH_MAX = 255;
+
+void buildIconPath(char *out, size_t outSize, char side, const char *code)
+{
+  if (!out || outSize == 0)
+    return;
+  if (!code)
+    code = "";
+  snprintf(out, outSize, "T_UI_HUD_Character_Icon_%c_%s", side, code);
 }
 
-std::string getIconPath(int side, int charId)
+void buildNamePath(char *out, size_t outSize, const char *code)
 {
-  return buildString(side == 0 ? 'L' : 'R', getCharCode(charId));
+  if (!out || outSize == 0)
+    return;
+  if (!code)
+    code = "";
+  snprintf(out, outSize, "T_UI_HUD_Character_Name_%s", code);
 }
 
-std::string getNamePath(int charId)
+void getIconPath(char *out, size_t outSize, int side, int charId)
 {
-  std::stringstream ss;
-  ss << "T_UI_HUD_Character_Name_" << getCharCode(charId);
-  return ss.str();
+  buildIconPath(out, outSize, side == 0 ? 'L' : 'R', getCharCode(charId).c_str());
 }
 
-std::string getNamePath(const std::string& code)
+// This is an override
+void buildNamePath(char *out, size_t outSize, int charId)
 {
-  std::stringstream ss;
-  ss << "T_UI_HUD_Character_Name_" << code;
-  return ss.str();
+  buildNamePath(out, outSize, getCharCode(charId).c_str());
 }
 
 std::string getBossName(int bossCode)

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <climits>
 #include <Windows.h>
+#include <cstring>
 #include <string>
 #include <sstream>
 #include <Psapi.h>
@@ -313,12 +314,19 @@ public:
     }
   }
 
-  void writeString(uintptr_t address, const std::string &str)
+  void writeString(uintptr_t address, const char *str, size_t maxChars = SIZE_MAX)
   {
-    if (!WriteProcessMemory(processHandle, reinterpret_cast<LPVOID>(address), str.c_str(), str.size() + 1, nullptr))
-    {
-      std::cerr << "Error: Failed to write string to memory at address " << std::hex << address << std::endl;
-    }
+    if (!str)
+      str = "";
+    const size_t len = strnlen(str, maxChars);
+    if (!writeBytes(address, str, len))
+      return;
+    write<char>(address + len, '\0');
+  }
+
+  void writeString(uintptr_t address, const std::string &str, size_t maxChars = SIZE_MAX)
+  {
+    writeString(address, str.c_str(), maxChars == SIZE_MAX ? str.size() : maxChars);
   }
 
   template <typename T>
