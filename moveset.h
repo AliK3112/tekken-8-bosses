@@ -269,11 +269,6 @@ public:
     return move ? game.readUInt64(move + Offsets::Move::CancelList) + sizeof(TK_Cancel) * n : 0;
   }
 
-  uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n = 0)
-  {
-    return getCancelValue(getMoveNthCancel(move, n), "requirements");
-  }
-
   // Returns the address of cancel extradata given index
   uintptr_t getCancelExtradataAddr(int index)
   {
@@ -426,8 +421,8 @@ public:
   {
     if (!cancel)
       return false;
-    uintptr_t requirements = getCancelValue(cancel, "requirements");
-    return reqListHas(requirements, targetReq, targetParam);
+    TK_Cancel c = getCancel(cancel);
+    return reqListHas(c.requirements_ptr, targetReq, targetParam);
   }
 
   uintptr_t findRequirement(uintptr_t requirement, int targetReq, int targetParam = -1)
@@ -467,9 +462,10 @@ public:
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Cancel));
     while (cancel >= start && cancel < end)
     {
-      if (cancelHasCondition(cancel, targetReq, targetParam))
+      TK_Cancel c = getCancel(cancel);
+      if (reqListHas(c.requirements_ptr, targetReq, targetParam))
         return cancel;
-      if (getCancelValue(cancel, "command") == 0x8000)
+      if (c.command.value == Cancels::CANCEL_END)
         return 0;
       cancel += sizeof(TK_Cancel);
     }
@@ -486,9 +482,10 @@ public:
     uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     while (cancel >= start && cancel < end)
     {
-      if (getCancelValue(cancel, "command") == endValue)
+      TK_Cancel c = getCancel(cancel);
+      if (c.command.direction == endValue)
         return 0;
-      if (getCancelValue(cancel, column) == value)
+      if (getCancelValue(c, column) == value)
         return cancel;
       cancel += sizeof(TK_Cancel);
     }
@@ -670,39 +667,44 @@ public:
     return cancel ? game.readInt16(cancel + Offsets::Cancel::Move) : -1;
   }
 
-  uintptr_t getCancelValue(uintptr_t addr, std::string column)
+  TK_Cancel getCancel(uintptr_t addr)
   {
-    if (!addr) return 0;
+    if (!addr)
+      return {};
+    return game.read<TK_Cancel>(addr);
+  }
+
+  uintptr_t getCancelValue(const TK_Cancel &cancel, std::string column)
+  {
     if (column == "command")
-      return game.readUInt64(addr + Offsets::Cancel::Command);
+      return cancel.command.value;
     else if (column == "requirements")
-      return game.readUInt64(addr + Offsets::Cancel::RequirementsList);
+      return cancel.requirements_ptr;
     else if (column == "requirement_idx")
-    {
-      uintptr_t header = getMovesetHeader("requirements");
-      uintptr_t value = game.readUInt64(addr + Offsets::Cancel::RequirementsList);
-      return getItemIndex(header, value, sizeof(TK_Requirement));
-    }
+      return getItemIndex(getMovesetHeader("requirements"), cancel.requirements_ptr, sizeof(TK_Requirement));
     else if (column == "extradata")
-      return game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
+      return cancel.extradata_ptr;
     else if (column == "extradata_idx")
-    {
-      uintptr_t header = getMovesetHeader("cancel_extra_datas");
-      uintptr_t value = game.readUInt64(addr + Offsets::Cancel::CancelExtradata);
-      return getItemIndex(header, value, Sizes::Moveset::CancelExtradata);
-    }
+      return getItemIndex(getMovesetHeader("cancel_extra_datas"), cancel.extradata_ptr, Sizes::Moveset::CancelExtradata);
     else if (column == "start")
-      return game.readUInt32(addr + Offsets::Cancel::WindowStart);
+      return cancel.input_window_start;
     else if (column == "end")
-      return game.readUInt32(addr + Offsets::Cancel::WindowEnd);
+      return cancel.input_window_end;
     else if (column == "transition")
-      return game.readUInt32(addr + Offsets::Cancel::TransitionFrame);
+      return cancel.starting_frame;
     else if (column == "move")
-      return game.readUInt16(addr + Offsets::Cancel::Move);
+      return cancel.move_id;
     else if (column == "option")
-      return game.readUInt16(addr + Offsets::Cancel::Option);
+      return cancel.option;
 
     return 0;
+  }
+
+  uintptr_t getCancelValue(uintptr_t addr, std::string column)
+  {
+    if (!addr)
+      return 0;
+    return getCancelValue(getCancel(addr), column);
   }
 
   void editCancelValue(uintptr_t addr, std::string column, uintptr_t value)

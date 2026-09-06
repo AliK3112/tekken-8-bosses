@@ -913,11 +913,11 @@ private:
       addr = moveset.getMoveNthCancel(addr, 0);
       while (true)
       {
-        uintptr_t command = moveset.getCancelValue(addr, "command");
-        if (command == 0x8000)
+        TK_Cancel cancel = moveset.getCancel(addr);
+        if (cancel.command.direction == 0x8000)
           break;
         // For 1+2 command, place the above acquired req_idx to disable these cancels
-        if (command == 0x4000000300000000)
+        if (cancel.command.button == 0x40000003 && cancel.command.direction == 0)
           moveset.editCancelValue(addr, "requirement_idx", reqIdx);
         addr = moveset.iterateCancel(addr, 1);
       }
@@ -947,12 +947,14 @@ private:
       addr = moveset.getMoveNthCancel(addr, 0);
       if (!addr)
         return;
-      while (moveset.getCancelValue(addr, "command") != 0x8000)
+      while (true)
       {
         if (!addr)
           return;
-        const int cMoveId = moveset.getCancelValue(addr, "move");
-        if (std::find(moves.begin(), moves.end(), cMoveId) != moves.end())
+        TK_Cancel cancel = moveset.getCancel(addr);
+        if (cancel.command.direction == 0x8000)
+          break;
+        if (std::find(moves.begin(), moves.end(), cancel.move_id) != moves.end())
         {
           moveset.editCancelValue(addr, "start", 0x7FFF);
         }
@@ -1303,10 +1305,10 @@ private:
     {
       addr = moveset.getMoveAddress(0xace34ec8); // Dj_Direct
       addr = moveset.getMoveNthCancel(addr, 1);
-      int moveId = moveset.getCancelValue(addr, "move");
-      if (moveId == moveset.getMoveId(0x6b59f816)) // swl_s00
+      TK_Cancel cancel = moveset.getCancel(addr);
+      if (cancel.move_id == moveset.getMoveId(0x6b59f816)) // swl_s00
       {
-        addr = moveset.getCancelValue(addr, "requirements");
+        addr = cancel.requirements_ptr;
         addr = moveset.editRequirement(addr, Requirements::INTRO_RELATED, 0);
         addr = moveset.editRequirement(addr, Requirements::EOL, 0);
       }
@@ -1573,10 +1575,10 @@ private:
     addr = moveset.getMoveAddress(0xfebdae71); // Kz_Direct
     addr = moveset.getMoveNthCancel(addr, 1);
     {
-      int moveId = moveset.getCancelValue(addr, "move");
-      if (moveId == moveset.getMoveId(0x69fa69b1)) // grl_s00
+      TK_Cancel cancel = moveset.getCancel(addr);
+      if (cancel.move_id == moveset.getMoveId(0x69fa69b1)) // grl_s00
       {
-        addr = moveset.getCancelValue(addr, "requirements");
+        addr = cancel.requirements_ptr;
         addr = moveset.editRequirement(addr, Requirements::INTRO_RELATED, 0);
         addr = moveset.editRequirement(addr, Requirements::EOL, 0);
       }
