@@ -1,3 +1,9 @@
+## Changelog (September 6, 2026)
+ - Fixed `True Devil Kazuya` Rage Art dialogue issue as well as u/f+1+2 laser issue where u/f+1 was coming out.
+ - More refactoring and performance improvements.
+ - Fixed a bug that caused HUD icons to not load sometimes.
+ - Fixed the Heat Smash for depowered Jin variants from FC d/f+4 ~ ZEN. The normal Heat Smash with wing VFX was coming out.
+
 ## Changelog (September 4, 2026)
  - Fix the intros for `True Devil Kazuya` and `Angel Jin`
  - Fixed Fate intros for `Story Devil Jin`

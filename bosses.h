@@ -427,9 +427,8 @@ private:
       game.write<uint16_t>(hudNameAddr, HUD_PATCH_NOP);
   }
 
-  void restoreHudAddr(uintptr_t matchStructAddr)
+  void restoreHudAddr()
   {
-    (void)matchStructAddr;
     if (!hudIconAddr || !hudNameAddr)
       return;
 
@@ -2157,7 +2156,7 @@ public:
   {
     uninstallStoryCameraHook();
     uninstallDramaCameraHook();
-    restoreHudAddr(0);
+    restoreHudAddr();
   }
 
   // Explicit cleanup for Ctrl+C / GUI close (also invoked by destructor)
@@ -2322,13 +2321,9 @@ public:
         continue;
       }
 
-      if (handleIcons)
-      {
-        modifyHudAddr(matchStructAddr);
-      }
-
       if (!isEligible(matchStructAddr))
       {
+        restoreHudAddr();
         syncCameraEligible(false);
         continue;
       }
@@ -2347,6 +2342,7 @@ public:
 
       if (handleIcons)
       {
+        modifyHudAddr(matchStructAddr);
         hudHandler(matchStructAddr);
       }
 
@@ -2369,11 +2365,6 @@ public:
       if (movesetAddr == 0)
       {
         continue;
-      }
-
-      if (handleIcons)
-      {
-        restoreHudAddr(matchStructAddr);
       }
 
       if (!movesetExists(movesetAddr))
