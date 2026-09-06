@@ -266,7 +266,7 @@ public:
 
   uintptr_t getMoveNthCancel(uintptr_t move, int n = 0)
   {
-    return move ? game.readUInt64(move + Offsets::Move::CancelList) + Sizes::Moveset::Cancel * n : 0;
+    return move ? game.readUInt64(move + Offsets::Move::CancelList) + sizeof(TK_Cancel) * n : 0;
   }
 
   uintptr_t getMoveNthCancel1stReqAddr(uintptr_t move, int n = 0)
@@ -464,14 +464,14 @@ public:
       return 0;
     uintptr_t start = getMovesetHeader("cancels");
     uintptr_t count = getMovesetCount("cancels");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Cancel));
     while (cancel >= start && cancel < end)
     {
       if (cancelHasCondition(cancel, targetReq, targetParam))
         return cancel;
       if (getCancelValue(cancel, "command") == 0x8000)
         return 0;
-      cancel += Sizes::Moveset::Cancel;
+      cancel += sizeof(TK_Cancel);
     }
     return 0;
   }
@@ -482,7 +482,7 @@ public:
       return 0;
     uintptr_t start = getMovesetHeader(isGroupCancel ? "group_cancels" : "cancels");
     uintptr_t count = getMovesetCount(isGroupCancel ? "group_cancels" : "cancels");
-    uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Cancel);
+    uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Cancel));
     uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     while (cancel >= start && cancel < end)
     {
@@ -490,7 +490,7 @@ public:
         return 0;
       if (getCancelValue(cancel, column) == value)
         return cancel;
-      cancel += Sizes::Moveset::Cancel;
+      cancel += sizeof(TK_Cancel);
     }
     return 0;
   }
@@ -741,7 +741,7 @@ public:
   // Moves `n` cancels forward given a cancel's address
   uintptr_t iterateCancel(uintptr_t cancel, int n)
   {
-    return cancel ? cancel + (n * Sizes::Moveset::Cancel) : 0;
+    return cancel ? cancel + (n * sizeof(TK_Cancel)) : 0;
   }
 
   // Moves `n` requirements forward given a requirement's address
@@ -800,28 +800,34 @@ public:
 
   void replaceCancelMoveIndexes(std::vector<std::pair<int, int>> moves, bool groupCancels = false)
   {
-    auto func = [&](std::string section)
+    if (moves.empty())
+      return;
+
+    std::unordered_map<int, int> replacements;
+    replacements.reserve(moves.size());
+    for (const auto &[targetMoveId, replacementMoveId] : moves)
+      replacements[targetMoveId] = replacementMoveId;
+
+    auto replaceInSection = [&](uintptr_t start, size_t count)
     {
-      const uintptr_t start = getMovesetHeader(section);
-      const uintptr_t count = getMovesetCount(section);
+      if (!start || count == 0)
+        return;
 
-      for (uintptr_t i = 0; i < count; ++i)
+      std::vector<TK_Cancel> cancels = game.readArray<TK_Cancel>(start, count);
+      if (cancels.size() != count)
+        return;
+
+      for (size_t i = 0; i < count; ++i)
       {
-        const uintptr_t addr = start + i * Sizes::Cancel;
-        const int cMoveId = getCancelValue(addr, "move");
-
-        for (const auto &[targetMoveId, replacementMoveId] : moves)
-        {
-          if (cMoveId == targetMoveId)
-          {
-            editCancelValue(addr, "move", replacementMoveId);
-          }
-        }
+        auto it = replacements.find(cancels[i].move_id);
+        if (it != replacements.end())
+          editCancelMoveId(start + i * sizeof(TK_Cancel), static_cast<short>(it->second));
       }
     };
 
-    func("cancels");
-    if (groupCancels) func("group_cancels");
+    replaceInSection(getMovesetHeader("cancels"), getMovesetCount("cancels"));
+    if (groupCancels)
+      replaceInSection(getMovesetHeader("group_cancels"), getMovesetCount("group_cancels"));
   }
 
   uintptr_t getMovesetHeader(std::string column)

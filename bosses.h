@@ -156,6 +156,7 @@ private:
   {
     if (!playerAddr || !permaDevilOffset)
       return;
+    game.write<int>(playerAddr + permaDevilOffset - 4, value);
     game.write<int>(playerAddr + permaDevilOffset, value);
   }
 
@@ -727,6 +728,15 @@ private:
       moveset.editCancelValue(cancel, "move", tMoveId);
     }
 
+    // Replacing Heat Smash with the story version
+    moveId = moveset.getMoveId(0xc295a703); // Jz_66lrp_EX
+    cancel = moveset.findCancel(firstCancel, "move", moveId);
+    if (cancel)
+    {
+      tMoveId = moveset.getMoveId(0x25ab81f6);
+      moveset.editCancelValue(cancel, "move", tMoveId);
+    }
+
     // ZEN 1+2 becomes ZEN u+1+2 because of command priority
     cancel = moveset.findCancel(firstCancel, "command", 0x4000000300000000);
     if (cancel)
@@ -1062,7 +1072,7 @@ private:
       addr = moveset.getMoveAddress(0x1A571FA1, idleStanceIdx);
       addr = moveset.findMoveCancelByCondition(addr, Requirements::STORY_BATTLE_NUM, 97);
       moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
-      addr += Sizes::Moveset::Cancel; // Move 1 cancel forward
+      addr = moveset.iterateCancel(addr, 1); // Move 1 cancel forward
       moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
 
       // d/b+1+2
@@ -1570,6 +1580,15 @@ private:
         addr = moveset.editRequirement(addr, Requirements::INTRO_RELATED, 0);
         addr = moveset.editRequirement(addr, Requirements::EOL, 0);
       }
+    }
+
+    // Fix Heat Rage Art issue, need to replace the references to Kz_RageArts00heat
+    {
+      std::vector<std::pair<int, int>> moves = {{
+        moveset.getMoveId(0x35956634), // Kz_RageArts00heat
+        moveset.getMoveId(0xfaf65ab0), // Kz_RageArts00
+      }};
+      moveset.replaceCancelMoveIndexes(moves, true);
     }
 
     return markMovesetEdited(movesetAddr);
@@ -2399,19 +2418,25 @@ public:
     uintptr_t playerAddr = getPlayerAddress(side);
     uintptr_t movesetAddr = getMovesetAddress(playerAddr);
 
-    // Special-case: Enable/Disable Heihachi WI flag from P1 struct
-    if (bossCode == BossCodes::AmnesiaHeihachi || bossCode == BossCodes::FinalHeihachi)
+    int charId = getCharId(playerAddr);
+    if (charId == FighterId::TrueDevilKazuya && bossCode == BossCodes::TrueDevilKazuya)
     {
-      int value = bossCode == BossCodes::AmnesiaHeihachi ? 2 : 1;
+      setKazuyaPermaDevil(playerAddr, 1);
+    }
+    else if (charId == FighterId::Kazuya && bossCode == BossCodes::DevilKazuya)
+    {
+      setKazuyaPermaDevil(playerAddr, 1);
+    }
+    else if (charId == FighterId::Heihachi && isValidHeihachiBoss(bossCode))
+    {
+      int value = bossCode == BossCodes::FinalHeihachi ? 1 : 2;
       setHeihachiPermaWI(playerAddr, value);
     }
 
-    if (isMovesetEdited(movesetAddr))
-      return false;
+    if (isMovesetEdited(movesetAddr)) return false;
 
     try // Added so if "getMoveAddress" throws an error, the whole trainer doesn't crash.
     {
-      int charId = getCharId(playerAddr);
       switch (charId)
       {
       case FighterId::Jin:

@@ -348,13 +348,38 @@
 //     void *arc_mota_ptr;                            // Offset: 0x310 - Pointer to "xxxrotsm.arc" file. No longer used, always 0
 // };
 
+// Size: 0x08
+struct TK_Input
+{
+    union
+    {
+        uint64_t value;
+        struct
+        {
+            uint32_t direction;
+            uint32_t button;
+        };
+    };
+};
+
 struct TK_Requirement
 {
     int req;
     int param[4];
 };
 
-static_assert(sizeof(TK_Requirement) == 0x14, "TK_Requirement layout mismatch");
+// Size: 0x28
+struct TK_Cancel
+{
+    TK_Input command;
+    uint64_t requirements_ptr;
+    uint64_t extradata_ptr;
+    uint32_t input_window_start;
+    uint32_t input_window_end;
+    uint32_t starting_frame;
+    uint16_t move_id;
+    uint16_t option;
+};
 
 // Size: 0x28
 struct TK_ExtraProp
@@ -364,8 +389,6 @@ struct TK_ExtraProp
     int property;
     int params[4];
 };
-
-static_assert(sizeof(TK_ExtraProp) == 0x28, "TK_ExtraProp layout mismatch");
 
 struct Motbin
 {
@@ -438,4 +461,8 @@ struct Motbin
     void *arc_mota_ptr;                 // Offset: 0x310 - Pointer to "xxxrotsm.arc" file. No longer used, always 0
 };
 
+static_assert(sizeof(TK_Input) == 0x08, "TK_Input layout mismatch");
+static_assert(sizeof(TK_Requirement) == 0x14, "TK_Requirement layout mismatch");
+static_assert(sizeof(TK_Cancel) == 0x28, "TK_Cancel layout mismatch");
+static_assert(sizeof(TK_ExtraProp) == 0x28, "TK_ExtraProp layout mismatch");
 static_assert(sizeof(Motbin) == 0x318, "Motbin layout mismatch");
