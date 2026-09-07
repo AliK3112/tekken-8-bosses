@@ -54,7 +54,6 @@ private:
   uintptr_t movesetOffset = 0;
   uintptr_t permaDevilOffset = 0;
   uintptr_t heihachiWIOffset = 0;
-  uintptr_t decryptFuncAddr = 0;
   uintptr_t hudIconAddr = 0;
   uintptr_t hudNameAddr = 0;
   uintptr_t m_player1 = 0;
@@ -185,28 +184,36 @@ private:
   // Side: 0 = P1, 1 = P2
   uintptr_t getPlayerAddress(int side)
   {
+    if (!playerStructOffset) return 0;
     return game.getAddress({(DWORD)playerStructOffset, (DWORD)(0x30 + side * 8)});
   }
 
   uintptr_t getMovesetAddress(uintptr_t playerAddr)
   {
-    return game.ReadUnsignedLong(playerAddr + movesetOffset);
+    return playerAddr ? game.readUInt64(playerAddr + movesetOffset) : 0;
+  }
+
+  uintptr_t getOpponentAddress(uintptr_t playerAddr)
+  {
+    // Opponent PTR is always +0x28 from player's moveset
+    return playerAddr ? game.readUInt64(playerAddr + movesetOffset + 0x28) : 0;
   }
 
   int getCharId(uintptr_t playerAddr)
   {
-    return game.readInt32(playerAddr + 0x168);
+    return playerAddr ? game.readInt32(playerAddr + 0x168) : -1;
   }
 
   // Side: 0 = P1, 1 = P2
   int getCharId(uintptr_t matchStructAddr, int side)
   {
-    return game.readInt32(matchStructAddr + 0x10 + side * 0x84);
+    return matchStructAddr ? game.readInt32(matchStructAddr + 0x10 + side * 0x84) : -1;
   }
 
   // Side: 0 = P1, 1 = P2
   void setCharId(uintptr_t matchStructAddr, int side, int charId)
   {
+    if (!matchStructAddr) return;
     game.write(matchStructAddr + 0x10 + side * 0x84, charId);
   }
 
@@ -217,18 +224,21 @@ private:
 
   bool movesetExists(uintptr_t moveset)
   {
+    if (!moveset) return false;
     std::string str = game.ReadString(moveset + 8, 3);
-    return str.compare("ALI") == 0 || str.compare("TEK") == 0;
+    return str == "ALI" || str == "TEK";
   }
 
   bool isMovesetEdited(uintptr_t moveset)
   {
+    if (!moveset) return false;
     std::string str = game.ReadString(moveset + 8, 3);
-    return str.compare("ALI") == 0;
+    return str == "ALI";
   }
 
   bool markMovesetEdited(uintptr_t moveset)
   {
+    if (!moveset) return false;
     try
     {
       game.writeString(moveset + 8, "ALI");
@@ -278,16 +288,7 @@ private:
       throw std::runtime_error("Match Struct Base Address not found!");
     }
 
-    // We no longer use it since I've recreated the decryption method
-    // addr = game.FastAoBScan(Tekken::ENC_SIG_BYTES, base + 0x1700000);
-    // if (addr != 0)
-    // {
-    //   decryptFuncAddr = addr;
-    // }
-    // else
-    // {
-    //   throw std::runtime_error("Decryption Function Address not found!");
-    // }
+    // Decryption AoB scan removed — validateAndTransform64BitValue replaces the game decrypt func.
 
     addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
     if (addr != 0)
@@ -396,7 +397,6 @@ private:
     {
       printf("playerStructOffset: 0x%llX\n", playerStructOffset);
       printf("matchStructOffset: 0x%llX\n", matchStructOffset);
-      // printf("decryptFuncAddr: 0x%llX\n", decryptFuncAddr);
       printf("hudIconAddr: 0x%llX\n", hudIconAddr);
       printf("hudNameAddr: 0x%llX\n", hudNameAddr);
       printf("movesetOffset: 0x%llX\n", movesetOffset);
@@ -624,7 +624,7 @@ private:
 
   void handleHeihachiMoveProp(uintptr_t movesetAddr, int moveIdx)
   {
-    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    TkMoveset moveset(this->game, movesetAddr);
     uintptr_t addr = moveset.getMoveAddrByIdx(moveIdx);
     addr = moveset.getMoveExtrapropAddr(addr);
     while (true)
@@ -987,11 +987,14 @@ private:
     }
   }
 
-  bool loadJin(uintptr_t movesetAddr, int bossCode)
+  bool loadJin(uintptr_t playerAddr, int bossCode)
   {
     if (!isValidJinBoss(bossCode))
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
 
     applyJinStoryRequirements(moveset, bossCode);
 
@@ -1032,11 +1035,14 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
-  bool loadKazuya(uintptr_t movesetAddr, int bossCode)
+  bool loadKazuya(uintptr_t playerAddr, int bossCode)
   {
     if (!isValidKazuyaBoss(bossCode))
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     int idleStanceIdx = moveset.getAliasMoveId(0x8001);
     if (bossCode == BossCodes::DevilKazuya)
@@ -1258,11 +1264,14 @@ private:
     return false;
   }
 
-  bool loadAzazel(uintptr_t movesetAddr, int bossCode)
+  bool loadAzazel(uintptr_t playerAddr, int bossCode)
   {
     if (bossCode != BossCodes::Azazel)
       return false;
-    TkMoveset moveset(this->game, movesetAddr, decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
 
     uintptr_t addr = moveset.getMoveAddrByIdx(0x8000);
     addr = moveset.getMoveNthCancel(addr, 0);
@@ -1276,22 +1285,31 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
-  bool loadAngelJin(uintptr_t movesetAddr, int bossCode)
+  bool loadAngelJin(uintptr_t playerAddr, int bossCode)
   {
     if (bossCode != BossCodes::AngelJin)
       return false;
-    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
 
-    // Fix Rage Art dialogue (2 cancels)
-    uintptr_t addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
+    uintptr_t addr = 0;
 
-    uintptr_t cancelAddr = moveset.findMoveCancelByCondition(addr, Requirements::ARCADE_BATTLE);
-    addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
-    moveset.editRequirement(addr, 0);
-
-    cancelAddr = moveset.iterateCancel(cancelAddr, 1);
-    addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
-    moveset.editRequirement(addr, 0);
+    // Fix Rage Art dialogue (2 cancels) - Leave it be if the opponent is True Devil Kazuya, let story dialogue play
+    int opponentFighterId = getCharId(getOpponentAddress(playerAddr));
+    if (opponentFighterId != FighterId::TrueDevilKazuya)
+    {
+      addr = moveset.getMoveAddress(0x53089f24, moveset.getAliasMoveId(0x8000) - 25); // Rage Art
+  
+      uintptr_t cancelAddr = moveset.findMoveCancelByCondition(addr, Requirements::ARCADE_BATTLE);
+      addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
+      moveset.editRequirement(addr, 0);
+  
+      cancelAddr = moveset.iterateCancel(cancelAddr, 1);
+      addr = moveset.findRequirement(moveset.getCancelValue(cancelAddr, "requirements"), Requirements::ARCADE_BATTLE);
+      moveset.editRequirement(addr, 0);
+    }
 
     // Adjust damage for the new CD+1
     if (config->toneDownDamage) {
@@ -1316,11 +1334,14 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
-  bool loadHeihachi(uintptr_t movesetAddr, int bossCode)
+  bool loadHeihachi(uintptr_t playerAddr, int bossCode)
   {
     if (!isValidHeihachiBoss(bossCode))
       return false;
-    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     int idleStanceIdx = moveset.getAliasMoveId(0x8001);
     uintptr_t addr = moveset.getMoveAddrByIdx(idleStanceIdx);
@@ -1554,25 +1575,31 @@ private:
     return false;
   }
 
-  bool loadTrueDevilKazuya(uintptr_t movesetAddr, int bossCode)
+  bool loadTrueDevilKazuya(uintptr_t playerAddr, int bossCode)
   {
     if (bossCode != BossCodes::TrueDevilKazuya)
       return false;
-    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
-    uintptr_t addr = 0;
-    try {
-      addr = moveset.getMoveAddress(0xc8c48167);
-    } catch (...) {
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
       return false;
-    }
-    addr = moveset.getMoveNthCancel(addr);
-    addr = moveset.findCancelByCondition(addr, Requirements::ARCADE_BATTLE);
-    moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
-    addr = moveset.iterateCancel(addr, 1); // Next cancel
-    moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
+    TkMoveset moveset(this->game, movesetAddr);
 
-    addr = moveset.getMoveAddress(0xfebdae71); // Kz_Direct
-    addr = moveset.getMoveNthCancel(addr, 1);
+    uintptr_t addr = 0;
+
+    int opponentFighterId = getCharId(getOpponentAddress(playerAddr));
+    if (opponentFighterId != FighterId::AngelJin)
+    {
+      addr = moveset.getMoveAddress(0xc8c48167);
+      addr = moveset.getMoveNthCancel(addr);
+      addr = moveset.findCancelByCondition(addr, Requirements::ARCADE_BATTLE);
+      moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
+      addr = moveset.iterateCancel(addr, 1); // Next cancel
+      moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
+  
+      addr = moveset.getMoveAddress(0xfebdae71); // Kz_Direct
+      addr = moveset.getMoveNthCancel(addr, 1);
+    }
+
     {
       TK_Cancel cancel = moveset.getCancel(addr);
       if (cancel.move_id == moveset.getMoveId(0x69fa69b1)) // grl_s00
@@ -1595,11 +1622,14 @@ private:
     return markMovesetEdited(movesetAddr);
   }
 
-  bool loadStoryDevilJin(uintptr_t movesetAddr, int bossCode)
+  bool loadStoryDevilJin(uintptr_t playerAddr, int bossCode)
   {
     if (!isValidDevilJinBoss(bossCode))
       return false;
-    TkMoveset moveset(this->game, movesetAddr, this->decryptFuncAddr);
+    uintptr_t movesetAddr = getMovesetAddress(playerAddr);
+    if (!movesetAddr)
+      return false;
+    TkMoveset moveset(this->game, movesetAddr);
     int defaultAliasIdx = moveset.getAliasMoveId(0x8000);
     uintptr_t addr = 0;
 
@@ -1610,19 +1640,63 @@ private:
 
     // Adjusting Rage Art dialogues
     {
-      addr = moveset.getMoveAddress(0xa02e070b, defaultAliasIdx - 20); // Dj_RageArts01
-      addr = moveset.getMoveExtrapropAddr(addr);
-      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+      int opponentFighterId = getCharId(getOpponentAddress(playerAddr));
+      uintptr_t Dj_RageArts01_p = moveset.getMoveAddress(0xa02e070b);
+      uintptr_t Dj_RageArts_n_p = moveset.getMoveAddress(0xfe2cd621);
 
-      addr = moveset.getMoveAddress(0xfe2cd621, defaultAliasIdx - 15); // Dj_RageArts_n
-      // 1st extraprop
-      addr = moveset.getMoveExtrapropAddr(addr);
-      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
-      // 5th extraprop
-      addr = moveset.iterateExtraprops(addr, 4);
-      moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+      if (bossCode == BossCodes::DevilJin_2 && opponentFighterId == FighterId::Jin)
+      {
+        // Chapter 12, Battle 3
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts01_p);
+        addr = moveset.iterateExtraprops(addr, 2);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts_n_p);
+        addr = moveset.iterateExtraprops(addr, 2);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts_n_p);
+        addr = moveset.iterateExtraprops(addr, 10);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+      }
+      else if (bossCode == BossCodes::DevilJin_3 && (opponentFighterId == FighterId::TrueDevilKazuya || opponentFighterId == FighterId::Kazuya))
+      {
+        // Chapter 13, Battle 1
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts01_p);
+        addr = moveset.iterateExtraprops(addr, 30); // Play Subtitle Prop
+        moveset.editExtrapropValue(addr, "requirement_idx", 0);
+        addr = moveset.iterateExtraprops(addr, 1); // Play sound prop
+        moveset.editExtrapropValue(addr, "requirement_idx", 0);
+
+        auto clearRageArtProps = [&](int startOffset, const char *column)
+        {
+          uintptr_t propAddr = moveset.getMoveExtrapropAddr(Dj_RageArts_n_p);
+          propAddr = moveset.iterateExtraprops(propAddr, startOffset);
+          for (int i = 0; i < 4; i++) // subtitles, SFX, subtitles, SFX
+          {
+            moveset.editExtrapropValue(propAddr, column, 0);
+            propAddr = moveset.iterateExtraprops(propAddr, 1);
+          }
+        };
+
+        clearRageArtProps(16, "requirement_idx"); // enabling AC13B1 voicelines
+        clearRageArtProps(56, "prop"); // disabling normal voicelines
+      }
+      else
+      {
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts01_p);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+
+        // 1st extraprop
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts_n_p);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+        // 5th extraprop
+        addr = moveset.iterateExtraprops(addr, 4);
+        moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
+      }
 
       if (bossCode == BossCodes::DevilJin_2 || bossCode == BossCodes::DevilJin_3) {
+        addr = moveset.getMoveExtrapropAddr(Dj_RageArts_n_p);
         addr = moveset.findExtraProp(addr, ExtraMoveProperties::STORE_VALUE_80C8);
         moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
 
@@ -1647,10 +1721,8 @@ private:
       // TEMP
       // {
       //   uintptr_t header, count;
-
       //   header = moveset.getMovesetHeader("requirements");
       //   count = moveset.getMovesetCount("requirements");
-
       //   for (uintptr_t i = 0; i < count; i++)
       //   {
       //     uintptr_t addr = header + i * sizeof(TK_Requirement);
@@ -2433,31 +2505,31 @@ public:
       switch (charId)
       {
       case FighterId::Jin:
-        return loadJin(movesetAddr, bossCode);
+        return loadJin(playerAddr, bossCode);
       case FighterId::Kazuya:
       {
         if (bossCode == BossCodes::DevilKazuya)
         {
           setKazuyaPermaDevil(playerAddr, 1);
         }
-        return loadKazuya(movesetAddr, bossCode);
+        return loadKazuya(playerAddr, bossCode);
       }
       case FighterId::Azazel:
-        return loadAzazel(movesetAddr, bossCode);
+        return loadAzazel(playerAddr, bossCode);
       case FighterId::Heihachi:
-        return loadHeihachi(movesetAddr, bossCode);
+        return loadHeihachi(playerAddr, bossCode);
       case FighterId::AngelJin:
-        return loadAngelJin(movesetAddr, bossCode);
+        return loadAngelJin(playerAddr, bossCode);
       case FighterId::TrueDevilKazuya:
       {
         if (bossCode == BossCodes::TrueDevilKazuya)
         {
           setKazuyaPermaDevil(playerAddr, 1);
         }
-        return loadTrueDevilKazuya(movesetAddr, bossCode);
+        return loadTrueDevilKazuya(playerAddr, bossCode);
       }
       case FighterId::DevilJin2:
-        return loadStoryDevilJin(movesetAddr, bossCode);
+        return loadStoryDevilJin(playerAddr, bossCode);
       default:
         return false;
       }

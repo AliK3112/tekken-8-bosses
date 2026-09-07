@@ -35,7 +35,6 @@ class TkMoveset
 {
 private:
   uintptr_t moveset;
-  uintptr_t decryptFuncAddr;
   GameClass &game;
   Motbin motbin{};
   std::unordered_map<int, int> nameKeyToIndex;
@@ -131,8 +130,8 @@ private:
 
 public:
   // Constructor
-  TkMoveset(GameClass &game, uintptr_t moveset, uintptr_t decryptFuncAddr)
-      : game(game), moveset(moveset), decryptFuncAddr(decryptFuncAddr)
+  TkMoveset(GameClass &game, uintptr_t moveset)
+      : game(game), moveset(moveset)
   {
     cacheMotbin();
     cacheMoves();
@@ -141,7 +140,6 @@ public:
   ~TkMoveset()
   {
     this->moveset = 0;
-    this->decryptFuncAddr = 0;
     this->motbin = {};
     this->nameKeyToIndex.clear();
   }
