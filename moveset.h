@@ -195,17 +195,22 @@ public:
     }
   }
 
-  bool replaceRequirements(int targetReq, int targetParam = -1, int overrideReq = 0, int overrideParam = 0)
+  bool replaceRequirement(int targetReq, int targetParam = -1, int overrideReq = 0, int overrideParam = 0)
   {
     uintptr_t requirements = getMovesetHeader("requirements");
     size_t requirementsCount = getMovesetCount("requirements");
+    if (!requirements || requirementsCount == 0)
+      return true;
+
+    std::vector<TK_Requirement> reqs = game.readArray<TK_Requirement>(requirements, requirementsCount);
+    if (reqs.size() != requirementsCount)
+      return false;
+
     for (size_t i = 0; i < requirementsCount; i++)
     {
-      uintptr_t addr = requirements + i * sizeof(TK_Requirement);
-      int req = game.ReadSignedInt(addr);
-      int param = game.ReadSignedInt(addr + 4);
-      if (req == targetReq && (param == targetParam || targetParam == -1))
+      if (reqs[i].req == targetReq && (reqs[i].param[0] == targetParam || targetParam == -1))
       {
+        uintptr_t addr = requirements + i * sizeof(TK_Requirement);
         game.write<int>(addr, overrideReq);
         game.write<int>(addr + 4, overrideParam);
       }
@@ -306,7 +311,8 @@ public:
   {
     uintptr_t start = getMovesetHeader("moves");
     uintptr_t end = getMovesetHeader("voiceclips");
-    if (addr >= start && addr < end) {
+    if (addr >= start && addr < end)
+    {
       return (addr - start) / Sizes::Moveset::Move;
     }
     return 0;
@@ -363,7 +369,8 @@ public:
     else if (column == "requirement_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
-      if (!tAddr) return;
+      if (!tAddr)
+        return;
       game.write<uintptr_t>(addr + Offsets::ExtraProp::RequirementAddr, tAddr);
     }
     else if (column == "prop")
@@ -707,7 +714,8 @@ public:
 
   void editCancelValue(uintptr_t addr, std::string column, uintptr_t value)
   {
-    if (!addr) return;
+    if (!addr)
+      return;
     if (column == "command")
       game.write<uintptr_t>(addr + Offsets::Cancel::Command, value);
     else if (column == "requirements")
@@ -715,7 +723,8 @@ public:
     else if (column == "requirement_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
-      if (!tAddr) return;
+      if (!tAddr)
+        return;
       game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, tAddr);
     }
     else if (column == "extradata")
@@ -723,7 +732,8 @@ public:
     else if (column == "extradata_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("cancel_extra_datas", value, Sizes::Moveset::CancelExtradata);
-      if (!tAddr) return;
+      if (!tAddr)
+        return;
       game.write<uintptr_t>(addr + Offsets::Cancel::CancelExtradata, tAddr);
     }
     else if (column == "start")
@@ -763,7 +773,8 @@ public:
 
   bool isLastHitCondition(uintptr_t addr)
   {
-    if (!addr) return true;
+    if (!addr)
+      return true;
     return getRequirementValue(game.readUInt64(addr), "req") == Requirements::EOL;
   }
 
@@ -783,7 +794,8 @@ public:
     else if (column == "requirement_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
-      if (!tAddr) return;
+      if (!tAddr)
+        return;
       game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC, tAddr);
     }
     else if (column == "damage")
@@ -793,7 +805,8 @@ public:
     else if (column == "reaction_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("reactions", value, Sizes::Moveset::ReactionList);
-      if (!tAddr) return;
+      if (!tAddr)
+        return;
       game.write<uintptr_t>(addr + Offsets::HitCondition::ReactionListAddr, tAddr);
     }
   }

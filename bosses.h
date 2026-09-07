@@ -605,21 +605,10 @@ private:
     loadCostume(matchStructAddr, side, 51, costumePath);
   }
 
-  void adjustIntroOutroReq(TkMoveset &moveset, int bossCode, int start = 0)
+  void adjustIntroOutroReq(TkMoveset &moveset, int bossCode)
   {
-    uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
-    uintptr_t reqCount = moveset.getMovesetCount("requirements");
-    uintptr_t requirement = 0;
-    int req = -1;
-    for (int i = start; i < reqCount; i++)
-    {
-      requirement = reqHeader + i * sizeof(TK_Requirement);
-      req = game.readInt32(requirement);
-      if (req == Requirements::FATE_INTRO_RELATED)
-      {
-        game.write(requirement + 4, bossCode);
-      }
-    }
+    int req = Requirements::FATE_INTRO_RELATED;
+    moveset.replaceRequirement(req, -1, req, bossCode);
   }
 
   void handleHeihachiMoveProp(uintptr_t movesetAddr, int moveIdx)
@@ -662,17 +651,23 @@ private:
     int storyFlagParam = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
     uintptr_t start = moveset.getMovesetHeader("requirements");
     uintptr_t count = moveset.getMovesetCount("requirements");
+    if (!start || count == 0)
+      return;
+
+    std::vector<TK_Requirement> reqs = game.readArray<TK_Requirement>(start, count);
+    if (reqs.size() != count)
+      return;
+
     for (size_t i = 0; i < count; i++)
     {
       uintptr_t addr = start + i * sizeof(TK_Requirement);
-      TK_Requirement requirement = moveset.getRequirement(addr);
-      if (requirement.req == Requirements::STORY_FLAGS && requirement.param[0] == storyFlagParam)
+      if (reqs[i].req == Requirements::STORY_FLAGS && reqs[i].param[0] == storyFlagParam)
       {
-        game.write<int>(addr, 0);
+        moveset.editRequirement(addr, 0);
       }
-      else if (requirement.req == Requirements::NOT_STORY_MODE)
+      else if (reqs[i].req == Requirements::NOT_STORY_MODE)
       {
-        game.write<int>(addr, Requirements::STORY_FLAGS);
+        moveset.editRequirement(addr, Requirements::STORY_FLAGS);
       }
     }
   }
@@ -1103,14 +1098,23 @@ private:
       // requirements
       uintptr_t start = moveset.getMovesetHeader("requirements");
       uintptr_t count = moveset.getMovesetCount("requirements");
-      for (uintptr_t i = 4530; i < count - 2000; i++)
+      constexpr uintptr_t reqScanFrom = 4530;
+      constexpr uintptr_t reqScanTailSkip = 2000;
+      if (start && count > reqScanFrom + reqScanTailSkip)
       {
-        uintptr_t addr = start + (i * sizeof(TK_Requirement));
-        TK_Requirement requirement = moveset.getRequirement(addr);
-        if ((requirement.req == ExtraMoveProperties::DEVIL_STATE && requirement.param[0] >= 1) ||
-            (requirement.req == ExtraMoveProperties::WING_ANIM))
+        uintptr_t scanCount = count - reqScanTailSkip - reqScanFrom;
+        std::vector<TK_Requirement> reqs = game.readArray<TK_Requirement>(
+            start + reqScanFrom * sizeof(TK_Requirement), scanCount);
+        if (reqs.size() == scanCount)
         {
-          moveset.editRequirement(addr, 0, 0);
+          for (uintptr_t i = 0; i < scanCount; i++)
+          {
+            if ((reqs[i].req == ExtraMoveProperties::DEVIL_STATE && reqs[i].param[0] >= 1) ||
+                (reqs[i].req == ExtraMoveProperties::WING_ANIM))
+            {
+              moveset.editRequirement(start + (reqScanFrom + i) * sizeof(TK_Requirement), 0, 0);
+            }
+          }
         }
       }
 
@@ -1636,7 +1640,7 @@ private:
     // Used in tandem with the Drama hook, helps trigger Fate cameras
     // TODO: Check if only changing Dj_Direct cancel reqs is enough to trigger Fate cameras
     // I suspect that us also updating dialogue reqs is messing up with the voicelines being played
-    adjustIntroOutroReq(moveset, FighterId::DevilJin2, 2000); // I know targetReq is first seen after index 2000
+    adjustIntroOutroReq(moveset, FighterId::DevilJin2);
 
     // Adjusting Rage Art dialogues
     {
