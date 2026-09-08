@@ -1,3 +1,10 @@
+## Changelog (September 7, 2026)
+ - Added opponent-specific Rage Art dialogues for some characters, from the story mode:
+    - Devil Jin vs Jin - Chapter 12
+    - Devil Jin vs Kazuya - Chapter 13 (includes True Devil Kazuya)
+    - Angel Jin vs True Devil Kazuya - Chapter 14 (includes their respective dialogues againt one another)
+ - More refactoring, now I read whole Requirements array at once to avoid thousands of RPM calls
+
 ## Changelog (September 6, 2026)
  - Fixed `True Devil Kazuya` Rage Art dialogue issue as well as u/f+1+2 laser issue where u/f+1 was coming out.
  - More refactoring and performance improvements.
