@@ -208,3 +208,16 @@ player_struct_base=0x9B91BC0
 match_struct_base=0x9B8C7E8
 moveset_offset=0x39E8
 permanent_devil_offset=0x156C
+
+v3.02.02
+moveset_offset_addr_offset=0x18ED3CE
+permanent_devil_offset_addr_offset=0x190B194
+camera_hook_offset=0x5C38720
+player_struct_base_addr_offset=0x5E76F35
+hud_icon_addr_offset=0x5E7BED1
+hud_name_addr_offset=0x5E7C547
+match_struct_base_addr_offset=0x5F32B81
+player_struct_base=0x9B90BC0
+match_struct_base=0x9B8B7E8
+moveset_offset=0x39E8
+permanent_devil_offset=0x156C
