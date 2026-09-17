@@ -555,16 +555,21 @@ public:
   {
     if (!addr)
       return 0;
+    return getRequirementValue(getRequirement(addr), column);
+  }
+
+  int getRequirementValue(const TK_Requirement &requirement, std::string column)
+  {
     if (column == "req")
-      return game.readInt32(addr);
+      return requirement.req;
     else if (column == "param")
-      return game.readInt32(addr + 4);
+      return requirement.param[0];
     else if (column == "param2")
-      return game.readInt32(addr + 8);
+      return requirement.param[1];
     else if (column == "param3")
-      return game.readInt32(addr + 12);
+      return requirement.param[2];
     else if (column == "param4")
-      return game.readInt32(addr + 16);
+      return requirement.param[3];
     return 0;
   }
 

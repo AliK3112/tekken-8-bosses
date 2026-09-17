@@ -1625,12 +1625,11 @@ private:
       moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
       addr = moveset.iterateCancel(addr, 1); // Next cancel
       moveset.disableRequirement(moveset.getCancelValue(addr, "requirements"), Requirements::ARCADE_BATTLE);
-  
+    }
+    // Intro Fix
+    {
       addr = moveset.getMoveAddress(0xfebdae71); // Kz_Direct
       addr = moveset.getMoveNthCancel(addr, 1);
-    }
-
-    {
       TK_Cancel cancel = moveset.getCancel(addr);
       if (cancel.move_id == moveset.getMoveId(0x69fa69b1)) // grl_s00
       {

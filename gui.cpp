@@ -176,24 +176,15 @@ void InitializeUI(HWND hwnd)
   int groupCursorY = currentY + 20; // Start below group title
 
   // Item 1
-  hwndCheckbox = CreateWindowA("BUTTON", "Load HUD and Costume for unique bosses", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+  hwndCheckbox = CreateWindowA("BUTTON", "Load Story Costumes for unique bosses", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)3, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
   
-  CreateWindowA("STATIC", "  (Excludes: Angel Jin, True Devil Kazuya and Story Devil Jin)", WS_CHILD | WS_VISIBLE | SS_LEFT,
+  CreateWindowA("STATIC", "  (Excludes Angel Jin, True Devil Kazuya and Story Devil Jin)", WS_CHILD | WS_VISIBLE | SS_LEFT,
       groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
   groupCursorY += SUBTEXT_HEIGHT + 5;
 
   // Item 2
-  hwndCheckParry = CreateWindowA("BUTTON", "Disable Auto-Parries", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)4, NULL, NULL);
-  groupCursorY += CHECKBOX_HEIGHT;
-
-  CreateWindowA("STATIC", "  (Applies to: Jin and Heihachi Final variants)", WS_CHILD | WS_VISIBLE | SS_LEFT,
-      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
-  groupCursorY += SUBTEXT_HEIGHT + 5;
-
-  // Item 3
   hwndCheckDamage = CreateWindowA("BUTTON", "Tone Down Excessive Damage", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)5, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
@@ -202,14 +193,15 @@ void InitializeUI(HWND hwnd)
       groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
   groupCursorY += SUBTEXT_HEIGHT + 5;
 
+  // Item 3
+  hwndCheckParry = CreateWindowA("BUTTON", "Disable Automatic Parries From Idle Stance", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+      groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)4, NULL, NULL);
+  groupCursorY += CHECKBOX_HEIGHT;
+
   // Item 4
   hwndCheckRage = CreateWindowA("BUTTON", "Final Battle Kazuya Rage Art", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)6, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
-
-  CreateWindowA("STATIC", "  (Set \"Rage Blast\" as his \"Rage Art\")", WS_CHILD | WS_VISIBLE | SS_LEFT,
-      groupInnerX, groupCursorY, groupInnerW, SUBTEXT_HEIGHT, hwnd, NULL, NULL, NULL);
-
   currentY += groupTotalHeight + GROUP_SPACING;
 
   // --- 3. Log Section ---

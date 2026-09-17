@@ -1,3 +1,10 @@
+## Changelog (September 17, 2026)
+ - Fixed a bug where intros and outros were not playing correctly for True Devil Kazuya
+ - Fixed a bug in HUD loading logic where after loading a boss and then setting it to None, the original HUD loading logic wouldn't restore
+ - HUD & Costume checkbox now only deals with Costumes, removed HUD logic from the checkbox
+ - Implemented a totally new approach for HUD Icons, no longer required to scan the EXE for 3-letter character codes
+ - More refactoring to avoid unnecessary API calls and string operations.
+
 ## Changelog (September 7, 2026)
  - Added opponent-specific Rage Art dialogues for some characters, from the story mode:
     - Devil Jin vs Jin - Chapter 12
