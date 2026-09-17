@@ -199,7 +199,7 @@ void InitializeUI(HWND hwnd)
   groupCursorY += CHECKBOX_HEIGHT;
 
   // Item 4
-  hwndCheckRage = CreateWindowA("BUTTON", "Final Battle Kazuya Rage Art", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+  hwndCheckRage = CreateWindowA("BUTTON", "Set Rage Blast as Final Battle Kazuya's Rage Art", WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
       groupInnerX, groupCursorY, groupInnerW, CHECKBOX_HEIGHT, hwnd, (HMENU)6, NULL, NULL);
   groupCursorY += CHECKBOX_HEIGHT;
   currentY += groupTotalHeight + GROUP_SPACING;
