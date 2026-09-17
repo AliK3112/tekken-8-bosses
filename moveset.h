@@ -188,8 +188,8 @@ public:
     if (!requirements)
       return;
     uintptr_t addr = requirements;
-    uintptr_t start = getMovesetHeader("requirements");
-    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t start = motbin.requirements_ptr;
+    uintptr_t count = motbin.requirements_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (addr >= start && addr < end)
     {
@@ -207,8 +207,8 @@ public:
 
   bool replaceRequirement(int targetReq, int targetParam = -1, int overrideReq = 0, int overrideParam = 0)
   {
-    uintptr_t requirements = getMovesetHeader("requirements");
-    size_t requirementsCount = getMovesetCount("requirements");
+    uintptr_t requirements = motbin.requirements_ptr;
+    size_t requirementsCount = motbin.requirements_count;
     if (!requirements || requirementsCount == 0)
       return true;
 
@@ -257,8 +257,8 @@ public:
   {
     if (!requirements)
       return;
-    uintptr_t start = getMovesetHeader("requirements");
-    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t start = motbin.requirements_ptr;
+    uintptr_t count = motbin.requirements_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     for (uintptr_t addr = requirements; addr >= start && addr < end; addr += sizeof(TK_Requirement))
     {
@@ -277,18 +277,10 @@ public:
     return move ? game.readUInt64(move + Offsets::Move::CancelList) + sizeof(TK_Cancel) * n : 0;
   }
 
-  // Returns the address of cancel extradata given index
-  uintptr_t getCancelExtradataAddr(int index)
-  {
-    uintptr_t start = getMovesetHeader("cancel_extra_datas");
-    size_t count = getMovesetCount("cancel_extra_datas");
-    return getItemAddress(start, index, Sizes::Moveset::CancelExtradata);
-  }
-
   uintptr_t findCancelExtradata(int target)
   {
-    uintptr_t start = getMovesetHeader("cancel_extra_datas");
-    size_t count = getMovesetCount("cancel_extra_datas");
+    uintptr_t start = motbin.cancel_extradata_ptr;
+    size_t count = motbin.cancel_extradata_count;
     for (size_t i = 0; i < count; i++)
     {
       uintptr_t addr = start + i * Sizes::Moveset::CancelExtradata;
@@ -302,11 +294,11 @@ public:
   {
     if (idx < 0)
       return 0;
-    uintptr_t start = getMovesetHeader("moves");
+    uintptr_t start = motbin.moves_ptr;
     idx = idx >= 0x8000 ? getAliasMoveId(idx) : idx;
     if (!start || idx < 0)
       return 0;
-    size_t count = getMovesetCount("moves");
+    size_t count = motbin.moves_count;
     uintptr_t addr = getItemAddress(start, idx, Sizes::Moveset::Move);
     uintptr_t end = getItemAddress(start, count - 1, Sizes::Moveset::Move);
     return addr >= start && addr < end ? addr : 0; // Not letting overflow happen
@@ -314,8 +306,8 @@ public:
 
   uintptr_t getMoveIdxByAddress(uintptr_t addr)
   {
-    uintptr_t start = getMovesetHeader("moves");
-    uintptr_t end = getMovesetHeader("voiceclips");
+    uintptr_t start = motbin.moves_ptr;
+    uintptr_t end = motbin.voiceclips_ptr;
     if (addr >= start && addr < end)
     {
       return (addr - start) / Sizes::Moveset::Move;
@@ -335,30 +327,33 @@ public:
     return game.read<TK_ExtraProp>(addr);
   }
 
-  uintptr_t getExtrapropValue(uintptr_t addr, std::string column)
+  uintptr_t getExtrapropValue(const TK_ExtraProp &extraprop, std::string column)
   {
     if (column == "frame")
-      return game.readInt32(addr + Offsets::ExtraProp::Type);
+      return extraprop.frame;
     else if (column == "requirements")
-      return game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
+      return extraprop.requirements_ptr;
     else if (column == "requirement_idx")
-    {
-      uintptr_t header = getMovesetHeader("requirements");
-      uintptr_t value = game.readUInt64(addr + Offsets::ExtraProp::RequirementAddr);
-      return getItemIndex(header, value, sizeof(TK_Requirement));
-    }
+      return getItemIndex(motbin.requirements_ptr, extraprop.requirements_ptr, sizeof(TK_Requirement));
     else if (column == "prop")
-      return game.readInt32(addr + Offsets::ExtraProp::Prop);
+      return extraprop.property;
     else if (column == "value")
-      return game.readInt32(addr + Offsets::ExtraProp::Value);
+      return extraprop.params[0];
     else if (column == "value2")
-      return game.readInt32(addr + Offsets::ExtraProp::Value2);
+      return extraprop.params[1];
     else if (column == "value3")
-      return game.readInt32(addr + Offsets::ExtraProp::Value3);
+      return extraprop.params[2];
     else if (column == "value4")
-      return game.readInt32(addr + Offsets::ExtraProp::Value4);
+      return extraprop.params[3];
 
     return 0;
+  }
+
+  uintptr_t getExtrapropValue(uintptr_t addr, std::string column)
+  {
+    if (!addr)
+      return 0;
+    return getExtrapropValue(getExtraProp(addr), column);
   }
 
   void editExtrapropValue(uintptr_t addr, std::string column, uintptr_t value)
@@ -428,8 +423,8 @@ public:
   {
     if (!requirement)
       return 0;
-    uintptr_t start = getMovesetHeader("requirements");
-    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t start = motbin.requirements_ptr;
+    uintptr_t count = motbin.requirements_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (requirement >= start && requirement < end)
     {
@@ -456,8 +451,8 @@ public:
   {
     if (!cancel)
       return 0;
-    uintptr_t start = getMovesetHeader("cancels");
-    uintptr_t count = getMovesetCount("cancels");
+    uintptr_t start = motbin.cancels_ptr;
+    uintptr_t count = motbin.cancels_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Cancel));
     while (cancel >= start && cancel < end)
     {
@@ -475,8 +470,8 @@ public:
   {
     if (!cancel)
       return 0;
-    uintptr_t start = getMovesetHeader(isGroupCancel ? "group_cancels" : "cancels");
-    uintptr_t count = getMovesetCount(isGroupCancel ? "group_cancels" : "cancels");
+    uintptr_t start = isGroupCancel ? motbin.group_cancels_ptr : motbin.cancels_ptr;
+    uintptr_t count = isGroupCancel ? motbin.group_cancels_count : motbin.cancels_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Cancel));
     uintptr_t endValue = isGroupCancel ? Cancels::GROUP_CANCEL_END : Cancels::CANCEL_END;
     while (cancel >= start && cancel < end)
@@ -495,8 +490,8 @@ public:
   {
     if (!addr)
       return 0;
-    uintptr_t start = getMovesetHeader("extra_move_properties");
-    uintptr_t count = getMovesetCount("extra_move_properties");
+    uintptr_t start = motbin.extra_move_properties_ptr;
+    uintptr_t count = motbin.extra_move_properties_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_ExtraProp));
     while (addr >= start && addr < end)
     {
@@ -534,8 +529,8 @@ public:
   {
     if (!addr)
       return 0;
-    uintptr_t start = getMovesetHeader("requirements");
-    uintptr_t count = getMovesetCount("requirements");
+    uintptr_t start = motbin.requirements_ptr;
+    uintptr_t count = motbin.requirements_count;
     uintptr_t end = getItemAddress(start, count - 1, sizeof(TK_Requirement));
     while (addr >= start && addr < end)
     {
@@ -639,11 +634,11 @@ public:
     else if (column == "requirements")
       return cancel.requirements_ptr;
     else if (column == "requirement_idx")
-      return getItemIndex(getMovesetHeader("requirements"), cancel.requirements_ptr, sizeof(TK_Requirement));
+      return getItemIndex(motbin.requirements_ptr, cancel.requirements_ptr, sizeof(TK_Requirement));
     else if (column == "extradata")
       return cancel.extradata_ptr;
     else if (column == "extradata_idx")
-      return getItemIndex(getMovesetHeader("cancel_extra_datas"), cancel.extradata_ptr, Sizes::Moveset::CancelExtradata);
+      return getItemIndex(motbin.cancel_extradata_ptr, cancel.extradata_ptr, Sizes::Moveset::CancelExtradata);
     else if (column == "start")
       return cancel.input_window_start;
     else if (column == "end")
@@ -793,9 +788,9 @@ public:
       }
     };
 
-    replaceInSection(getMovesetHeader("cancels"), getMovesetCount("cancels"));
+    replaceInSection(motbin.cancels_ptr, motbin.cancels_count);
     if (groupCancels)
-      replaceInSection(getMovesetHeader("group_cancels"), getMovesetCount("group_cancels"));
+      replaceInSection(motbin.group_cancels_ptr, motbin.group_cancels_count);
   }
 
   uintptr_t getMovesetHeader(std::string column)

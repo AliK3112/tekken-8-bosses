@@ -613,8 +613,9 @@ private:
     addr = moveset.getMoveExtrapropAddr(addr);
     while (true)
     {
-      int frame = moveset.getExtrapropValue(addr, "frame");
-      int prop = moveset.getExtrapropValue(addr, "prop");
+      auto extraprop = moveset.getExtraProp(addr);
+      int frame = extraprop.frame;
+      int prop = extraprop.property;
       if (!prop && !frame)
         break;
       if (prop == ExtraMoveProperties::SPEND_RAGE)
@@ -1120,8 +1121,9 @@ private:
       for (uintptr_t i = 2200; i < count; i++)
       {
         uintptr_t addr = start + (i * sizeof(TK_ExtraProp));
-        int prop = moveset.getExtrapropValue(addr, "prop");
-        int param = moveset.getExtrapropValue(addr, "value");
+        auto extraprop = moveset.getExtraProp(addr);
+        int prop = extraprop.property;
+        int param = extraprop.params[0];
         if (prop == ExtraMoveProperties::DEVIL_STATE || prop == ExtraMoveProperties::WING_ANIM || (prop == ExtraMoveProperties::CHARA_TRAIL_VFX && (param == 0xC || param == 0xD)))
         {
           moveset.editExtraprop(addr, 0, 0);
@@ -1393,10 +1395,11 @@ private:
         addr = moveset.getMoveExtrapropAddr(addr);
         while (true)
         {
-          int frame = moveset.getExtrapropValue(addr, "frame");
-          int prop = moveset.getExtrapropValue(addr, "prop");
+          auto extraprop = moveset.getExtraProp(addr);
+          int frame = extraprop.frame;
+          int prop = extraprop.property;
           if (frame == 0 && prop == 0) break;
-          int reqIdx = moveset.getExtrapropValue(addr, "requirement_idx");
+          int reqIdx = moveset.getExtrapropValue(extraprop, "requirement_idx");
           if (reqIdx != 0)
           {
             moveset.editExtrapropValue(addr, "prop", 0);
@@ -1702,8 +1705,9 @@ private:
           for (int i = 9000; i < count; i++) // 9000 idx is near the Rage Art
           {
             addr = start + (i * sizeof(TK_ExtraProp));
-            int prop = moveset.getExtrapropValue(addr, "prop");
-            int param = moveset.getExtrapropValue(addr, "value");
+            auto extraprop = moveset.getExtraProp(addr);
+            int prop = extraprop.property;
+            int param = extraprop.params[0];
             if (prop == ExtraMoveProperties::RAGE_ART_CAMERA)
             {
               if (param == 48 || param == 49) {
