@@ -18,6 +18,7 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD signal)
     {
       g_bossLoader->uninstallStoryCameraHook();
       g_bossLoader->uninstallDramaCameraHook();
+      g_bossLoader->restoreHudAddr();
     }
     return FALSE; // let the process terminate
   }
@@ -26,9 +27,12 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD signal)
 
 int main()
 {
-  int bossCode = BossCodes::AngelJin;
+  int bossCode = BossCodes::DevilJin_2;
   int selectedSide = PlayerSide::Left;
-  ConfigFlags config = {.disableAutoParries = false, .handleHudAndCostumes = true, .toneDownDamage = false};
+  ConfigFlags config{};
+  config.disableAutoParries = false;
+  config.handleHudAndCostumes = true;
+  config.toneDownDamage = false;
   TkBossLoader bossLoader;
   bossLoader.setConfig(&config);
   g_bossLoader = &bossLoader;

@@ -48,13 +48,13 @@ int main()
 
   if (auto addr = scan(Tekken::HUD_ICON_SIG_BYTES, 0x5C00000))
   {
-    addr += 13;
+    addr += 2;
     printf("hud_icon_addr_offset=0x%llX\n", addr - base);
   }
 
   if (auto addr = scan(Tekken::HUD_NAME_SIG_BYTES, 0x5C00000))
   {
-    addr += 13;
+    addr += 2;
     printf("hud_name_addr_offset=0x%llX\n", addr - base);
   }
 

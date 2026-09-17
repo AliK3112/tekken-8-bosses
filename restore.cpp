@@ -6,7 +6,7 @@
 
 static constexpr size_t HOOK_PATCH_SIZE = 14;
 
-static constexpr uintptr_t STORY_CAMERA_HOOK_RVA = 0x5C38A40;
+static constexpr uintptr_t STORY_CAMERA_HOOK_RVA = 0x5C38720;
 static constexpr uint8_t STORY_CAMERA_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
     0x48, 0x89, 0x5C, 0x24, 0x08, // mov [rsp+8], rbx
     0x48, 0x89, 0x74, 0x24, 0x18, // mov [rsp+18], rsi
@@ -14,7 +14,7 @@ static constexpr uint8_t STORY_CAMERA_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
     0x57,                         // push rdi
     0x41, 0x54};                  // push r12
 
-static constexpr uintptr_t DRAMA_CAMERA_HOOK_RVA = 0x5C26E70;
+static constexpr uintptr_t DRAMA_CAMERA_HOOK_RVA = 0x5C26B50;
 static constexpr uint8_t DRAMA_CAMERA_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
     0x40, 0x55,                   // push rbp
     0x53,                         // push rbx

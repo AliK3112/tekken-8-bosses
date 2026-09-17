@@ -17,6 +17,7 @@ static constexpr const char *DEVIL_JIN_COSTUME_PATH_3 = "/Game/Demo/Story/Sets/C
 static constexpr const char *HEIHACHI_MONK_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_whitetiger_nohat_nomask.CS_bee_whitetiger_nohat_nomask";
 static constexpr const char *HEIHACHI_SHADOW_COSTUME_PATH = "/Game/Demo/Ingame/Item/Sets/CS_bee_1p_p_shadow.CS_bee_1p_p_shadow";
 bool INSTALL_CAMERA_HOOKS = true;
+bool INSTALL_HUD_HOOKS = true;
 
 bool isCorrectCharacter(int bossCode, int charId);
 bool isValidJinBoss(int bossCode);
@@ -59,8 +60,8 @@ private:
   uintptr_t m_player1 = 0;
   uintptr_t m_player2 = 0;
   // jz rel8 at sig+13 — masked in AoB so already-NOP'd (0x90 0x90) sites still match
-  static constexpr uint16_t HUD_ICON_ORIG = 0x5274; // 74 52
-  static constexpr uint16_t HUD_NAME_ORIG = 0x3174; // 74 31
+  static constexpr uint16_t HUD_ICON_ORIG = 0x4374; // 74 43
+  static constexpr uint16_t HUD_NAME_ORIG = 0x3674; // 74 36
   static constexpr uint16_t HUD_PATCH_NOP = 0x9090;
   uintptr_t cameraHookAddr = 0;
   uintptr_t dramaCameraHookAddr = 0;
@@ -290,10 +291,10 @@ private:
 
     // Decryption AoB scan removed — validateAndTransform64BitValue replaces the game decrypt func.
 
-    addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, start);
+    addr = game.FastAoBScan(Tekken::HUD_ICON_SIG_BYTES, base + 0x5C00000);
     if (addr != 0)
     {
-      hudIconAddr = addr + 13;
+      hudIconAddr = addr + 2;
       const uint16_t iconBytes = game.readUInt16(hudIconAddr);
       if (iconBytes != HUD_ICON_ORIG && iconBytes != HUD_PATCH_NOP)
         hudIconAddr = 0;
@@ -305,10 +306,10 @@ private:
 
     if (hudIconAddr)
     {
-      addr = game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x1000);
+      addr = game.FastAoBScan(Tekken::HUD_NAME_SIG_BYTES, addr + 0x10, addr + 0x4000);
       if (addr != 0)
       {
-        hudNameAddr = addr + 13;
+        hudNameAddr = addr + 2;
         const uint16_t nameBytes = game.readUInt16(hudNameAddr);
         if (nameBytes != HUD_NAME_ORIG && nameBytes != HUD_PATCH_NOP)
           hudNameAddr = 0;
@@ -412,9 +413,11 @@ private:
   // Sites may already be NOP'd (sig masks match either original jz or 90 90).
   void modifyHudAddr(uintptr_t matchStructAddr)
   {
-    int mode = game.readInt32(matchStructAddr);
-    if (mode != 1 && mode != 6)
+    if (!INSTALL_HUD_HOOKS)
       return;
+    // int mode = game.readInt32(matchStructAddr);
+    // if (mode != 1 && mode != 6)
+    //   return;
     if (!hudIconAddr || !hudNameAddr)
       return;
 
@@ -427,20 +430,10 @@ private:
       game.write<uint16_t>(hudNameAddr, HUD_PATCH_NOP);
   }
 
-  void restoreHudAddr()
-  {
-    if (!hudIconAddr || !hudNameAddr)
-      return;
-
-    if (game.readUInt16(hudIconAddr) == HUD_PATCH_NOP)
-      game.write<uint16_t>(hudIconAddr, HUD_ICON_ORIG);
-
-    if (game.readUInt16(hudNameAddr) == HUD_PATCH_NOP)
-      game.write<uint16_t>(hudNameAddr, HUD_NAME_ORIG);
-  }
-
   void loadBossHud(uintptr_t matchStruct, int side, int charId, int bossCode)
   {
+    if (!INSTALL_HUD_HOOKS)
+      return;
     if (bossCode == BossCodes::None)
       return;
     char icon[256]{};
@@ -493,22 +486,34 @@ private:
       game.writeString(matchStruct + 0x4C0 + side * 0x100, name, HUD_PATH_MAX);
   }
 
+  void clearHudNameAndIconPaths(uintptr_t matchStruct)
+  {
+    game.writeString(matchStruct + 0x2C0, "\0", HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x3C0, "\0", HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x4C0, "\0", HUD_PATH_MAX);
+    game.writeString(matchStruct + 0x5C0, "\0", HUD_PATH_MAX);
+  }
+
   void hudHandler(uintptr_t matchStruct)
   {
+    if (!INSTALL_HUD_HOOKS)
+      return;
     int char1 = game.readInt32(matchStruct + 0x10);
     int char2 = game.readInt32(matchStruct + 0x94);
-    char icon1[256]{};
-    char icon2[256]{};
-    char name1[256]{};
-    char name2[256]{};
-    getIconPath(icon1, sizeof(icon1), 0, char1);
-    getIconPath(icon2, sizeof(icon2), 1, char2);
-    buildNamePath(name1, sizeof(name1), char1);
-    buildNamePath(name2, sizeof(name2), char2);
-    game.writeString(matchStruct + 0x2C0, icon1, HUD_PATH_MAX);
-    game.writeString(matchStruct + 0x3C0, icon2, HUD_PATH_MAX);
-    game.writeString(matchStruct + 0x4C0, name1, HUD_PATH_MAX);
-    game.writeString(matchStruct + 0x5C0, name2, HUD_PATH_MAX);
+    // char icon1[256]{};
+    // char icon2[256]{};
+    // char name1[256]{};
+    // char name2[256]{};
+    // getIconPath(icon1, sizeof(icon1), 0, char1);
+    // getIconPath(icon2, sizeof(icon2), 1, char2);
+    // buildNamePath(name1, sizeof(name1), char1);
+    // buildNamePath(name2, sizeof(name2), char2);
+    // game.writeString(matchStruct + 0x2C0, icon1, HUD_PATH_MAX);
+    // game.writeString(matchStruct + 0x3C0, icon2, HUD_PATH_MAX);
+    // game.writeString(matchStruct + 0x4C0, name1, HUD_PATH_MAX);
+    // game.writeString(matchStruct + 0x5C0, name2, HUD_PATH_MAX);
+
+    clearHudNameAndIconPaths(matchStruct);
 
     loadBossHud(matchStruct, 0, char1, this->bossCode_L);
     loadBossHud(matchStruct, 1, char2, this->bossCode_R);
@@ -2235,6 +2240,20 @@ public:
     restoreHudAddr();
   }
 
+  void restoreHudAddr()
+  {
+    if (!INSTALL_HUD_HOOKS)
+      return;
+    if (!hudIconAddr || !hudNameAddr)
+      return;
+
+    if (game.readUInt16(hudIconAddr) == HUD_PATCH_NOP)
+      game.write<uint16_t>(hudIconAddr, HUD_ICON_ORIG);
+
+    if (game.readUInt16(hudNameAddr) == HUD_PATCH_NOP)
+      game.write<uint16_t>(hudNameAddr, HUD_NAME_ORIG);
+  }
+
   // Explicit cleanup for Ctrl+C / GUI close (also invoked by destructor)
   void uninstallStoryCameraHook()
   {
@@ -2388,7 +2407,10 @@ public:
       this->m_player2 = 0;
 
       if (this->bossCode_L == BossCodes::None && this->bossCode_R == BossCodes::None)
+      {
+        clearHudNameAndIconPaths(matchStructAddr);
         continue;
+      }
 
       matchStructAddr = game.getAddress(offsets);
       if (matchStructAddr == 0)
@@ -2399,7 +2421,6 @@ public:
 
       if (!isEligible(matchStructAddr))
       {
-        restoreHudAddr();
         syncCameraEligible(false);
         continue;
       }
