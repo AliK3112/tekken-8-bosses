@@ -426,54 +426,85 @@ private:
       return;
     if (bossCode == BossCodes::None)
       return;
+
     char icon[256]{};
     char name[256]{};
     const char c = side == 0 ? 'L' : 'R';
-    bool isStoryDvj = isValidDevilJinBoss(bossCode) && charId == FighterId::DevilJin2;
-    if (isStoryDvj)
+
+    switch (charId)
     {
-      if (bossCode == BossCodes::DevilJin || bossCode == BossCodes::DevilJin_1) {
+    case FighterId::Jin:
+      switch (bossCode)
+      {
+      case BossCodes::FinalJin:
+      case BossCodes::MishimaJin:
+      case BossCodes::KazamaJin:
+        buildIconPath(icon, sizeof(icon), c, HudIcon::JinFinal);
+        buildNamePath(name, sizeof(name), FighterId::Jin);
+        break;
+      }
+      break;
+
+    case FighterId::Kazuya:
+      switch (bossCode)
+      {
+      case BossCodes::FinalKazuya:
+        buildIconPath(icon, sizeof(icon), c, HudIcon::KazFinal);
+        buildNamePath(name, sizeof(name), FighterId::Kazuya);
+        break;
+      case BossCodes::DevilKazuya:
+        buildIconPath(icon, sizeof(icon), c, HudIcon::KazDevil);
+        buildNamePath(name, sizeof(name), HudName::KazDevil);
+        break;
+      }
+      break;
+
+    case FighterId::Heihachi:
+      switch (bossCode)
+      {
+      case BossCodes::AmnesiaHeihachi:
+        buildIconPath(icon, sizeof(icon), c, HudIcon::HeiMonk);
+        buildNamePath(name, sizeof(name), FighterId::Heihachi);
+        break;
+      case BossCodes::ShadowHeihachi:
+        buildIconPath(icon, sizeof(icon), c, HudIcon::HeiShadow);
+        buildNamePath(name, sizeof(name), HudName::HeiShadow);
+        break;
+      }
+      break;
+
+    case FighterId::AngelJin:
+      buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::AngelJin));
+      buildNamePath(name, sizeof(name), FighterId::AngelJin);
+      break;
+
+    case FighterId::TrueDevilKazuya:
+      buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::TrueDevilKazuya));
+      buildNamePath(name, sizeof(name), FighterId::TrueDevilKazuya);
+      break;
+
+    case FighterId::DevilJin2:
+      switch (bossCode)
+      {
+      case BossCodes::DevilJin:
+      case BossCodes::DevilJin_1:
         buildIconPath(icon, sizeof(icon), c, getCharCode(FighterId::Jin));
         buildNamePath(name, sizeof(name), FighterId::Jin);
-      }
-      else if (bossCode == BossCodes::DevilJin_2) {
+        break;
+      case BossCodes::DevilJin_2:
         buildIconPath(icon, sizeof(icon), c, HudIcon::DvjCh12);
         buildNamePath(name, sizeof(name), FighterId::DevilJin);
-      }
-      else if (bossCode == BossCodes::DevilJin_3) {
+        break;
+      case BossCodes::DevilJin_3:
         buildIconPath(icon, sizeof(icon), c, HudIcon::DvjCh13);
         buildNamePath(name, sizeof(name), FighterId::DevilJin);
+        break;
       }
-    } 
-    else if ((bossCode == BossCodes::FinalJin || bossCode == BossCodes::MishimaJin || bossCode == BossCodes::KazamaJin) && charId == FighterId::Jin)
-    {
-      buildIconPath(icon, sizeof(icon), c, HudIcon::JinFinal);
-      buildNamePath(name, sizeof(name), FighterId::Jin);
+      break;
     }
-    else if (bossCode == BossCodes::FinalKazuya && charId == FighterId::Kazuya)
-    {
-      buildIconPath(icon, sizeof(icon), c, HudIcon::KazFinal);
-      buildNamePath(name, sizeof(name), FighterId::Kazuya);
-    }
-    else if (bossCode == BossCodes::DevilKazuya && charId == FighterId::Kazuya)
-    {
-      buildIconPath(icon, sizeof(icon), c, HudIcon::KazDevil);
-      buildNamePath(name, sizeof(name), HudName::KazDevil);
-    }
-    else if (bossCode == BossCodes::AmnesiaHeihachi && charId == FighterId::Heihachi)
-    {
-      buildIconPath(icon, sizeof(icon), c, HudIcon::HeiMonk);
-      buildNamePath(name, sizeof(name), FighterId::Heihachi);
-    }
-    else if (bossCode == BossCodes::ShadowHeihachi && charId == FighterId::Heihachi)
-    {
-      buildIconPath(icon, sizeof(icon), c, HudIcon::HeiShadow);
-      buildNamePath(name, sizeof(name), HudName::HeiShadow);
-    }
-    if (icon[0] && (shouldHandleHudAndCostumes() || isStoryDvj))
-      game.writeString(matchStruct + 0x2C0 + side * 0x100, icon, HUD_PATH_MAX);
-    if (name[0] && (shouldHandleHudAndCostumes() || isStoryDvj))
-      game.writeString(matchStruct + 0x4C0 + side * 0x100, name, HUD_PATH_MAX);
+
+    if (icon[0]) game.writeString(matchStruct + 0x2C0 + side * 0x100, icon, HUD_PATH_MAX);
+    if (name[0]) game.writeString(matchStruct + 0x4C0 + side * 0x100, name, HUD_PATH_MAX);
   }
 
   void clearHudNameAndIconPaths(uintptr_t matchStruct)
