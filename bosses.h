@@ -644,8 +644,8 @@ private:
   void applyJinStoryRequirements(TkMoveset &moveset, int bossCode)
   {
     int storyFlagParam = bossCode == BossCodes::ChainedJin ? 1 : bossCode;
-    uintptr_t start = moveset.getMovesetHeader("requirements");
-    uintptr_t count = moveset.getMovesetCount("requirements");
+    uintptr_t start = moveset.getMotbin().requirements_ptr;
+    uintptr_t count = moveset.getMotbin().requirements_count;
     if (!start || count == 0)
       return;
 
@@ -1091,8 +1091,8 @@ private:
     {
       // Go through reqs and props to disable his devil form
       // requirements
-      uintptr_t start = moveset.getMovesetHeader("requirements");
-      uintptr_t count = moveset.getMovesetCount("requirements");
+      uintptr_t start = moveset.getMotbin().requirements_ptr;
+      uintptr_t count = moveset.getMotbin().requirements_count;
       constexpr uintptr_t reqScanFrom = 4530;
       constexpr uintptr_t reqScanTailSkip = 2000;
       if (start && count > reqScanFrom + reqScanTailSkip)
@@ -1114,8 +1114,8 @@ private:
       }
 
       // extraprops
-      start = moveset.getMovesetHeader("extra_move_properties");
-      count = moveset.getMovesetCount("extra_move_properties");
+      start = moveset.getMotbin().extra_move_properties_ptr;
+      count = moveset.getMotbin().extra_move_properties_count;
 
       for (uintptr_t i = 2200; i < count; i++)
       {
@@ -1134,7 +1134,6 @@ private:
         int idx = moveset.getMoveIdxByAddress(addr);
         int moveId = moveset.getMoveId(0xbe4863c0, idx + 1); // Kz_66rp_DVL
         addr = moveset.getMoveNthCancel(addr, 0);
-        uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
         moveset.editCancelValue(addr, "requirement_idx", 0);
         moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(1025));
         moveset.editCancelValue(addr, "start", 1);
@@ -1164,8 +1163,6 @@ private:
       addr = moveset.getMoveNthCancel(addr, 1);
       moveset.editCancelValue(addr, "command", 0x10);
       moveset.editCancelValue(addr, "option", 0x50);
-
-      uintptr_t reqHeader = moveset.getMovesetHeader("requirements");
 
       // Ultra-wavedash
       addr = moveset.getMoveAddress(0x77314B09, idleStanceIdx);
@@ -1201,7 +1198,7 @@ private:
         int df34_1 = moveset.getMoveId(0x6562FA84, idleStanceIdx);
         addr = moveset.getMoveAddrByIdx(df34_1);
         addr = moveset.getMoveNthCancel(addr, 0);
-        int df34_1_db2 = moveset.getCancelMoveId(addr);
+        int df34_1_db2 = moveset.getCancelValue(addr, "move");
         int df34_1_2 = moveset.getMoveId(0xD63CD0E6, df34_1);
         addr = moveset.findCancel(addr, "move", df34_1_2);
         moveset.editCancelValue(addr, "move", df34_1_db2);
@@ -1212,7 +1209,7 @@ private:
       addr = moveset.getMoveAddress(0xFE501006, idleStanceIdx); // Co_t_slp00EX
       addr = moveset.getMoveNthCancel(addr, 0);
       // Grabbing move ID from 3rd cancel
-      int moveId_db2 = moveset.getCancelMoveId(moveset.iterateCancel(addr, 2));
+      int moveId_db2 = moveset.getCancelValue(moveset.iterateCancel(addr, 2), "move");
       addr = moveset.findCancel(addr, "move", moveset.getMoveId(0xbc4e3d37, 1700)); // Kz_1lprp
       moveset.editCancelValue(addr, "start", 19);
       moveset.editCancelValue(addr, "end", 19);
@@ -1375,8 +1372,8 @@ private:
       int targetMoveId = moveset.getMoveId(0x942c4d5c);                // He_RageArts00_St
       addr = moveset.getMoveAddress(0xde97038f, defaultAliasIdx - 30); // He_RageArts00
       addr = moveset.getMoveNthCancel(addr, 0);
-      moveset.editCancelMoveId(addr, (short)targetMoveId);
-      moveset.editCancelReqAddr(addr, moveset.getMovesetHeader("requirements"));
+      moveset.editCancelValue(addr, "move", (short)targetMoveId);
+      moveset.editCancelValue(addr, "requirement_idx", 0);
     }
 
     if (bossCode == BossCodes::ShadowHeihachi)
@@ -1529,7 +1526,7 @@ private:
       addr = moveset.getMoveAddress(0xF69E2BEF, 1550);
       addr = moveset.getMoveNthCancel(addr, 1);
       moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
-      int new22 = moveset.getCancelMoveId(addr);
+      int new22 = moveset.getCancelValue(addr, "move");
       uintptr_t moveAddr = moveset.getMoveAddrByIdx(new22);
       // 2,2,2
       addr = moveset.getMoveNthCancel(moveAddr, 5);
@@ -1561,8 +1558,8 @@ private:
       {
         uintptr_t defaultAliasAddr = moveset.getMoveAddrByIdx(defaultAliasIdx);
         addr = moveset.findMoveCancelByCondition(defaultAliasAddr, Requirements::PRE_ROUND_ANIM, -1, 50);
-        moveset.editCancelMoveId(addr, preRound1);
-        moveset.editCancelMoveId(moveset.iterateCancel(addr, 1), preRound2);
+        moveset.editCancelValue(addr, "move", preRound1);
+        moveset.editCancelValue(moveset.iterateCancel(addr, 1), "move", preRound2);
 
         // Now enabling story reqs inside their props
         handleHeihachiMoveProp(movesetAddr, preRound1);
@@ -1700,8 +1697,8 @@ private:
         moveset.disableStoryRelatedReqs(moveset.getExtrapropValue(addr, "requirements"));
 
         {
-          uintptr_t start = moveset.getMovesetHeader("extra_move_properties");
-          uintptr_t count = moveset.getMovesetCount("extra_move_properties");
+          uintptr_t start = moveset.getMotbin().extra_move_properties_ptr;
+          uintptr_t count = moveset.getMotbin().extra_move_properties_count;
           for (int i = 9000; i < count; i++) // 9000 idx is near the Rage Art
           {
             addr = start + (i * sizeof(TK_ExtraProp));
@@ -1720,8 +1717,8 @@ private:
       // TEMP
       // {
       //   uintptr_t header, count;
-      //   header = moveset.getMovesetHeader("requirements");
-      //   count = moveset.getMovesetCount("requirements");
+      //   header = moveset.getMotbin().requirements_ptr;
+      //   count = moveset.getMotbin().requirements_count;
       //   for (uintptr_t i = 0; i < count; i++)
       //   {
       //     uintptr_t addr = header + i * sizeof(TK_Requirement);

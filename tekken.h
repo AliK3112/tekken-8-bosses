@@ -91,7 +91,6 @@ namespace Tekken
       Value2 = 0x18,
       Value3 = 0x1C,
       Value4 = 0x20,
-      Value5 = 0x24
     };
 
     enum HitCondition

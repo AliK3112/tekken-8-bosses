@@ -170,6 +170,16 @@ public:
     game = newGame;
   }
 
+  Motbin getMotbin() const
+  {
+    return motbin;
+  }
+
+  void setMotbin(const Motbin &newMotbin)
+  {
+    motbin = newMotbin;
+  }
+
   // Utility methods
 
   // Disable a single requirement given a requirement list address
@@ -262,11 +272,6 @@ public:
     }
   }
 
-  uintptr_t getCancelReqAddr(uintptr_t cancel)
-  {
-    return cancel ? game.readUInt64(cancel + Offsets::Cancel::RequirementsList) : 0;
-  }
-
   uintptr_t getMoveNthCancel(uintptr_t move, int n = 0)
   {
     return move ? game.readUInt64(move + Offsets::Move::CancelList) + sizeof(TK_Cancel) * n : 0;
@@ -299,7 +304,7 @@ public:
       return 0;
     uintptr_t start = getMovesetHeader("moves");
     idx = idx >= 0x8000 ? getAliasMoveId(idx) : idx;
-    if (!start)
+    if (!start || idx < 0)
       return 0;
     size_t count = getMovesetCount("moves");
     uintptr_t addr = getItemAddress(start, idx, Sizes::Moveset::Move);
@@ -352,8 +357,6 @@ public:
       return game.readInt32(addr + Offsets::ExtraProp::Value3);
     else if (column == "value4")
       return game.readInt32(addr + Offsets::ExtraProp::Value4);
-    else if (column == "value5")
-      return game.readInt32(addr + Offsets::ExtraProp::Value5);
 
     return 0;
   }
@@ -383,8 +386,6 @@ public:
       game.write<int>(addr + Offsets::ExtraProp::Value3, value);
     else if (column == "value4")
       game.write<int>(addr + Offsets::ExtraProp::Value4, value);
-    else if (column == "value5")
-      game.write<int>(addr + Offsets::ExtraProp::Value5, value);
   }
 
   // Moves `n` Extraprops forward given a prop's address
@@ -405,13 +406,6 @@ public:
     {
       game.write<int>(propAddr + Offsets::ExtraProp::Value, paramValue);
     }
-  }
-
-  void editCancelReqAddr(uintptr_t cancel, uintptr_t value)
-  {
-    if (!cancel)
-      return;
-    game.write<uintptr_t>(cancel + Offsets::Cancel::RequirementsList, value);
   }
 
   int getAliasMoveId(int idx)
@@ -622,51 +616,6 @@ public:
       game.write<short>(targetCancelAddr + Offsets::Cancel::Option, (short)option);
   }
 
-  void editCancelCommand(uintptr_t cancel, uintptr_t value)
-  {
-    if (!cancel)
-      return;
-    game.write<uintptr_t>(cancel + Offsets::Cancel::Command, value);
-  }
-
-  void editCancelCommand(uintptr_t cancel, int value)
-  {
-    if (!cancel)
-      return;
-    game.write<int>(cancel + Offsets::Cancel::Command, value);
-  }
-
-  void editCancelExtradata(uintptr_t cancel, uintptr_t extradataAddr)
-  {
-    if (!cancel || !extradataAddr)
-      return;
-    game.write<int>(cancel + Offsets::Cancel::CancelExtradata, extradataAddr);
-  }
-
-  void editCancelFrames(uintptr_t cancel, int windowStart, int windowEnd, int startingFrame)
-  {
-    if (windowStart != -1)
-      game.write<int>(cancel + Offsets::Cancel::WindowStart, windowStart);
-    if (windowEnd != -1)
-      game.write<int>(cancel + Offsets::Cancel::WindowEnd, windowEnd);
-    if (startingFrame != -1)
-      game.write<int>(cancel + Offsets::Cancel::TransitionFrame, startingFrame);
-  }
-
-  void editCancelMoveId(uintptr_t cancel, short moveId)
-  {
-    if (cancel == 0)
-      return;
-    if (moveId == -1)
-      return;
-    game.write<short>(cancel + Offsets::Cancel::Move, moveId);
-  }
-
-  void editCancelOption(uintptr_t cancel, short value)
-  {
-    game.write<short>(cancel + Offsets::Cancel::Option, value);
-  }
-
   int getCancelMoveId(uintptr_t cancel)
   {
     return cancel ? game.readInt16(cancel + Offsets::Cancel::Move) : -1;
@@ -683,6 +632,10 @@ public:
   {
     if (column == "command")
       return cancel.command.value;
+    else if (column == "direction")
+      return cancel.command.direction;
+    else if (column == "button")
+      return cancel.command.button;
     else if (column == "requirements")
       return cancel.requirements_ptr;
     else if (column == "requirement_idx")
@@ -789,8 +742,7 @@ public:
     if (!addr)
       return;
     if (column == "requirement")
-      game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC,
-                            value);
+      game.write<uintptr_t>(addr + Offsets::HitCondition::RequirementAddrHC, value);
     else if (column == "requirement_idx")
     {
       uintptr_t tAddr = getAddressFromIndex("requirements", value, sizeof(TK_Requirement));
@@ -834,7 +786,10 @@ public:
       {
         auto it = replacements.find(cancels[i].move_id);
         if (it != replacements.end())
-          editCancelMoveId(start + i * sizeof(TK_Cancel), static_cast<short>(it->second));
+        {
+          uintptr_t addr = start + i * sizeof(TK_Cancel);
+          editCancelValue(addr, "move", static_cast<short>(it->second));
+        }
       }
     };
 
