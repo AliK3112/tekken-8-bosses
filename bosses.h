@@ -1,6 +1,5 @@
 // This class will be responsible for loading boss characters
 #include "moveset.h"
-#include "charcodes.h"
 #include "utils.h"
 #include <array>
 #include <cstring>
@@ -383,15 +382,6 @@ private:
     {
       dramaCameraHookAddr = 0;
       AppendLog("Drama Camera Hook Address not found (intro/winpose remap disabled)");
-    }
-
-    // Picks up fighters released after this build; falls back to the built-in
-    // codes if the scan cannot be validated.
-    std::string charCodeStatus;
-    int newFighters = scanFighterCodes(game, charCodeStatus);
-    if (newFighters != 0 || devMode)
-    {
-      AppendLog(charCodeStatus);
     }
 
     if (devMode)

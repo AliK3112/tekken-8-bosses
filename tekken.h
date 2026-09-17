@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <stdint.h>
-#include <map>
 
 struct EncryptedValue
 {
@@ -268,11 +267,6 @@ namespace Tekken
     Seiryu
   };
 
-  // Filled in at runtime by scanFighterCodes() (charcodes.h) for fighters that
-  // did not exist when this table was written. Never overrides the cases below.
-  std::map<int, std::string> scannedCharCodes;
-
-  // Pointer is valid until the next scanFighterCodes() / scannedCharCodes.clear().
   const char *getCharCode(int charId)
   {
     switch (charId)
@@ -380,10 +374,7 @@ namespace Tekken
     case FighterId::Seiryu:
       return "xxg";
     default:
-    {
-      std::map<int, std::string>::const_iterator scanned = scannedCharCodes.find(charId);
-      return scanned != scannedCharCodes.end() ? scanned->second.c_str() : "Unknown";
-    }
+      return "Unknown";
     }
   }
 
