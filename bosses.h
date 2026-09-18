@@ -1469,10 +1469,19 @@ private:
       // Adjusting Heat Smash
       {
         addr = moveset.getMoveAddress(0xc9c8dd57, idleStanceIdx); // He_ZoneD
-        addr = moveset.getMoveNthCancel(addr, 1); // 2nd cancel
-        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
-        addr = moveset.iterateCancel(addr, 1); // 3rd cancel
-        moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
+        addr = moveset.getMoveNthCancel(addr, 0); // 1st cancel
+        int He_ZoneD_n = moveset.getMoveId(0x98835300);
+        int He_ZoneD6_n = moveset.getMoveId(0xa4c7470a);
+        while (true)
+        {
+          auto cancel = moveset.getCancel(addr);
+          if (cancel.command.direction == 0x8000) break;
+          if (cancel.move_id == He_ZoneD_n)
+          {
+            moveset.editCancelValue(addr, "move", He_ZoneD6_n);
+          }
+          addr = moveset.iterateCancel(addr, 1);
+        }
       }
 
       // 2nd hit of regular 2,2
@@ -1487,6 +1496,58 @@ private:
         uintptr_t reqs = moveset.getCancelValue(moveset.iterateCancel(addr, i), "requirements");
         moveset.disableStoryRelatedReqs(reqs);
       }
+
+      auto FixVoiceclip = [&](uint32_t nameKey, int newVoicelineValue)
+      {
+        addr = moveset.getMoveAddress(nameKey);
+        addr = moveset.getMoveExtrapropAddr(addr);
+        while (true)
+        {
+          auto extraprop = moveset.getExtraProp(addr);
+          if (extraprop.frame == 0 && extraprop.property == 0)
+            break;
+          if (
+            extraprop.property == ExtraMoveProperties::PLAY_VOICECLIP &&
+            extraprop.params[0] == 16 &&
+            extraprop.params[1] == 100
+          )
+          {
+            moveset.editExtrapropValue(addr, "value2", 0);
+            moveset.editExtrapropValue(addr, "value3", newVoicelineValue);
+            break;
+          }
+          addr = moveset.iterateExtraprops(addr, 1);
+        }
+      };
+
+      // Voiceline for b+3,3,2 ground punch
+      FixVoiceclip(0x25442e32, 3885); // He_4LKLKRP
+      FixVoiceclip(0x8e24c181, 3816); // He_4LKLK_reserve_RP
+
+      // Disable Install increment
+      auto disableInstallStocks = [&] ()
+      {
+        uintptr_t start = moveset.getMotbin().extra_move_properties_ptr;
+        uintptr_t count = moveset.getMotbin().extra_move_properties_count;
+        std::vector<TK_ExtraProp> array = game.readArray<TK_ExtraProp>(start, count);
+        if (array.size() != count)
+          return;
+        for (uintptr_t i = 0; i < count; i++)
+        {
+          uintptr_t addr = start + i * sizeof(TK_ExtraProp);
+          if (
+            array[i].property == ExtraMoveProperties::MULTILEVEL_INSTALLS &&
+            array[i].params[0] == 1
+          )
+          {
+            moveset.editExtrapropValue(addr, "prop", 0);
+            moveset.editExtrapropValue(addr, "value", 0);
+          }
+        }
+      };
+
+      disableInstallStocks();     
+
       return markMovesetEdited(movesetAddr);
     }
 

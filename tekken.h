@@ -207,6 +207,7 @@ namespace Tekken
     HEAT_CAMERA = 0x86b0,
     CAMERA_TRANSITION = 0x8695,
     CAMERA_ORBIT = 0x8697,
+    PLAY_VOICECLIP = 0x87f0,
   };
 
   enum FighterId

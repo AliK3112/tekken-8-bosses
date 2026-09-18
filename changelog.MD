@@ -1,3 +1,7 @@
+## Changelog (September 18, 2026)
+ - Improved some voicelines for Monk Heihachi, mainly his b+3,3 and n+3,3 into Battering Ram. That transition was added in S2 so Heihachi laughed like a maniac while doing that move.
+ - Monk Heat Smash will now always do the on-hit camera zoom-in. Previously it didn't do that, even when playing so Story Mode. So this is an improvement over Bamco.
+
 ## Changelog (September 17, 2026)
  - Fixed a bug where intros and outros were not playing correctly for True Devil Kazuya
  - Fixed a bug in HUD loading logic where after loading a boss and then setting it to None, the original HUD loading logic wouldn't restore

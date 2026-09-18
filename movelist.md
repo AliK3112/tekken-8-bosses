@@ -141,6 +141,7 @@
   - New String: 1, 1, 4 (only when attack hits or blocked)
   - 1, 2, 4 last hit changes
   - New String: 2, 2, 2
+  - For airborne opponents, RAI 3 Kick comes out instead of the Right Punch
   - New String: 3, 3
   - Standing 4 now does Spinning Demon
   - New String: db+2, 3
@@ -161,6 +162,7 @@
   - 1, 1 can lead into all WGK follow-ups except 2
   - 1, 1, 2 last hit properties change
   - 2, 2 can lead into all TGK follow-ups
+  - For airborne opponents, When doing `2, 2 > 2`, RAI 3 Kick comes out instead of the Right Punch
   - New String: 3, 3. The second hit can further be followed-up by 2
   - New Move: 4. Uses WGK 4 and can be followed-up into all TGK attacks
   - New Move: d/f+1, 2. (Twin Pistons)
