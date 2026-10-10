@@ -19,21 +19,21 @@
 
 ### Nerfed Jin ([Movelist Showcase](https://youtu.be/6HofnzDjPlM?si=50FrGFlMTeYukU4h))
   - 1, 2, 1 removed
-  - d/f+2 changed to T7 version
+  - d/f+2 changed to T7 version. +4 oH, -7 oB, 15dmg, CH launcher
   - d+1 followup removed
   - d+2 removed
-  - New String: CD+4, 3
+  - New String: CD+4, 3. 2nd hit does 25dmg, Tornado, -9 oB, KND oH
   - CD+4, 2 removed
   - f,f+2 wing VFX removed
-  - New String: ws+1, 3, 2, 1, 4 > 3+4
+  - New String: ws+1, 3, 2, 1, 4 > 3+4. Last hit has same properties as normal [4 ~ 3]
   - ws+1, 3, 2, 1, 4 > 2 removed
   - Omen Stance followups removed
-  - ZEN 1, 2 last hit reverted to T7
-  - ZEN 2 reverted to T7, Now a PC Heat Engager
-  - ZEN 4 changed. Has same anim as T7 f,f+4. Chip damange on block.
-  - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2. Instant Tornado
+  - ZEN 1, 2 last hit reverted to T7. -14 oB w/ chip dmg. KND on hit with 21 dmg.
+  - ZEN 2 reverted to T7, Now a PC Heat Engager. -14 oB. KND oH. 27dmg.
+  - ZEN 4 changed. Has same anim as T7 f,f+4. Chip damange on block. +8 oH, 0 oB, KND on CH, 19dmg. Can be +10 oH from a distance.
+  - New String: ZEN u+1+2. Has same anim as T7 ZEN 1+2. -13 oB w/ chip dmg. Instant Tornado oH. 28dmg.
   - ZEN u+1 removed
-  - ZEN 3+4 reaction changed, similar to T7 now.
+  - ZEN 3+4 reaction changed, similar to T7 now. +8 oB. No chip dmg, 30 dmg, KND on Hit. Allows followup
   - 2nd Heat Smash becomes the default
   - Rage Art changed
 

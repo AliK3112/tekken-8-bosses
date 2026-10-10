@@ -1,29 +1,17 @@
 #include "game.h"
 
-// One-shot cleanup for leftover story/drama camera caves + hook patches.
+// One-shot cleanup for leftover factory camera cave + hook patch.
 // Build: g++ -o restore.exe restore.cpp && restore.exe
 // Reads cave VA from abs-jmp target at hook+6 when patched (FF 25).
 
 static constexpr size_t HOOK_PATCH_SIZE = 14;
 
-static constexpr uintptr_t STORY_CAMERA_HOOK_RVA = 0x5C38720;
-static constexpr uint8_t STORY_CAMERA_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
-    0x48, 0x89, 0x5C, 0x24, 0x08, // mov [rsp+8], rbx
-    0x48, 0x89, 0x74, 0x24, 0x18, // mov [rsp+18], rsi
-    0x55,                         // push rbp
-    0x57,                         // push rdi
-    0x41, 0x54};                  // push r12
-
-static constexpr uintptr_t DRAMA_CAMERA_HOOK_RVA = 0x5C26B50;
-static constexpr uint8_t DRAMA_CAMERA_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
-    0x40, 0x55,                   // push rbp
-    0x53,                         // push rbx
-    0x56,                         // push rsi
-    0x57,                         // push rdi
-    0x41, 0x54,                   // push r12
-    0x41, 0x56,                   // push r14
-    0x41, 0x57,                   // push r15
-    0x48, 0x8B, 0xEC};            // mov rbp, rsp
+static constexpr uintptr_t CAMERA_FACTORY_HOOK_RVA = 0x591BFF0;
+static constexpr uint8_t CAMERA_FACTORY_HOOK_ORIGINAL[HOOK_PATCH_SIZE] = {
+    0x40, 0x53,                   // push rbx
+    0x48, 0x83, 0xEC, 0x30,       // sub rsp, 30
+    0x48, 0x8B, 0xD9,             // mov rbx, rcx
+    0xB9, 0x60, 0x01, 0x00, 0x00}; // mov ecx, 0x160
 
 static void restoreHook(GameClass &game, const char *name, uintptr_t rva, const uint8_t *original)
 {
@@ -76,7 +64,6 @@ int main()
     return 1;
   }
 
-  restoreHook(game, "Story RA camera", STORY_CAMERA_HOOK_RVA, STORY_CAMERA_HOOK_ORIGINAL);
-  restoreHook(game, "Drama camera", DRAMA_CAMERA_HOOK_RVA, DRAMA_CAMERA_HOOK_ORIGINAL);
+  restoreHook(game, "Camera factory", CAMERA_FACTORY_HOOK_RVA, CAMERA_FACTORY_HOOK_ORIGINAL);
   return 0;
 }

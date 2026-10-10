@@ -16,8 +16,7 @@ BOOL WINAPI ConsoleCtrlHandler(DWORD signal)
   {
     if (g_bossLoader)
     {
-      g_bossLoader->uninstallStoryCameraHook();
-      g_bossLoader->uninstallDramaCameraHook();
+      g_bossLoader->uninstallCameraFactoryHook();
       g_bossLoader->restoreHudAddr();
     }
     return FALSE; // let the process terminate

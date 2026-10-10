@@ -35,9 +35,9 @@ int main()
     printf("permanent_devil_offset_addr_offset=0x%llX\n", addr - base);
   }
 
-  if (auto addr = scan(Tekken::STORY_CAMERA_HOOK_SIG_BYTES, 0x5C00000))
+  if (auto addr = scan(Tekken::CAMERA_FACTORY_HOOK_SIG_BYTES, 0x5900000))
   {
-    printf("camera_hook_offset=0x%llX\n", addr - base);
+    printf("camera_factory_hook_offset=0x%llX\n", addr - base);
   }
 
   if (auto addr = scan(Tekken::PLAYER_STRUCT_SIG_BYTES, 0x5A00000))

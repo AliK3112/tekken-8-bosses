@@ -140,9 +140,8 @@ namespace Tekken
   std::string P_MOVE_ID_SIG_BYTES = "89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 8B 86 ?? ?? ?? 00 89 86 ?? ?? ?? 00 E8 ?? ?? ?? ?? 85 C0";
   std::string HEI_WI_SIG_BYTES = "41 83 BE ?? ?? ?? ?? 02 41 0F 95 C0 41 8B D7 48 8B C8 E8 ?? ?? ?? ?? 41 8B 9E ?? ?? ?? ?? 33 FF 48 89 7D D0 C7 45 D8 01 00 00 00 45 33 C0 8D 57 01 48 8D 4D D0";
   std::string RAW_MOVESET_FILE_PTR_SIG_BYTES = "48 C7 05 ?? ?? ?? ?? 00 00 00 00 48 8D 51 28 4C 8B 41 28 48 8B F9 48 83 C1 28 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 28 BA 30 00 00 00 E8 ?? ?? ?? ?? 4C 8B 47 18 48 8D 57 18 48 8D 4F 18 4D 8B 40 08 E8 ?? ?? ?? ?? 48 8B 4F 18";
-  // Starts at function prologue — Story RA camera hook injection point (14-byte abs jmp)
-  std::string STORY_CAMERA_HOOK_SIG_BYTES = "48 89 5C 24 08 48 89 74 24 18 55 57 41 54 41 56 41 57 48 8D AC 24 50 FE FF FF 48 81 EC B0 02 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 85 A0 01 00 00 41 8B F9";
-  std::string DRAMA_CAMERA_HOOK_SIG_BYTES = "40 55 53 56 57 41 54 41 56 41 57 48 8B EC 48 81 EC 80 00 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 F8 45 8B F1 41 8B F0 8B DA 48 8B F9 48 89 4D B0 44 0F B6 7D 60 E8 ?? ?? ?? ??";
+  // TK__CreateAndLoadCameraAssetsForMatch prologue — single factory camera hook (14-byte abs jmp)
+  std::string CAMERA_FACTORY_HOOK_SIG_BYTES = "40 53 48 83 EC 30 48 8B D9 B9 60 01 00 00 E8";
 
   enum Cancels
   {
@@ -187,10 +186,10 @@ namespace Tekken
     STORE_VALUE_80C5 = 0x80c5,
     STORE_VALUE_80C8 = 0x80c8,
     DEVIL_STATE = 0x80dc,
-    HEAT_METER = 0x8139,
-    HEAT_RELATED = 0x814d,
-    PERMA_DEVIL = 0x8151,
     SHORT_FLAG = 0x8128,
+    SET_HEAT_STATE = 0x8139,
+    SET_HEAT_DASH_CHARGE = 0x814d,
+    PERMA_DEVIL = 0x8151,
     FORCE_MOVE = 0x8244,
     OPP_VISIBILTY = 0x82c2,
     SPEND_RAGE = 0x82e2,
@@ -201,12 +200,8 @@ namespace Tekken
     HEAT_AURA_VFX = 0x8394,
     MULTILEVEL_INSTALLS = 0x83ee,
     HEI_WARRIOR = 0x83f9,
-    BLACK_SCREEN_VFX = 0x83C0,
     _0x8555 = 0x8555,
     WING_ANIM = 0x8683,
-    HEAT_CAMERA = 0x86b0,
-    CAMERA_TRANSITION = 0x8695,
-    CAMERA_ORBIT = 0x8697,
     PLAY_VOICECLIP = 0x87f0,
   };
 
