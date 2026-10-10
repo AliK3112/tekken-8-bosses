@@ -1865,9 +1865,10 @@ private:
     cameraRemoteState = nullptr;
   }
 
-  // Mutates event payload at RBX after stolen prologue: cinematicIndex (+8), charId (+0xC).
-  // Preserves RBX (event) and ECX (0x160 for alloc). Never touches opponentCharId (+0x10).
-  std::vector<uint8_t> buildCameraFactoryShellcode(uintptr_t remoteStateAddr, uintptr_t returnAddr)
+  // Full factory replacement: event at RBX is never written. Remaps only the
+  // EDX (cinematicIndex) / R8D (charId) args passed to LoadCameraAssetsForMatch.
+  std::vector<uint8_t> buildCameraFactoryShellcode(
+      uintptr_t remoteStateAddr, uintptr_t allocAddr, uintptr_t loadAddr)
   {
     std::vector<uint8_t> code;
     auto emit = [&](std::initializer_list<uint8_t> bytes)
@@ -1883,6 +1884,13 @@ private:
     {
       for (int i = 0; i < 8; ++i)
         code.push_back(static_cast<uint8_t>((value >> (8 * i)) & 0xFF));
+    };
+    auto emitAbsCall = [&](uintptr_t target)
+    {
+      // mov rax, target / call rax
+      emit({0x48, 0xB8});
+      emitU64(target);
+      emit({0xFF, 0xD0});
     };
     auto emitRel32Hole = [&](std::initializer_list<uint8_t> opcode) -> size_t
     {
@@ -1900,29 +1908,35 @@ private:
       code[hole + 3] = static_cast<uint8_t>((rel >> 24) & 0xFF);
     };
 
-    // Stolen prologue — RBX = event, ECX = 0x160
-    emit({0x40, 0x53});
-    emit({0x48, 0x83, 0xEC, 0x30});
-    emit({0x48, 0x8B, 0xD9});
-    emit({0xB9, 0x60, 0x01, 0x00, 0x00});
+    // Prologue (same as original factory)
+    emit({0x40, 0x53});             // push rbx
+    emit({0x48, 0x83, 0xEC, 0x30}); // sub rsp, 30
+    emit({0x48, 0x8B, 0xD9});       // mov rbx, rcx  ; event*
+    emit({0xB9, 0x60, 0x01, 0x00, 0x00}); // mov ecx, 0x160
+    emitAbsCall(allocAddr);
+    emit({0x48, 0x89, 0x44, 0x24, 0x40}); // mov [rsp+40], rax
+    emit({0x48, 0x85, 0xC0});             // test rax, rax
+    size_t jeFail = emitRel32Hole({0x0F, 0x84});
 
-    // mov rax, remoteStateAddr
+    // Load args from event (reads only) — matches original order before call
+    emit({0x0F, 0xB6, 0x53, 0x14});       // movzx edx, byte [rbx+14]
+    emit({0x88, 0x54, 0x24, 0x20});       // mov [rsp+20], dl
+    emit({0x44, 0x8B, 0x4B, 0x10});       // mov r9d, [rbx+10]
+    emit({0x44, 0x8B, 0x43, 0x0C});       // mov r8d, [rbx+0xC]  ; charId
+    emit({0x8B, 0x53, 0x08});             // mov edx, [rbx+8]    ; cinematicIndex
+
+    // --- Remap EDX / R8D only when eligible (event object untouched) ---
     emit({0x48, 0xB8});
     emitU64(remoteStateAddr);
-    // cmp dword [rax+8], 0 / je done
-    emit({0x83, 0x78, 0x08, 0x00});
+    emit({0x83, 0x78, 0x08, 0x00}); // cmp dword [rax+8], 0
     size_t jeSkipEligible = emitRel32Hole({0x0F, 0x84});
 
-    // r8d = cinematicIndex [rbx+8], r9d = charId [rbx+0xC]
-    emit({0x44, 0x8B, 0x43, 0x08});
-    emit({0x44, 0x8B, 0x4B, 0x0C});
-
-    // --- Story RA: only Jin / Heihachi / DevilJin2 ---
-    emit({0x41, 0x83, 0xF9, FighterId::Jin});
+    // Story RA: char in R8D must be Jin / Heihachi / DevilJin2
+    emit({0x41, 0x83, 0xF8, FighterId::Jin});
     size_t jeCheckCamJin = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
+    emit({0x41, 0x83, 0xF8, FighterId::Heihachi});
     size_t jeCheckCamHei = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, static_cast<uint8_t>(FighterId::DevilJin2)});
+    emit({0x41, 0x83, 0xF8, static_cast<uint8_t>(FighterId::DevilJin2)});
     size_t jeCheckCamDvj = emitRel32Hole({0x0F, 0x84});
     size_t jmpToDrama = emitRel32Hole({0xE9});
 
@@ -1931,19 +1945,19 @@ private:
     patchRel32(jeCheckCamHei, checkCam);
     patchRel32(jeCheckCamDvj, checkCam);
 
-    // cmp r8d, 0x24 / jb check_p2
-    emit({0x41, 0x83, 0xF8, 0x24});
+    // cmp edx, 0x24 / jb check_p2
+    emit({0x83, 0xFA, 0x24});
     size_t jbCheckP2 = emitRel32Hole({0x0F, 0x82});
-    // cmp r8d, 0x29 / ja check_p2
-    emit({0x41, 0x83, 0xF8, 0x29});
+    // cmp edx, 0x29 / ja check_p2
+    emit({0x83, 0xFA, 0x29});
     size_t jaCheckP2 = emitRel32Hole({0x0F, 0x87});
 
     // --- P1 ---
-    emit({0x41, 0x83, 0xF9, FighterId::Jin});
+    emit({0x41, 0x83, 0xF8, FighterId::Jin});
     size_t jeP1Jin = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
+    emit({0x41, 0x83, 0xF8, FighterId::Heihachi});
     size_t jeP1Hei = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, static_cast<uint8_t>(FighterId::DevilJin2)});
+    emit({0x41, 0x83, 0xF8, static_cast<uint8_t>(FighterId::DevilJin2)});
     size_t jeP1Dvj = emitRel32Hole({0x0F, 0x84});
     size_t jmpSkipP1Unknown = emitRel32Hole({0xE9});
 
@@ -1982,16 +1996,16 @@ private:
     patchRel32(jbCheckP2, checkP2);
     patchRel32(jaCheckP2, checkP2);
 
-    emit({0x41, 0x83, 0xF8, 0x2A});
+    emit({0x83, 0xFA, 0x2A});
     size_t jbSkipP2Lo = emitRel32Hole({0x0F, 0x82});
-    emit({0x41, 0x83, 0xF8, 0x2F});
+    emit({0x83, 0xFA, 0x2F});
     size_t jaSkipP2Hi = emitRel32Hole({0x0F, 0x87});
 
-    emit({0x41, 0x83, 0xF9, FighterId::Jin});
+    emit({0x41, 0x83, 0xF8, FighterId::Jin});
     size_t jeP2Jin = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, FighterId::Heihachi});
+    emit({0x41, 0x83, 0xF8, FighterId::Heihachi});
     size_t jeP2Hei = emitRel32Hole({0x0F, 0x84});
-    emit({0x41, 0x83, 0xF9, static_cast<uint8_t>(FighterId::DevilJin2)});
+    emit({0x41, 0x83, 0xF8, static_cast<uint8_t>(FighterId::DevilJin2)});
     size_t jeP2Dvj = emitRel32Hole({0x0F, 0x84});
     size_t jmpSkipP2Unknown = emitRel32Hole({0xE9});
 
@@ -2026,13 +2040,12 @@ private:
     emitP2Compare(BossCodes::DevilJin_3, jeRemapP2Dvj1);
     size_t jmpSkipP2Dvj = emitRel32Hole({0xE9});
 
-    // add dword [rbx+8], 0xDB
+    // add edx, 0xDB  (register only — not [rbx+8])
     size_t remap = code.size();
-    emit({0x81, 0x43, 0x08});
+    emit({0x81, 0xC2});
     emitU32(CAMERA_ID_STORY_DELTA);
 
-    // --- Drama + Fate: indexes 1..28 (0x18 drama, 25–28 fate), charId 121 -> 12 ---
-    // Rage starts at 0x24 (36), so this never remaps rage/story-rage char folders.
+    // --- Drama + Fate: indexes 1..28, R8D 121 -> 12 ---
     size_t drama = code.size();
     patchRel32(jmpToDrama, drama);
     patchRel32(jmpSkipP1Unknown, drama);
@@ -2058,27 +2071,40 @@ private:
     patchRel32(jeRemapP2Dvj0, remap);
     patchRel32(jeRemapP2Dvj1, remap);
 
-    // mov r8d, [rbx+8] / sub r8d, 1 / cmp r8d, 0x1B / ja done  (indexes 1..28)
-    emit({0x44, 0x8B, 0x43, 0x08});
-    emit({0x41, 0x83, 0xE8, 0x01});
-    emit({0x41, 0x83, 0xF8, 0x1B});
+    // mov r10d, edx / sub r10d, 1 / cmp r10d, 0x1B / ja skip_drama
+    emit({0x41, 0x89, 0xD2});       // mov r10d, edx
+    emit({0x41, 0x83, 0xEA, 0x01}); // sub r10d, 1
+    emit({0x41, 0x83, 0xFA, 0x1B}); // cmp r10d, 0x1B
     size_t jaSkipDrama = emitRel32Hole({0x0F, 0x87});
-    // cmp dword [rbx+0xC], 121 / jne done
-    emit({0x81, 0x7B, 0x0C});
+    // cmp r8d, 121 / jne skip_drama
+    emit({0x41, 0x81, 0xF8});
     emitU32(FighterId::DevilJin2);
     size_t jneSkipDrama = emitRel32Hole({0x0F, 0x85});
-    // mov dword [rbx+0xC], 12
-    emit({0xC7, 0x43, 0x0C});
+    // mov r8d, 12
+    emit({0x41, 0xB8});
     emitU32(FighterId::DevilJin);
 
-    size_t done = code.size();
-    patchRel32(jeSkipEligible, done);
-    patchRel32(jaSkipDrama, done);
-    patchRel32(jneSkipDrama, done);
+    size_t callLoad = code.size();
+    patchRel32(jeSkipEligible, callLoad);
+    patchRel32(jaSkipDrama, callLoad);
+    patchRel32(jneSkipDrama, callLoad);
 
-    // Absolute jmp back to original+14 (call alloc)
-    emit({0xFF, 0x25, 0x00, 0x00, 0x00, 0x00});
-    emitU64(returnAddr);
+    // mov rcx, [rsp+40] ; allocated obj
+    emit({0x48, 0x8B, 0x4C, 0x24, 0x40});
+    emitAbsCall(loadAddr);
+
+    // Epilogue (success)
+    emit({0x48, 0x83, 0xC4, 0x30}); // add rsp, 30
+    emit({0x5B});                   // pop rbx
+    emit({0xC3});                   // ret
+
+    // fail: xor eax,eax / add rsp,30 / pop rbx / ret
+    size_t fail = code.size();
+    patchRel32(jeFail, fail);
+    emit({0x33, 0xC0});
+    emit({0x48, 0x83, 0xC4, 0x30});
+    emit({0x5B});
+    emit({0xC3});
 
     return code;
   }
@@ -2109,9 +2135,30 @@ private:
     if (!ensureCameraRemoteState())
       return false;
 
-    uintptr_t returnAddr = hookAddr + CAMERA_HOOK_PATCH_SIZE;
+    // Resolve alloc + LoadCameraAssetsForMatch from the original factory body
+    // (call sites at +0x0E and +0x33 — beyond our 14-byte entry patch).
+    uint8_t factoryBody[0x40] = {};
+    if (!game.readBytes(hookAddr, factoryBody, sizeof(factoryBody)))
+    {
+      AppendLog("Camera factory hook: failed to read factory body");
+      maybeFreeCameraRemoteState();
+      return false;
+    }
+    if (factoryBody[0x0E] != 0xE8 || factoryBody[0x33] != 0xE8)
+    {
+      AppendLog("Camera factory hook: unexpected call sites in factory body");
+      maybeFreeCameraRemoteState();
+      return false;
+    }
+    int32_t allocRel = 0;
+    int32_t loadRel = 0;
+    memcpy(&allocRel, factoryBody + 0x0F, sizeof(allocRel));
+    memcpy(&loadRel, factoryBody + 0x34, sizeof(loadRel));
+    uintptr_t allocAddr = hookAddr + 0x0E + 5 + allocRel;
+    uintptr_t loadAddr = hookAddr + 0x33 + 5 + loadRel;
+
     std::vector<uint8_t> shellcode = buildCameraFactoryShellcode(
-        reinterpret_cast<uintptr_t>(cameraRemoteState), returnAddr);
+        reinterpret_cast<uintptr_t>(cameraRemoteState), allocAddr, loadAddr);
 
     cameraCodeCave = game.allocateInTarget<uint8_t>(shellcode.size());
     if (!cameraCodeCave)
