@@ -1,3 +1,7 @@
+## Changelog (October 10, 2026)
+ - Completely reworked the camera hook logic, now only a single hook handles everything.
+ - The reworked logic is also compatible with TkModLoader. Prior, both mods wrote their hooks at the same function.
+
 ## Changelog (September 18, 2026)
  - Improved some voicelines for Monk Heihachi, mainly his b+3,3 and n+3,3 into Battering Ram. That transition was added in S2 so Heihachi laughed like a maniac while doing that move.
  - Monk Heat Smash will now always do the on-hit camera zoom-in. Previously it didn't do that, even when playing so Story Mode. So this is an improvement over Bamco.

@@ -212,7 +212,7 @@ permanent_devil_offset=0x156C
 v3.02.02
 moveset_offset_addr_offset=0x18ED3CE
 permanent_devil_offset_addr_offset=0x190B194
-camera_hook_offset=0x5C38720
+camera_factory_hook_offset=0x591BFF0
 player_struct_base_addr_offset=0x5E76F35
 hud_icon_addr_offset=0x5E7BED1
 hud_name_addr_offset=0x5E7C547

@@ -3,3 +3,8 @@
 3. Costumes load automatically now
 4. For NPCs like Angel Jin, True Devil Kazuya and Story Devil Jin, you cannot pick any other character, they will always be loaded, no matter what
 5. Optionally, you can use the Cheat Table to load the correct HUD icons and character names. Just attach it and activate both scripts in it.
+
+=== OPTIONAL ===
+- Paste the "2pHudIconFixes" folder to your TEKKEN 8 mods folder "..\TEKKEN 8\Polaris\Content\Paks\Mods"
+- If a folder doesn't exist create it
+- If you already have a LogicMods or ~Mods (or ~mods) folder just put it there
