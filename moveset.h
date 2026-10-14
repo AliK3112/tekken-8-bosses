@@ -671,6 +671,10 @@ public:
       return;
     if (column == "command")
       game.write<uintptr_t>(addr + Offsets::Cancel::Command, value);
+    else if (column == "direction")
+      game.write<int>(addr + Offsets::Cancel::Direction, value);
+    else if (column == "button")
+      game.write<int>(addr + Offsets::Cancel::Button, value);
     else if (column == "requirements")
       game.write<uintptr_t>(addr + Offsets::Cancel::RequirementsList, value);
     else if (column == "requirement_idx")

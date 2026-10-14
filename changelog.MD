@@ -1,3 +1,8 @@
+## Changelog (October 15, 2026)
+ - Reworked Shadow Heihachi because prior implementation had issues
+ - Fixed some oversights from Bamco, like Shadow Heihachi RAI 1 having broken VFX
+ - Added old d/f+1, 1 for SH.
+
 ## Changelog (October 10, 2026)
  - Completely reworked the camera hook logic, now only a single hook handles everything.
  - The reworked logic is also compatible with TkModLoader. Prior, both mods wrote their hooks at the same function.

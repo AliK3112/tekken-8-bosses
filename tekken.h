@@ -29,6 +29,8 @@ namespace Tekken
     enum Cancel
     {
       Command = 0x0,
+      Direction = 0x0,
+      Button = 0x4,
       RequirementsList = 0x8,
       CancelExtradata = 0x10,
       WindowStart = 0x18,

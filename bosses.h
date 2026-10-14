@@ -1383,13 +1383,13 @@ private:
 
     if (bossCode == BossCodes::ShadowHeihachi)
     {
-      addr = moveset.getMoveAddrByIdx(idleStanceIdx);
-      uintptr_t cancel1 = moveset.getMoveNthCancel(addr, 0);
-      uintptr_t cancel2 = moveset.getMoveNthCancel(addr, 1);
-      uintptr_t reqListCancel1 = moveset.getCancelValue(cancel1, "requirements");
-      uintptr_t reqListCancel2 = moveset.getCancelValue(cancel2, "requirements");
-      moveset.editCancelValue(cancel1, "requirements", reqListCancel2);
-      moveset.disableStoryRelatedReqs(reqListCancel1);
+      // addr = moveset.getMoveAddrByIdx(idleStanceIdx);
+      // uintptr_t cancel1 = moveset.getMoveNthCancel(addr, 0);
+      // uintptr_t cancel2 = moveset.getMoveNthCancel(addr, 1);
+      // uintptr_t reqListCancel1 = moveset.getCancelValue(cancel1, "requirements");
+      // uintptr_t reqListCancel2 = moveset.getCancelValue(cancel2, "requirements");
+      // moveset.editCancelValue(cancel1, "requirements", reqListCancel2);
+      // moveset.disableStoryRelatedReqs(reqListCancel1);
 
       // Dialogue for RA
       // Disabling regular dialogues for "He_RageArts00_St"
@@ -1417,9 +1417,119 @@ private:
       addr = moveset.findExtraProp(addr, ExtraMoveProperties::STORE_VALUE_80C5);
       moveset.disableStoryRelatedReqs(moveset.getCancelValue(addr, "requirements"));
 
+      std::vector<std::pair<int, int>> moves = {
+        // {
+        //   moveset.getMoveId(0x83276b4f), // He_lk00
+        //   moveset.getMoveId(0x1d63f55a), // He_lk00_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x7582a3de), // He_rk00
+        //   moveset.getMoveId(0x10b244e4), // He_rk00_shadow
+        // },
+        {
+          moveset.getMoveId(0xf69e2bef), // He_RPRP
+          moveset.getMoveId(0xaffba07b), // He_RPRP_Story
+        },
+        // {
+        //   moveset.getMoveId(0xdf1b2fb8), // He_4LP
+        //   moveset.getMoveId(0x602d23b9), // He_4LP_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x9cdb8a3a), // He_4RK
+        //   moveset.getMoveId(0xe68c9e39), // He_4RK_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x9fdd5757), // He_4WP
+        //   moveset.getMoveId(0x737824ab), // He_4WP_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x72b32ab0), // He_6WK
+        //   moveset.getMoveId(0x17f96b6e), // He_6WK_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x83ccc649), // He_6LK
+        //   moveset.getMoveId(0xf839e6b3), // He_6LK_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0xeae77499), // He_3LP
+        //   moveset.getMoveId(0x710215cb), // He_3LP_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x8c2763d1), // He_3RP
+        //   moveset.getMoveId(0xe74fc811), // He_3RP_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x245d9527), // He_3LK
+        //   moveset.getMoveId(0x5def460a), // He_3LK_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0x9ba4852f), // He_1LK
+        //   moveset.getMoveId(0x3afb7ca7), // He_1LK_shadow
+        // },
+        // {
+        //   moveset.getMoveId(0xcd449b14), // He_2RK
+        //   moveset.getMoveId(0x99529d2e), // He_2RK_shadow
+        // },
+        {
+          moveset.getMoveId(0xc21d691d), // He_9LP
+          moveset.getMoveId(0xd5793e46), // He_9LP_shadow
+        },
+        {
+          moveset.getMoveId(0x0a71ab97), // He_s_tLKWP
+          moveset.getMoveId(0x80abe1a6), // He_s_tLKWP_shadow
+        },
+      };
+
+      moveset.replaceCancelMoveIndexes(moves, true);
+
+      auto removeShadowRequirement = [&](uint32_t moveHash, int cancelIndex = 0)
+      {
+        auto addr = moveset.getMoveAddress(moveHash);
+        addr = moveset.getMoveNthCancel(addr, cancelIndex);
+        moveset.editCancelValue(addr, "requirement_idx", 0);
+      };
+
+      // removeShadowRequirement(0xf69e2bef); // He_RPRP to He_RPRP_Story
+      removeShadowRequirement(0x83276b4f); // He_lk00 to He_lk00_shadow
+      removeShadowRequirement(0xeae77499); // He_3LP to He_3LP_shadow
+      removeShadowRequirement(0x8c2763d1); // He_3RP to He_3RP_shadow
+      removeShadowRequirement(0x245d9527); // He_3LK to He_3LK_shadow
+      removeShadowRequirement(0xdf1b2fb8); // He_4LP to He_4LP_shadow
+      removeShadowRequirement(0x9cdb8a3a); // He_4RK to He_4RK_shadow
+      removeShadowRequirement(0x9fdd5757); // He_4WP to He_4WP_shadow
+      removeShadowRequirement(0x83ccc649); // He_6LK to He_6LK_shadow
+      removeShadowRequirement(0x72b32ab0); // He_6WK to He_6WK_shadow
+      removeShadowRequirement(0x9ba4852f); // He_1LK to He_1LK_shadow
+      removeShadowRequirement(0xc13f5485); // He_LPRPRK to He_LPRPRK_shadow
+      removeShadowRequirement(0xaffba07b); // He_RPRP_Story to He_RPRP_shadow
+      removeShadowRequirement(0xcd449b14, 1); // He_2RK to He_2RK_shadow
+      removeShadowRequirement(0x7582a3de, 2); // He_rk00 to He_rk00_shadow
+      removeShadowRequirement(0x28be7be8); // He_6LK_shadow_combo02. For old d/f+1,1
+
+      // Fixing Homing VFX
+      addr = moveset.getMoveAddress(0xe7918195); // He_6WK_LP_shadow
+      addr = moveset.getMoveExtrapropAddr(addr);
+      addr = moveset.iterateExtraprops(addr, 3);
+      moveset.editExtrapropValue(addr, "prop", 0x8049); // start
+      moveset.editExtrapropValue(addr, "value", 0x0D7D);
+      addr = moveset.iterateExtraprops(addr, 1);
+      moveset.editExtrapropValue(addr, "prop", 0x8024); // stop
+      moveset.editExtrapropValue(addr, "value", 0x007D);
+
+      // Making RAI 2, 1 into input based cancel
+      addr = moveset.getMoveAddress(0x2f805fee); // He_6WK_RP_shadow
+      addr = moveset.getMoveNthCancel(addr, 2);
+      moveset.editCancelValue(addr, "button", 0x40000001);
+      moveset.editCancelValue(addr, "option", 80);
+
+      // Old d/f+1,1 reserve cancel
+      addr = moveset.getMoveAddress(0x710215cb); // He_3LP_shadow
+      addr = moveset.getMoveNthCancel(addr, 3);
+      int moveId = moveset.getMoveId(0x28be7be8); // He_6LK_shadow_combo02
+      moveset.editCancelValue(addr, "move", moveId);
+
       // TODO: b,f+2 functional
       // TODO: Broken Toy functional
-      // Nice to have: d/f+1, 1 using the old animation
       return markMovesetEdited(movesetAddr);
     }
 
@@ -1530,6 +1640,11 @@ private:
     Then add Heat State and Heat Fill Meter props to the second req
     Then add the Heat Dash Charge prop to 300
     Would need to allocate memory to allocate more requirements and extraprops
+
+    All that's needed to activate Heat inside a player prop is:
+    - Write 1 to "HeatState[0]" member
+    - Write 90,000 to "HeatMeter" encrypted member (28 bit value with 4 bit checksum, key: 0)
+    - Write 300 to "HeatDashCharge" member
     */
     if (bossCode == BossCodes::FinalHeihachi)
     {
