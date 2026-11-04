@@ -1528,8 +1528,73 @@ private:
       int moveId = moveset.getMoveId(0x28be7be8); // He_6LK_shadow_combo02
       moveset.editCancelValue(addr, "move", moveId);
 
-      // TODO: b,f+2 functional
-      // TODO: Broken Toy functional
+      // TODO: b,f+2 functional (Input Seq # 65)
+      // TODO: Broken Toy functional (Input Seq # 132)
+      // I've got them working from buffering, but due to order of the cancels, it's not the best.
+
+      // Adding Broken Toy
+      auto addExtraMoves = [&]()
+      {
+        // First, reading all cancels
+        uintptr_t start = moveset.getMotbin().cancels_ptr;
+        uintptr_t count = moveset.getMotbin().cancels_count;
+        std::vector<TK_Cancel> cancels = game.readArray<TK_Cancel>(start, count);
+        if (cancels.size() != count)
+          return;
+
+        int targetSeq = INPUT_SEQUENCE_START + 87;
+        int newSeqId = INPUT_SEQUENCE_START + 65;
+        int targetMoveId = moveset.getMoveId(0xAB24701C); // He_236RP
+        int newMoveId = moveset.getMoveId(0xF8E42978); // He_6LK_shadow_combo04 (b,f+2,1)
+        // int targetSeq = INPUT_SEQUENCE_START + 87;
+        // int newSeqId = INPUT_SEQUENCE_START + 132;
+        // int targetMoveId = moveset.getMoveId(0xAB24701C); // He_236RP
+        // int newMoveId = moveset.getMoveId(0xFDE8A9ED); // He_washi_nage_shadow
+        for (size_t i = 0; i < count; ++i)
+        {
+          uintptr_t addr = start + i * sizeof(TK_Cancel);
+
+          // b,f+2
+          if (
+            cancels[i].command.direction == targetSeq &&
+            cancels[i].command.button == 0 &&
+            cancels[i].move_id == targetMoveId
+          )
+          {
+            moveset.editCancelValue(addr, "direction", static_cast<int>(newSeqId));
+            moveset.editCancelValue(addr, "move", static_cast<short>(newMoveId));
+          }
+
+          // For broken-toy, replacing parry attack "He_otoko_LPn_Final"
+          if (
+            cancels[i].command.value == 0 &&
+            cancels[i].move_id == moveset.getMoveId(0x5245160D)
+          )
+          {
+            int newSeqId = INPUT_SEQUENCE_START + 132;
+            int newMoveId = moveset.getMoveId(0xFDE8A9ED); // He_washi_nage_shadow
+            moveset.editCancelValue(addr, "direction", newSeqId);
+            moveset.editCancelValue(addr, "requirement_idx", 0);
+            moveset.editCancelValue(addr, "extradata", moveset.findCancelExtradata(386));
+            moveset.editCancelValue(addr, "start", 1);
+            moveset.editCancelValue(addr, "end", 32767);
+            moveset.editCancelValue(addr, "transition", 1);
+            moveset.editCancelValue(addr, "move", newMoveId);
+            moveset.editCancelValue(addr, "option", 80);
+          }
+        }
+
+        // Setup 2nd hit of b,f+2,1 to be a cancelable move
+        addr = moveset.getMoveAddrByIdx(newMoveId);
+        addr = moveset.getMoveNthCancel(addr, 0);
+        moveset.editCancelValue(addr, "button", 0x40000001);
+        moveset.editCancelValue(addr, "start", 1);
+        moveset.editCancelValue(addr, "end", 32);
+        moveset.editCancelValue(addr, "option", 80);
+      };
+
+      addExtraMoves();
+
       return markMovesetEdited(movesetAddr);
     }
 

@@ -11,6 +11,8 @@ struct EncryptedValue
 
 namespace Tekken
 {
+  const int INPUT_SEQUENCE_START = 0x8014;
+
   namespace Offsets
   {
     enum Move
