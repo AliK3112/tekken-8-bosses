@@ -2125,11 +2125,11 @@ private:
     patchRel32(jeCheckCamHei, checkCam);
     patchRel32(jeCheckCamDvj, checkCam);
 
-    // cmp edx, 0x24 / jb check_p2
-    emit({0x83, 0xFA, 0x24});
+    // cmp edx, 0x30 / jb check_p2
+    emit({0x83, 0xFA, 0x30});
     size_t jbCheckP2 = emitRel32Hole({0x0F, 0x82});
-    // cmp edx, 0x29 / ja check_p2
-    emit({0x83, 0xFA, 0x29});
+    // cmp edx, 0x35 / ja check_p2
+    emit({0x83, 0xFA, 0x35});
     size_t jaCheckP2 = emitRel32Hole({0x0F, 0x87});
 
     // --- P1 ---
@@ -2176,9 +2176,9 @@ private:
     patchRel32(jbCheckP2, checkP2);
     patchRel32(jaCheckP2, checkP2);
 
-    emit({0x83, 0xFA, 0x2A});
+    emit({0x83, 0xFA, 0x36});
     size_t jbSkipP2Lo = emitRel32Hole({0x0F, 0x82});
-    emit({0x83, 0xFA, 0x2F});
+    emit({0x83, 0xFA, 0x3B});
     size_t jaSkipP2Hi = emitRel32Hole({0x0F, 0x87});
 
     emit({0x41, 0x83, 0xF8, FighterId::Jin});
@@ -2225,7 +2225,7 @@ private:
     emit({0x81, 0xC2});
     emitU32(CAMERA_ID_STORY_DELTA);
 
-    // --- Drama + Fate: indexes 1..28, R8D 121 -> 12 ---
+    // --- Drama + Fate: indexes 1..40, R8D 121 -> 12 ---
     size_t drama = code.size();
     patchRel32(jmpToDrama, drama);
     patchRel32(jmpSkipP1Unknown, drama);
@@ -2251,10 +2251,10 @@ private:
     patchRel32(jeRemapP2Dvj0, remap);
     patchRel32(jeRemapP2Dvj1, remap);
 
-    // mov r10d, edx / sub r10d, 1 / cmp r10d, 0x1B / ja skip_drama
+    // mov r10d, edx / sub r10d, 1 / cmp r10d, 0x27 / ja skip_drama
     emit({0x41, 0x89, 0xD2});       // mov r10d, edx
     emit({0x41, 0x83, 0xEA, 0x01}); // sub r10d, 1
-    emit({0x41, 0x83, 0xFA, 0x1B}); // cmp r10d, 0x1B
+    emit({0x41, 0x83, 0xFA, 0x27}); // cmp r10d, 0x27
     size_t jaSkipDrama = emitRel32Hole({0x0F, 0x87});
     // cmp r8d, 121 / jne skip_drama
     emit({0x41, 0x81, 0xF8});

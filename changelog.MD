@@ -1,3 +1,6 @@
+## Changelog (November 17, 2026)
+ - Updated for Roger update: Fix broken special cameras
+
 ## Changelog (October 15, 2026)
  - Reworked Shadow Heihachi because prior implementation had issues
  - Fixed some oversights from Bamco, like Shadow Heihachi RAI 1 having broken VFX

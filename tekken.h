@@ -356,6 +356,8 @@ namespace Tekken
       return "ker";
     case FighterId::Bob:
       return "usi";
+    case FighterId::Roger:
+      return "inu";
     case FighterId::Dummy:
       return "dek";
     case FighterId::AngelJin:
